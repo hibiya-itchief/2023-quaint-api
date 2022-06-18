@@ -12,7 +12,7 @@ Gitリポジトリをクローン
 ```sh
 git clone https://github.com/hibiya-itchief/quaint-api.git
 ```
-使用するパッケージをrequirements.txt(まだない)でインストール
+使用するパッケージをrequirements.txt(pipreqs . で生成)でインストール
 ```
 pip install -r requirements.txt
 ```
