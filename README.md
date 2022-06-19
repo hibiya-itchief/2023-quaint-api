@@ -4,30 +4,29 @@
 - [quaint-api](#quaint-api)
   - [目次](#目次)
   - [動かす](#動かす)
-    - [必要要件](#必要要件)
+    - [必要条件](#必要条件)
+    - [手順](#手順)
   - [ディレクトリ構成(ただのメモ)](#ディレクトリ構成ただのメモ)
 
 ## 動かす
+### 必要条件
+- docker https://docs.docker.com/get-docker/
+- docker-compose
+- git https://github.com/git-guides/install-git
+
+をインストールしておく
+
+### 手順
 Gitリポジトリをクローン
 ```sh
-git clone https://github.com/hibiya-itchief/quaint-api.git
+$ git clone https://github.com/hibiya-itchief/quaint-api.git
 ```
-使用するパッケージをrequirements.txt(pipreqs . で生成)でインストール
+dockerコンテナを立ち上げ
+```sh
+$ docker-compose up -d
 ```
-pip install -r requirements.txt
-```
-サーバーをスタート
-```
-uvicorn main:app --reload
-```
-http://127.0.0.1:8000/docs でAPIドキュメントが読める
 
-### 必要要件
-おそらく
-- Python 3.6+
-- pip 
-
-で動く
+http://127.0.0.1:8080/docs でAPIドキュメントが読める
 
 
 ## ディレクトリ構成(ただのメモ)
