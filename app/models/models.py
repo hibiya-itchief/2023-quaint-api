@@ -9,6 +9,16 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 
+class Authority(Base):
+    #UserとGroupを結びつける中間テーブル権限管理
+    __tablename__ = "authority"
+    id = Column(Integer,primary_key=True,index=True,autoincrement=True)
+
+    user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
+    group_id = Column(Integer,ForeignKey("groups.id"),nullable=False)
+
+    role = Column(String(255))
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True,autoincrement=True)
@@ -16,12 +26,13 @@ class User(Base):
     username = Column(String(25), unique=True, index=True)
     hashed_password = Column(String(255))
 
-    is_Family = Column(Boolean,default=False)#家族アカウントかどうか
+    is_family = Column(Boolean,default=False)#家族アカウントかどうか
 
     is_active = Column(Boolean, default=False)#学校にいるか
-    require_change_password=Column(Boolean,default=False)#Password変更を要求
+    password_expired=Column(Boolean,default=False)#Password変更を要求
 
     tickets = relationship("Ticket",back_populates="owner")
+    groups = relationship("Group",secondary=Authority.__tablename__,back_populates="users")
 
 class Group(Base):
     __tablename__ = "groups"
@@ -33,16 +44,7 @@ class Group(Base):
     description = Column(String(255))#説明
 
     programs = relationship("Program",back_populates="group")
-
-class Authority(Base):
-    #UserとGroupを結びつける中間テーブル権限管理
-    __tablename__ = "authority"
-    id = Column(Integer,primary_key=True,index=True,autoincrement=True)
-
-    user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
-    group_id = Column(Integer,ForeignKey("groups.id"),nullable=False)
-
-    role = Column(String(255))
+    users = relationship("User",secondary=Authority.__tablename__,back_populates="groups")
 
 class Program(Base):
     __tablename__ = "programs"

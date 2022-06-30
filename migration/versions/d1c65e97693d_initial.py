@@ -1,8 +1,8 @@
-"""varcharlength
+"""initial
 
-Revision ID: 66a54c5b9a42
+Revision ID: d1c65e97693d
 Revises: 
-Create Date: 2022-06-26 15:30:58.189473
+Create Date: 2022-06-30 00:30:31.356454
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '66a54c5b9a42'
+revision = 'd1c65e97693d'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -31,9 +31,9 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('username', sa.String(length=25), nullable=True),
     sa.Column('hashed_password', sa.String(length=255), nullable=True),
-    sa.Column('is_Family', sa.Boolean(), nullable=True),
+    sa.Column('is_family', sa.Boolean(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('require_change_password', sa.Boolean(), nullable=True),
+    sa.Column('password_expired', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
