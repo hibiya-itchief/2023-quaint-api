@@ -67,6 +67,10 @@ $ alembic revision --autogenerate -m "hogehoge"
 ```sh
 $ alembic upgrade head
 ```
+SchemaSpyでDBのER図を生成
+```
+sudo java -jar schemaspy.jar -t mysql -host localhost -db quaint-app -u quaint -p password -o ./db/schemaspy -dp db/driver/mysql-connector-java-8.0.29/mysql-connector-java-8.0.29.jar -s quaint-app -vizjs
+```
 ### pip package
 このディレクトリ以下で使ってるパッケージだけをrequirements.txtに記録
 ```sh
