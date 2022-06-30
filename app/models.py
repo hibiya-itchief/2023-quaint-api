@@ -6,7 +6,7 @@ from sqlalchemy.dialects.sqlite import TIMESTAMP as Timestamp
 from sqlalchemy.sql.functions import current_timestamp
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from .database import Base
 
 
 class Authority(Base):
