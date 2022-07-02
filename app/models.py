@@ -19,6 +19,10 @@ class Authority(Base):
 
     role = Column(String(255))
 
+class Admin(Base):
+    __tablename__ = "admin"
+    user_id = Column(Integer,ForeignKey("users.id"),nullable=False,primary_key=True)
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True,autoincrement=True)
@@ -26,8 +30,8 @@ class User(Base):
     username = Column(String(25), unique=True, index=True)
     hashed_password = Column(String(255))
 
+    is_student = Column(Boolean,default=False)#生徒かどうか
     is_family = Column(Boolean,default=False)#家族アカウントかどうか
-
     is_active = Column(Boolean, default=False)#学校にいるか
     password_expired=Column(Boolean,default=False)#Password変更を要求
 
