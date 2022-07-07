@@ -237,6 +237,7 @@ def test_grant_authority_successfully(db:Session):
         )
     assert response.status_code == 404
     
+    
 def test_create_user_by_admin(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     user_admin = factories.Admin_UserCreateByAdmin()
