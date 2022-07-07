@@ -32,7 +32,10 @@ app = FastAPI(title="QUAINT-API",description=description,openapi_tags=tags_metad
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
+    return {
+        "title": "QUAINT-API",
+        "description":"日比谷高校オンライン整理券システム「QUAINT」のAPI"
+    }
 
 @app.post("/token", response_model=schemas.Token)
 async def login_for_access_token(db:Session = Depends(dep.get_db),form_data: OAuth2PasswordRequestForm = Depends()):
@@ -56,9 +59,12 @@ def create_user(user:schemas.UserCreate,db:Session=Depends(dep.get_db)):
 def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
     if not dep.authenticate_user(db,user.username,user.password):
         raise HTTPException(401,"Incorrect Username or Password")
+    if user.password==user.new_password:
+        raise HTTPException(400,"Enter different password from present")
     crud.change_password(db,user)
     return HTTPException(200,"Password changed successfully")
 
+'''
 @app.put("/users/{user_id}/authority",tags=["users"])
 def grant_authority(user_id:int,role:schemas.AuthorityRole,group_id:Union[int,None]=None,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
     user=crud.get_user(db,user_id)
@@ -83,9 +89,8 @@ def grant_authority(user_id:int,role:schemas.AuthorityRole,group_id:Union[int,No
             if crud.check_authorizer_of(db,group,user):
                 raise HTTPException(200)
             return crud.grant_authorizer_of(db,group,user)
+'''
     
-    
-
 @app.post("/admin/users",response_model=schemas.User,tags=["admin"],description="Required Authority: **Admin**")
 def create_user_by_admin(user:schemas.UserCreateByAdmin,permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
     db_user = crud.get_user_by_name(db,username=user.username)
