@@ -8,8 +8,10 @@ from passlib.context import CryptContext
 from yarg import get
 from sqlalchemy.orm.session import Session
 
+from app import schemas
+
 from .database import SessionLocal,engine
-from . import schemas,crud
+from . import crud
 
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
@@ -94,7 +96,7 @@ def admin(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_u
     return user
 
 def owner_of(groupname:str,db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
-    group=crud.get_group_by_name(db,groupname)
+    group=crud.get_group_by_name(db,groupname)###
     if not group:
         raise HTTPException(400,detail='Group "'+groupname+'" does not exist')
     if crud.check_admin(db,user):
@@ -111,7 +113,7 @@ def owner(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_u
     return user
 
 def authorizer_of(groupname:str,db:Session = Depends(get_db),user:schemas.User=Depends(get_current_user)):
-    group=crud.get_group_by_name(db,groupname)
+    group=crud.get_group_by_name(db,groupname)###
     if not group:
         raise HTTPException(400,detail='Group "'+groupname+'" does not exist')
     if crud.check_admin(db,user):

@@ -1,6 +1,7 @@
 from factory.alchemy import SQLAlchemyModelFactory
 
-from app import models,schemas
+from app import models
+from app import schemas
 from app.test.utils.overrides import TestingSessionLocal
 
 class Admin_UserCreateByAdmin():

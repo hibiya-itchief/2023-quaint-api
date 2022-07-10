@@ -5,58 +5,80 @@ from enum import Enum
 
 from pydantic import BaseModel
 
+class AuthorityRole(str,Enum):
+    Authorizer = "Authorizer"
+    Owner = "Owner"
+    Admin = "Admin"
 
-
-
-class ProgramBase(BaseModel):
+class EventBase(BaseModel):
+    title:str=Query(max_length=200)
+    description:str=Query(max_length=200)
     sell_at:datetime
+    sell_ends=datetime
     starts_at:datetime
     ends_at:datetime
     ticket_stock:int
+    lottery:bool=False
     group_id:str#hashids
-class ProgramCreate(ProgramBase):
+class EventCreate(EventBase):
     pass
-class Program(ProgramBase):#後夜祭対策でプログラム毎に名前とか入れれるように・抽選か先着か決める
+class Event(EventBase):
     id:str#hashids
-    #group:List[Group]
-    #tickets:List[Ticket]
+    group:List['Group']
+    tickets:List['Ticket']
     class Config:
         orm_mode=True
 
-
-
-class GroupBase(BaseModel):#url形式の英数字と表示名を分けた方がいい
-    groupname:str
-    title:str
-    description:str
+class GroupBase(BaseModel):#hashidsのidをURLにする。groupnameは表示名
+    groupname:str = Query(max_length=200)
+    title:Union[str,None] = Query(default=None,max_length=200)
+    description:Union[str,None] = Query(default=None,max_length=200)
+    page_content:Union[str,None] = Query(default=None,max_length=16000)
+    enable_vote:bool = True
 class GroupCreate(GroupBase):
     pass
 class Group(GroupBase):
     id:str#hashids
-    programs:List[Program]
-    #users:List[User]
+    events:List['Event']
+    users:List['User']
+    tags:List['Tag']
+    votes:List['Vote']
     class Config:
         orm_mode=True
 
+class TagBase(BaseModel):
+    tagname:str=Query(max_length=200)
+class Tag(TagBase):
+    id:str#hashids
+    groups:List['Group']
+    class Config:
+        orm_mode=True
 
 class TicketBase(BaseModel):
-    program_id:str#hashids
+    event_id:str#hashids
     owner_id:str#hashids
     is_family_ticket:bool = False
+    person:int = Query(default=1)#一緒に入場する人数(１人１チケットになったらこれを削除すればdbのdefaultが効く)
 class TicketCreate(TicketBase):
     pass
-class Ticket(TicketBase):#一緒に入場する人数
+class Ticket(TicketBase):
     id:str#hashids
     created_at:int
     is_used:bool
-    program:List[Program]
-    #owner:List[User]
+
+    events:List['Event']
+    owner:List['User']
     class Config:
         orm_mode=True
 
+class Token(BaseModel):
+    access_token:str
+    token_type:str
+class TokenData(BaseModel):#JWTに含まれるデータ
+    username: Union[str,None] = None
 
 class UserBase(BaseModel):
-    username: str = Query(regex="^[0-9a-zA-Z]*$",min_length=4,max_length=25)
+    username: str = Query(regex="^[a-zA-Z0-9_\-.]{3,15}$",min_length=4,max_length=25)
 class UserCreate(UserBase):
     password: str=Query(min_length=8,regex="^[0-9a-zA-Z]*$",max_length=255)
 class UserCreateByAdmin(UserCreate):
@@ -72,9 +94,11 @@ class User(UserBase):
     is_active:bool=False
     password_expired: bool=True
 
-    tickets: List[Ticket]=[]
-    groups: List[Group]=[]
     
+    groups: List['Group']
+    votes: List['Vote']
+    tickets: List['Ticket']
+
     class Config:
         orm_mode=True
 
@@ -82,15 +106,16 @@ class PasswordChange(UserCreate):
     new_password:str=Query(min_length=6,regex="^[0-9a-zA-Z]*$",max_length=255)
 
 
+class VoteModel(BaseModel):
+    group_id:str#hashids
+    user_id:str#hashids
+class Vote(VoteModel):
+    id:str#hashids
 
 
-class Token(BaseModel):
-    access_token:str
-    token_type:str
-class TokenData(BaseModel):#JWTに含まれるデータ
-    username: Union[str,None] = None
+Event.update_forward_refs()
+Group.update_forward_refs()
+Tag.update_forward_refs()
+Ticket.update_forward_refs()
+User.update_forward_refs()
 
-class AuthorityRole(str,Enum):
-    Authorizer = "Authorizer"
-    Owner = "Owner"
-    Admin = "Admin"

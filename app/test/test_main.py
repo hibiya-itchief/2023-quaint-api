@@ -1,7 +1,8 @@
 from fastapi.testclient import TestClient
 from requests import Session
 from app.main import app
-from app import crud, schemas
+from app import crud
+from app import schemas
 from app.test import factories
 
 client = TestClient(app)

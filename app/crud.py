@@ -1,10 +1,12 @@
 from curses import has_ic
 from sqlalchemy.orm import Session
 from fastapi import Query
-from app import models,schemas,dep
+from app import models,dep
 from app.config import settings
 
 from hashids import Hashids
+
+from app import schemas
 
 hashids = Hashids(salt=settings.HASHIDS_SALT,min_length=7)
 
@@ -38,7 +40,7 @@ def get_group(db:Session,group_id:str):
     id=int(hashids.decode(group_id)[0])
     group = db.query(models.Group).filter(models.Group.id==id).first()
     if group:
-        group_result = models.Group(id=hashids.encode(group.id),groupname=group.groupname,title=group.title,description=group.description)
+        group_result = models.Group(id=hashids.encode(group.id),groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote)
         return group_result
     else:
         return None

@@ -4,9 +4,13 @@ from typing import Optional,List,Union
 from fastapi import FastAPI,Depends,HTTPException,status,Query
 from fastapi.security import OAuth2PasswordBearer,OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+
+from app import schemas
+
+
 from .database import SessionLocal, engine
 
-from . import dep,schemas,models,crud
+from . import dep,models,crud
 
 
 #models.Base.metadata.create_all(bind=engine)
@@ -27,6 +31,7 @@ tags_metadata = [
 ]
 
 app = FastAPI(title="QUAINT-API",description=description,openapi_tags=tags_metadata)
+
 
 
 
@@ -64,9 +69,13 @@ def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
     crud.change_password(db,user)
     return HTTPException(200,"Password changed successfully")
 
+@app.get("/tags/",response_model=List[schemas.Tag])
+def get_all_tags():
+    pass
+
 '''
 @app.put("/users/{user_id}/authority",tags=["users"])
-def grant_authority(user_id:int,role:schemas.AuthorityRole,group_id:Union[int,None]=None,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+def grant_authority(user_id:int,role:schemas.AuthorityRole,group_id:Union[int,None]=None,permittion:schemas.user.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
     user=crud.get_user(db,user_id)
     if not user:
         raise HTTPException(404,"User Not Found")
