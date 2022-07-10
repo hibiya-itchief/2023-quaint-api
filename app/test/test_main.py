@@ -270,3 +270,11 @@ def test_create_user_by_admin(db:Session):
     )
     print(response.json())
     assert response.status_code == 200
+
+
+def test_get_user_by_name(db:Session):
+    user_in = factories.hogehoge_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_in)
+    user = crud.get_user_by_name(db,"hogehoge")
+    print(user)
+    assert user
