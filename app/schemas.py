@@ -37,11 +37,17 @@ class GroupBase(BaseModel):#hashidsのidをURLにする。groupnameは表示名
     enable_vote:bool = True
 class GroupCreate(GroupBase):
     pass
-class Group(GroupBase):
+class GroupMin(GroupBase):
     id:str#hashids
-    events:List['Event']
-    users:List['User']
     tags:List['Tag']
+    class Config:
+        orm_mode=True
+class Group(GroupMin):
+    events:List['Event']
+    class Config:
+        orm_mode=True
+class GroupAdmin(Group):
+    users:List['User']
     votes:List['Vote']
     class Config:
         orm_mode=True
@@ -117,6 +123,8 @@ class Vote(VoteModel):
 
 Event.update_forward_refs()
 Group.update_forward_refs()
+GroupMin.update_forward_refs()
+GroupAdmin.update_forward_refs()
 Tag.update_forward_refs()
 Ticket.update_forward_refs()
 User.update_forward_refs()

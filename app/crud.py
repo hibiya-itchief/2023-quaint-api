@@ -36,15 +36,6 @@ def get_all_users(db:Session):
         users.append(user)
     return users
 
-def get_group(db:Session,group_id:str):
-    id=int(hashids.decode(group_id)[0])
-    group = db.query(models.Group).filter(models.Group.id==id).first()
-    if group:
-        group_result = models.Group(id=hashids.encode(group.id),groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote)
-        return group_result
-    else:
-        return None
-
 '''
 def get_group_by_name(db:Session,groupname:str):
     group = db.query(models.Group).filter(models.Group.groupname==groupname).first()
@@ -78,6 +69,32 @@ def change_password(db:Session,user:schemas.PasswordChange):
     db_user.password_expired=False
     db.commit()
     return user
+
+def create_group(db:Session,group:schemas.GroupCreate):
+    db_group = models.Group(groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote)
+    db.add(db_group)
+    db.commit()
+    db.refresh(db_group)
+    group_result = models.Group(id=hashids.encode(db_group.id),groupname=db_group.groupname,title=db_group.title,description=db_group.description,page_content=db_group.page_content,enable_vote=db_group.enable_vote)
+    return group_result
+def get_all_groups(db:Session):
+    db_groups = db.query(models.Group).all()
+    groups=[]
+    for group in db_groups:
+        group.id = hashids.encode(group.id)
+        groups.append(group)
+    return groups
+def get_group(db:Session,hashids_id:str):
+    try:
+        id=int(hashids.decode(hashids_id)[0])
+    except:
+        return None
+    group = db.query(models.Group).filter(models.Group.id==id).first()
+    if group:
+        group_result = models.Group(id=hashids.encode(group.id),groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote)
+        return group_result
+    else:
+        return None
 
 ## Tag CRUD
 def create_tag(db:Session,tag:schemas.TagCreate):
@@ -131,7 +148,10 @@ def delete_tag(db:Session,hashids_id:str):
 ### 権限関係(Admin以外は要調整)
 
 def grant_admin(db:Session,user:schemas.User):
-    id = int(hashids.decode(user.id)[0])
+    try:
+        id = int(hashids.decode(user.id)[0])
+    except:
+        return None
     db_admin = models.Admin(user_id=id)
     db.add(db_admin)
     db.commit()
@@ -153,7 +173,10 @@ def grant_authorizer_of(db:Session,group:schemas.Group,user:schemas.User):
     return db_authorizer
 
 def check_admin(db:Session,user:schemas.User):
-    id = int(hashids.decode(user.id)[0])
+    try:
+        id = int(hashids.decode(user.id)[0])
+    except:
+        return False
     if not db.query(models.Admin).filter(models.Admin.user_id==id).first():
         return False
     return True
