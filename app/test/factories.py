@@ -13,10 +13,12 @@ class Admin_UserCreateByAdmin():
     password_expired=False
 
 class hogehoge_UserCreateByAdmin():
-    username = "hogehoge"
+    username = "hoge_hoge"
     password = "password"
     is_student=False
     is_family=False
     is_active=False
     password_expired=False
+class tag1_TagCreateByAdmin():
+    tagname="タグ1"
     

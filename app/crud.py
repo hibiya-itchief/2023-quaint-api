@@ -79,6 +79,55 @@ def change_password(db:Session,user:schemas.PasswordChange):
     db.commit()
     return user
 
+## Tag CRUD
+def create_tag(db:Session,tag:schemas.TagCreate):
+    db_tag=models.Tag(tagname=tag.tagname)
+    db.add(db_tag)
+    db.commit()
+    db.refresh(db_tag)
+    tag = models.Tag(id=hashids.encode(db_tag.id),tagname=db_tag.tagname,groups=db_tag.groups)
+    return tag
+def get_all_tags(db:Session):
+    db_tags=db.query(models.Tag).all()
+    tags=[]
+    for tag in db_tags:
+        tag.id = hashids.encode(tag.id)
+        tags.append(tag)
+    return tags
+def get_tag(db:Session,hashids_id:str):
+    try:
+        id=int(hashids.decode(hashids_id)[0])
+        db_tag = db.query(models.Tag).filter(models.Tag.id==id).first()
+    except:
+        return None
+    if db_tag:
+        tag = models.Tag(id=hashids.encode(db_tag.id),tagname=db_tag.tagname,groups=db_tag.groups)
+        return tag
+    return None
+def put_tag(db:Session,hashids_id:str,tag:schemas.TagCreate):
+    try:
+        id=int(hashids.decode(hashids_id)[0])
+        db_tag = db.query(models.Tag).filter(models.Tag.id==id).first()
+    except:
+        return None
+    db_tag.tagname=tag.tagname
+    db.commit()
+    db.refresh(db_tag)
+    tag_result = models.Tag(id=hashids.encode(db_tag.id),tagname=db_tag.tagname,groups=db_tag.groups)
+    return tag_result
+def delete_tag(db:Session,hashids_id:str):
+    try:
+        id=int(hashids.decode(hashids_id)[0])
+        db_tag = db.query(models.Tag).filter(models.Tag.id==id).first()
+    except:
+        return None
+    db.delete(db_tag)
+    db.commit()
+    return 0
+
+
+
+
 ### 権限関係(Admin以外は要調整)
 
 def grant_admin(db:Session,user:schemas.User):

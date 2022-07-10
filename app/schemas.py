@@ -48,6 +48,8 @@ class Group(GroupBase):
 
 class TagBase(BaseModel):
     tagname:str=Query(max_length=200)
+class TagCreate(TagBase):
+    pass
 class Tag(TagBase):
     id:str#hashids
     groups:List['Group']

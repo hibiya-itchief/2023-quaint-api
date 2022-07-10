@@ -24,10 +24,11 @@ tags_metadata = [
         "description": "Operations with users. The **login** logic is also here.",
     },
     {
-        "name": "items",
-        "description": "Manage items. So _fancy_ they have their own docs."
+        "name": "tags",
+        "description": "Tag for Group"
         
     },
+
 ]
 
 app = FastAPI(title="QUAINT-API",description=description,openapi_tags=tags_metadata)
@@ -47,7 +48,7 @@ async def login_for_access_token(db:Session = Depends(dep.get_db),form_data: OAu
     return dep.login_for_access_token(form_data.username,form_data.password,db)
 
 
-@app.get("/users/",response_model=List[schemas.User],tags=["users"],description="Required Authority: **Admin**")
+@app.get("/users",response_model=List[schemas.User],tags=["users"],description="Required Authority: **Admin**")
 def read_all_users(permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
     users = crud.get_all_users(db)
     return users
@@ -69,9 +70,32 @@ def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
     crud.change_password(db,user)
     return HTTPException(200,"Password changed successfully")
 
-@app.get("/tags/",response_model=List[schemas.Tag])
-def get_all_tags():
-    pass
+@app.post("/tags",response_model=schemas.Tag,tags=["tags"])
+def create_tag(tag:schemas.TagCreate,permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    return crud.create_tag(db,tag)
+@app.get("/tags",response_model=List[schemas.Tag],tags=["tags"])
+def get_all_tags(db:Session=Depends(dep.get_db)):
+    return crud.get_all_tags(db)
+@app.get("/tags/{tag_id}",response_model=schemas.Tag,tags=["tags"])
+def get_tag(tag_id:str,db:Session = Depends(dep.get_db)):
+    tag_result = crud.get_tag(db,tag_id)
+    if not tag_result:
+        raise HTTPException(404,"Tag Not Found")
+    return tag_result
+@app.put("/tags/{tag_id}",response_model=schemas.Tag,tags=["tags"])
+def change_tag_name(tag_id:str,tag:schemas.TagCreate,permittion:schemas.User=Depends(dep.admin),db:Session = Depends(dep.get_db)):
+    tag_result = crud.put_tag(db,tag_id,tag)
+    if not tag_result:
+        raise HTTPException(404,"Tag Not Found")
+    return tag_result
+@app.delete("/tags/{tag_id}",tags=["tags"])
+def delete_tag(tag_id:str,permittion:schemas.User=Depends(dep.admin),db:Session = Depends(dep.get_db)):
+    result = crud.delete_tag(db,tag_id)
+    if result==None:
+        raise HTTPException(404,"Tag Not Found")
+    return "Successfully Deleted"
+    
+
 
 '''
 @app.put("/users/{user_id}/authority",tags=["users"])

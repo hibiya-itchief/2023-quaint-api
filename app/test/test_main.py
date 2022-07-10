@@ -244,7 +244,6 @@ def test_create_user_by_admin(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)
     admin = crud.get_user_by_name(db,user_admin.username)
-    print(admin)
     crud.grant_admin(db,admin)
     response = client.post(
         "/token",
@@ -280,3 +279,194 @@ def test_get_user_by_name(db:Session):
     user = crud.get_user_by_name(db,"hogehoge")
     print(user)
     assert user
+
+###Tag CRUD
+def test_create_tag_successfully(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    response = client.post(
+        url="/tags",
+        json={
+            "tagname":"tag1"
+        },
+        headers=headers
+    )
+    assert response.status_code==200
+def test_create_tag_fail_not_admin(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    response = client.post(
+        url="/tags",
+        json={
+            "tagname":"tag1"
+        },
+        headers=headers
+    )
+    assert response.status_code==403
+
+def test_get_all_tags_successfully(db:Session):
+    tag_in = factories.tag1_TagCreateByAdmin()
+    crud.create_tag(db,tag_in)
+    response = client.get(url="/tags")
+    assert 200
+    assert response.json()[0]["tagname"]==tag_in.tagname
+def test_get_tag_successfully(db:Session):
+    tag_in = factories.tag1_TagCreateByAdmin()
+    tag = crud.create_tag(db,tag_in)
+    response = client.get(url="/tags/"+tag.id)
+    assert response.status_code == 200
+def test_get_tag_failed_invalid_hashids(db:Session):
+    tag_in = factories.tag1_TagCreateByAdmin()
+    tag = crud.create_tag(db,tag_in)
+    response = client.get(url="/tags/"+"invalidhashids")
+    assert response.status_code==404
+
+def test_change_tag_name_successfully(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    tag_in = factories.tag1_TagCreateByAdmin()
+    tag = crud.create_tag(db,tag_in)
+    response = client.put(url="/tags/"+tag.id,json={"tagname":"New_name"},headers=headers)
+    assert response.status_code==200
+def test_change_tag_name_failed_invalid_hashids(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    tag_in = factories.tag1_TagCreateByAdmin()
+    tag = crud.create_tag(db,tag_in)
+    response = client.put(url="/tags/"+"invalid-hashids",json={"tagname":"New_name"},headers=headers)
+    assert response.status_code==404
+def test_change_tag_name_failed_not_admin(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    tag_in = factories.tag1_TagCreateByAdmin()
+    tag = crud.create_tag(db,tag_in)
+    response = client.put(url="/tags/"+tag.id,json={"tagname":"New_name"},headers=headers)
+    assert response.status_code==403
+
+def test_delete_tag_successfully(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    tag_in = factories.tag1_TagCreateByAdmin()
+    tag = crud.create_tag(db,tag_in)
+    response = client.delete(url="/tags/"+tag.id,headers=headers)
+    assert response.status_code==200
+def test_delete_tag_failed_invalid_hashids(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    tag_in = factories.tag1_TagCreateByAdmin()
+    tag = crud.create_tag(db,tag_in)
+    response = client.delete(url="/tags/"+"invaild-hashids",headers=headers)
+    assert response.status_code==404
+def test_delete_tag_failed_not_admin(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    tag_in = factories.tag1_TagCreateByAdmin()
+    tag = crud.create_tag(db,tag_in)
+    response = client.delete(url="/tags/"+tag.id,headers=headers)
+    assert response.status_code==403
