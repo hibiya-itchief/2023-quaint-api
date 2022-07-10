@@ -243,6 +243,7 @@ def test_create_user_by_admin(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)
     admin = crud.get_user_by_name(db,user_admin.username)
+    print(admin)
     crud.grant_admin(db,admin)
     response = client.post(
         "/token",
