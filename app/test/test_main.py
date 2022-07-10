@@ -1,7 +1,8 @@
 from fastapi.testclient import TestClient
 from requests import Session
 from app.main import app
-from app import crud, schemas
+from app import crud
+from app import schemas
 from app.test import factories
 
 client = TestClient(app)
@@ -231,7 +232,7 @@ def test_grant_authority_successfully(db:Session):
 
     response = client.put(
         url=request_uri,
-        params={"role":schemas.AuthorityRole.Authorizer,
+        params={"role":schemas.authority.AuthorityRole.Authorizer,
         "group_id":1},
         headers=headers
         )
