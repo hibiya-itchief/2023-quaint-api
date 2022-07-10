@@ -6,6 +6,8 @@ from fastapi.security import OAuth2PasswordBearer,OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app import schemas
+
+
 from .database import SessionLocal, engine
 
 from . import dep,models,crud
@@ -29,6 +31,7 @@ tags_metadata = [
 ]
 
 app = FastAPI(title="QUAINT-API",description=description,openapi_tags=tags_metadata)
+
 
 
 

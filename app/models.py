@@ -1,6 +1,6 @@
 #from numpy import integer
 #from pandas import notnull
-from sqlalchemy import VARCHAR, Boolean, Column, ForeignKey, Integer, String, DateTime
+from sqlalchemy import TEXT, VARCHAR, Boolean, Column, ForeignKey, Integer, String, DateTime
 from sqlalchemy.dialects.sqlite import TIMESTAMP as Timestamp
 # from sqlalchemy.dialects.mysql import TIMESTAMP as Timestamp
 from sqlalchemy.sql.functions import current_timestamp
@@ -43,7 +43,7 @@ class Authority(Base):
     user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
     group_id = Column(Integer,ForeignKey("groups.id"),nullable=False)
 
-    role = Column(String(255))
+    role = Column(VARCHAR(255))
 
 class GroupTag(Base):
     __tablename__="grouptag"
@@ -54,7 +54,7 @@ class GroupTag(Base):
 
 class Tag(Base):
     __tablename__ = "tags"
-    id = Column(Integer,primary=True,index=True,autoincrement=True)
+    id = Column(Integer,primary_key=True,index=True,autoincrement=True)
     tagname = Column(VARCHAR(255),unique=True,nullable=False)
 
     groups = relationship("Group",secondary=GroupTag.__tablename__,back_populates="tags")
@@ -65,16 +65,19 @@ class Vote(Base):
     group_id = Column(Integer,ForeignKey("groups.id"),nullable=False)
     user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
 
+    groups = relationship("Group",back_populates="votes")
+    users = relationship("User",back_populates="votes")
+
 class Group(Base):
     __tablename__ = "groups"
     id = Column(Integer, primary_key=True, index=True,autoincrement=True)
 
-    groupname = Column(String(255), index=True,nullable=False)#団体名
+    groupname = Column(VARCHAR(255), index=True,nullable=False)#団体名
 
-    title = Column(String(255))#演目名
-    description = Column(String(255))#説明(一覧になったときに出る・イベントのデフォルトに使われる)
+    title = Column(VARCHAR(255))#演目名
+    description = Column(VARCHAR(255))#説明(一覧になったときに出る・イベントのデフォルトに使われる)
 
-    page_content = Column(String(65535))#宣伝ページのHTML
+    page_content = Column(TEXT(16383))#宣伝ページのHTML
 
     enable_vote = Column(Boolean,default=True)#投票機能を使うか
 
@@ -82,7 +85,7 @@ class Group(Base):
     events = relationship("Event",back_populates="group")
     users = relationship("User",secondary=Authority.__tablename__,back_populates="groups")
     tags = relationship("Tag",secondary=GroupTag.__tablename__,back_populates="groups")
-    votes = relationship("Vote",secondary=Vote.__tablename__,back_populates="groups")
+    votes = relationship("Vote",back_populates="groups")
     
 
 class Ticket(Base):
@@ -99,15 +102,15 @@ class Ticket(Base):
     is_family_ticket = Column(Boolean,default=False)#家族の1枚保証制度で取られたチケットかどうか
     is_used = Column(Boolean,default=False)
 
-    event = relationship("Event", back_populates="tickets")
+    events = relationship("Event", back_populates="tickets")
     owner = relationship("User", back_populates="tickets")
 
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True,autoincrement=True)
 
-    username = Column(String(25), unique=True, index=True)
-    hashed_password = Column(String(255))
+    username = Column(VARCHAR(25), unique=True, index=True)
+    hashed_password = Column(VARCHAR(255))
 
     is_student = Column(Boolean,default=False)#生徒かどうか
     is_family = Column(Boolean,default=False)#家族アカウントかどうか
@@ -116,4 +119,4 @@ class User(Base):
 
     tickets = relationship("Ticket",back_populates="owner")
     groups = relationship("Group",secondary=Authority.__tablename__,back_populates="users")
-    votes = relationship("Vote",secondary=Vote.__tablename__,back_populates="users")
+    votes = relationship("Vote",back_populates="users")

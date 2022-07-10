@@ -1,1 +1,0 @@
-from app.schema import authority,event,group,tag,ticket,token,user,vote

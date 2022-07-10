@@ -1,3 +1,7 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app import schemas
 from datetime import datetime
 from typing import List, Union
 from fastapi import Query
@@ -5,7 +9,7 @@ from enum import Enum
 
 from pydantic import BaseModel
 
-from app import schemas
+
 
 class UserBase(BaseModel):
     username: str = Query(regex="^[a-zA-Z0-9_\-.]{3,15}$",min_length=4,max_length=25)
@@ -24,9 +28,10 @@ class User(UserBase):
     is_active:bool=False
     password_expired: bool=True
 
-    tickets: List[schemas.ticket.Ticket]=[]
-    groups: List[schemas.group.Group]=[]
-    votes: List[schemas.user.User]=[]
+    
+    groups: List[schemas.group.Group]
+    votes: List[schemas.vote.Vote]
+    tickets: List[schemas.ticket.Ticket]
 
     class Config:
         orm_mode=True
