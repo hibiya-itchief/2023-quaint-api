@@ -243,6 +243,7 @@ def test_create_user_by_admin(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)
     admin = crud.get_user_by_name(db,user_admin.username)
+    print(admin)
     crud.grant_admin(db,admin)
     response = client.post(
         "/token",
@@ -270,3 +271,11 @@ def test_create_user_by_admin(db:Session):
     )
     print(response.json())
     assert response.status_code == 200
+
+
+def test_get_user_by_name(db:Session):
+    user_in = factories.hogehoge_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_in)
+    user = crud.get_user_by_name(db,"hogehoge")
+    print(user)
+    assert user
