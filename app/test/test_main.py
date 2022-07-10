@@ -232,7 +232,7 @@ def test_grant_authority_successfully(db:Session):
 
     response = client.put(
         url=request_uri,
-        params={"role":schemas.authority.AuthorityRole.Authorizer,
+        params={"role":schemas.AuthorityRole.Authorizer,
         "group_id":1},
         headers=headers
         )

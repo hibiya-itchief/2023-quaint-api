@@ -79,10 +79,10 @@ async def get_current_user(db:Session = Depends(get_db),token: str = Depends(oau
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-        token_data = schemas.token.TokenData(username=username)
+        token_data = schemas.TokenData(username=username)
     except JWTError:
         raise credentials_exception
-    user:schemas.user.User = crud.get_user_by_name(db, username=token_data.username)
+    user:schemas.User = crud.get_user_by_name(db, username=token_data.username)
     if user is None:
         raise credentials_exception
     if user.password_expired:
@@ -90,12 +90,12 @@ async def get_current_user(db:Session = Depends(get_db),token: str = Depends(oau
     return user
 
 
-def admin(db:Session = Depends(get_db),user:schemas.user.User = Depends(get_current_user)):
+def admin(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
     if not crud.check_admin(db,user):
         raise HTTPException(403,detail="Permittion Error")
     return user
 
-def owner_of(groupname:str,db:Session = Depends(get_db),user:schemas.user.User = Depends(get_current_user)):
+def owner_of(groupname:str,db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
     group=crud.get_group_by_name(db,groupname)###
     if not group:
         raise HTTPException(400,detail='Group "'+groupname+'" does not exist')
@@ -105,14 +105,14 @@ def owner_of(groupname:str,db:Session = Depends(get_db),user:schemas.user.User =
         raise HTTPException(403,detail="Permittion Error")
     return user
 
-def owner(db:Session = Depends(get_db),user:schemas.user.User = Depends(get_current_user)):
+def owner(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
     if crud.check_admin(db,user):
         return user
     if not crud.check_owner(db,user):
         raise HTTPException(403,detail="Permittion Error")
     return user
 
-def authorizer_of(groupname:str,db:Session = Depends(get_db),user:schemas.user.User=Depends(get_current_user)):
+def authorizer_of(groupname:str,db:Session = Depends(get_db),user:schemas.User=Depends(get_current_user)):
     group=crud.get_group_by_name(db,groupname)###
     if not group:
         raise HTTPException(400,detail='Group "'+groupname+'" does not exist')
@@ -124,7 +124,7 @@ def authorizer_of(groupname:str,db:Session = Depends(get_db),user:schemas.user.U
         raise HTTPException(403,detail="Permittion Error")
     return user
 
-def authorizer(db:Session = Depends(get_db),user:schemas.user.User=Depends(get_current_user)):
+def authorizer(db:Session = Depends(get_db),user:schemas.User=Depends(get_current_user)):
     if crud.check_admin(db,user):
         return user
     if crud.check_owner(db,user):
