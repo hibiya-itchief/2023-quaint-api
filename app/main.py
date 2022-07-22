@@ -89,7 +89,7 @@ def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
 def get_all_tags():
     pass
 
-'''
+
 @app.put("/users/{user_id}/authority",tags=["users"])
 def grant_authority(user_id:str,role:schemas.AuthorityRole,group_id:Union[str,None]=None,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
     user=crud.get_user(db,user_id)
@@ -114,13 +114,13 @@ def grant_authority(user_id:str,role:schemas.AuthorityRole,group_id:Union[str,No
             if crud.check_authorizer_of(db,group,user):
                 raise HTTPException(200)
             return crud.grant_authorizer_of(db,group,user)
-'''
+
 
 
 @app.post("/groups",response_model=schemas.Group,tags=["groups"],description="Required Authority: **Admin**")
 def create_group(group:schemas.GroupCreate,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
     return crud.create_group(db,group)
-@app.get("/groups",response_model=List[schemas.GroupMin],tags=["groups"])
+@app.get("/groups",response_model=List[schemas.Group],tags=["groups"])
 def get_all_groups(db:Session=Depends(dep.get_db)):
     return crud.get_all_groups(db)
 @app.get("/groups/{group_id}",response_model=schemas.Group,tags=["groups"])

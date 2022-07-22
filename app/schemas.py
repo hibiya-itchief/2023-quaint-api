@@ -37,13 +37,14 @@ class GroupBase(BaseModel):#hashidsのidをURLにする。groupnameは表示名
     description:Union[str,None] = Query(default=None,max_length=200)
     page_content:Union[str,None] = Query(default=None,max_length=16000)
     enable_vote:bool = True
-    twitter_url:Union[str,None]=Query(default=None,regex="https?://twitter.com/[0-9a-zA-Z_]{1,15}/?")
-    instagram_url:Union[str,None]=Query(default=None,regex="https?://instagram.com/[0-9a-zA-Z_.]{1,30}/?")
-    stream_url:Union[str,None]=Query(default=None,regex="https?://web.microsoftstream.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+")
+    twitter_url:Union[str,None]=Query(default=None,regex="https?://twitter\.com/[0-9a-zA-Z_]{1,15}/?")
+    instagram_url:Union[str,None]=Query(default=None,regex="https?://instagram\.com/[0-9a-zA-Z_.]{1,30}/?")
+    stream_url:Union[str,None]=Query(default=None,regex="https?://web.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?")
 class GroupCreate(GroupBase):
     pass
-class Group(GroupBase):
+class GroupMin(GroupBase):
     id:str#hashids
+class Group(GroupMin):
     events:List['Event']
     class Config:
         orm_mode=True
@@ -53,6 +54,8 @@ class GroupTagCreate(BaseModel):
 
 class TagBase(BaseModel):
     tagname:str=Query(max_length=200)
+class TagCreate(TagBase):
+    pass
 class Tag(TagBase):
     id:str#hashids
     #groups:List['Group']
@@ -121,6 +124,7 @@ class Vote(VoteModel):
 Event.update_forward_refs()
 EventAdmin.update_forward_refs()
 Group.update_forward_refs()
+GroupMin.update_forward_refs()
 Tag.update_forward_refs()
 Ticket.update_forward_refs()
 User.update_forward_refs()
