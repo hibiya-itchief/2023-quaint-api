@@ -156,7 +156,7 @@ def get_event(group_id:str,event_id:str,db:Session=Depends(dep.get_db)):
 
 
 
-@app.post("/tags",response_model=schemas.Tag,tags=["tags"])
+@app.post("/tags",response_model=schemas.Tag,tags=["tags"],description="Required Authority: **Admin**")
 def create_tag(tag:schemas.TagCreate,permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
     return crud.create_tag(db,tag)
 @app.get("/tags",response_model=List[schemas.Tag],tags=["tags"])
@@ -168,13 +168,13 @@ def get_tag(tag_id:str,db:Session = Depends(dep.get_db)):
     if not tag_result:
         raise HTTPException(404,"Tag Not Found")
     return tag_result
-@app.put("/tags/{tag_id}",response_model=schemas.Tag,tags=["tags"])
+@app.put("/tags/{tag_id}",response_model=schemas.Tag,tags=["tags"],description="Required Authority: **Admin**")
 def change_tag_name(tag_id:str,tag:schemas.TagCreate,permittion:schemas.User=Depends(dep.admin),db:Session = Depends(dep.get_db)):
     tag_result = crud.put_tag(db,tag_id,tag)
     if not tag_result:
         raise HTTPException(404,"Tag Not Found")
     return tag_result
-@app.delete("/tags/{tag_id}",tags=["tags"])
+@app.delete("/tags/{tag_id}",tags=["tags"],description="Required Authority: **Admin**")
 def delete_tag(tag_id:str,permittion:schemas.User=Depends(dep.admin),db:Session = Depends(dep.get_db)):
     result = crud.delete_tag(db,tag_id)
     if result==None:
