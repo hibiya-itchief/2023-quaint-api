@@ -118,6 +118,8 @@ def create_event(db:Session,hashidsgroup_id:str,event:schemas.EventCreate):
         group_id=int(hashids.decode(group.id)[0])
     except:
         return None
+    if not (event.sell_at<event.sell_ends and event.sell_ends<event.starts_at and event.starts_at<event.ends_at):
+        return None
     db_event = models.Event(title=event.title,description=event.description,sell_at=event.sell_at,sell_ends=event.sell_ends,starts_at=event.starts_at,ends_at=event.ends_at,ticket_stock=event.ticket_stock,lottery=event.lottery,group_id=group_id)
     db.add(db_event)
     db.commit()
