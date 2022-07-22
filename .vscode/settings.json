@@ -3,5 +3,8 @@
         "app"
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "workbench.colorCustomizations": {
+    "statusBar.background": "#7286a0"
+    }
 }
