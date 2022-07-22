@@ -66,6 +66,7 @@ def change_password(db:Session,user:schemas.PasswordChange):
     return user
 
 def create_group(db:Session,group:schemas.GroupCreate):
+
     db_group = models.Group(groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
     db.add(db_group)
     db.commit()
@@ -204,7 +205,10 @@ def delete_tag(db:Session,hashids_id:str):
 ### 権限関係(Admin以外は要調整)
 
 def grant_admin(db:Session,user:schemas.User):
-    id = int(hashids.decode(user.id)[0])
+    try:
+        id = int(hashids.decode(user.id)[0])
+    except:
+        return None
     db_admin = models.Admin(user_id=id)
     db.add(db_admin)
     db.commit()
@@ -240,7 +244,10 @@ def grant_authorizer_of(db:Session,group:schemas.Group,user:schemas.User):
     return "Grant Authorizer Successfully"
 
 def check_admin(db:Session,user:schemas.User):
-    id = int(hashids.decode(user.id)[0])
+    try:
+        id = int(hashids.decode(user.id)[0])
+    except:
+        return False
     if not db.query(models.Admin).filter(models.Admin.user_id==id).first():
         return False
     return True

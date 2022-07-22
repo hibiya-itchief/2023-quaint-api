@@ -36,6 +36,7 @@ tags_metadata = [
         "name": "tags",
         "description": "Tags for Group"
     },
+
 ]
 
 app = FastAPI(title="QUAINT-API",description=description,openapi_tags=tags_metadata)
@@ -62,12 +63,6 @@ def read_root():
 async def login_for_access_token(db:Session = Depends(dep.get_db),form_data: OAuth2PasswordRequestForm = Depends()):
     return dep.login_for_access_token(form_data.username,form_data.password,db)
 
-
-@app.get("/users/",response_model=List[schemas.User],tags=["users"],description="Required Authority: **Admin**")
-def read_all_users(permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
-    users = crud.get_all_users(db)
-    return users
-
 @app.post("/users",response_model=schemas.Token,tags=["users"])
 def create_user(user:schemas.UserCreate,db:Session=Depends(dep.get_db)):
     db_user = crud.get_user_by_name(db,username=user.username)
@@ -75,7 +70,10 @@ def create_user(user:schemas.UserCreate,db:Session=Depends(dep.get_db)):
         raise HTTPException(status_code=400,detail="username already registered")
     crud.create_user(db=db,user=user)
     return dep.login_for_access_token(user.username,user.password,db)
-
+@app.get("/users",response_model=List[schemas.User],tags=["users"],description="Required Authority: **Admin**")
+def read_all_users(permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    users = crud.get_all_users(db)
+    return users
 @app.put("/users/me/password",tags=["users"])
 def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
     if not dep.authenticate_user(db,user.username,user.password):
@@ -84,11 +82,6 @@ def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
         raise HTTPException(400,"Enter different password from present")
     crud.change_password(db,user)
     return HTTPException(200,"Password changed successfully")
-
-@app.get("/tags/",response_model=List[schemas.Tag])
-def get_all_tags():
-    pass
-
 
 @app.put("/users/{user_id}/authority",tags=["users"])
 def grant_authority(user_id:str,role:schemas.AuthorityRole,group_id:Union[str,None]=None,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
@@ -117,6 +110,7 @@ def grant_authority(user_id:str,role:schemas.AuthorityRole,group_id:Union[str,No
 
 
 
+
 @app.post("/groups",response_model=schemas.Group,tags=["groups"],description="Required Authority: **Admin**")
 def create_group(group:schemas.GroupCreate,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
     return crud.create_group(db,group)
@@ -129,6 +123,7 @@ def get_group(group_id:str,db:Session=Depends(dep.get_db)):
     if not group_result:
         raise HTTPException(404,"Group Not Found")
     return group_result
+
 @app.put("/groups/{group_id}/tags",tags=["groups"],description="Required Authority: **Admin**")
 def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,db:Session=Depends(dep.get_db)):
     grouptag = crud.add_tag(db,group_id,tag_id)
@@ -181,6 +176,7 @@ def delete_tag(tag_id:str,permittion:schemas.User=Depends(dep.admin),db:Session 
         raise HTTPException(404,"Tag Not Found")
     return "Successfully Deleted"
     
+
 
     
 @app.post("/admin/users",response_model=schemas.User,tags=["admin"],description="Required Authority: **Admin**")

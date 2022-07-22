@@ -13,10 +13,24 @@ class Admin_UserCreateByAdmin():
     password_expired=False
 
 class hogehoge_UserCreateByAdmin():
-    username = "hogehoge"
+    username = "hoge_hoge"
     password = "password"
     is_student=False
     is_family=False
     is_active=False
     password_expired=False
+class tag1_TagCreateByAdmin():
+    tagname="タグ1"
+class group1_GroupCreateByAdmin():
+    groupname="2年8組"
+    title="SING"
+    description="ここに説明文"
+    page_content="<html><h1>宣伝ページ</h1></html>"
+    enable_vote=True
+class group2_GroupCreateByAdmin():
+    groupname="1年8組"
+    title="あああああ"
+    description="ここに説明文"
+    page_content="<html><h1>宣伝ページ</h1></html>"
+    enable_vote=True
     

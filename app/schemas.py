@@ -42,9 +42,12 @@ class GroupBase(BaseModel):#hashidsのidをURLにする。groupnameは表示名
     stream_url:Union[str,None]=Query(default=None,regex="https?://web.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?")
 class GroupCreate(GroupBase):
     pass
-
 class Group(GroupBase):
     id:str#hashids
+    tags:List['Tag']
+    class Config:
+        orm_mode=True
+class Group(GroupMin):
     events:List['Event']
     class Config:
         orm_mode=True
@@ -124,6 +127,8 @@ class Vote(VoteModel):
 Event.update_forward_refs()
 EventAdmin.update_forward_refs()
 Group.update_forward_refs()
+GroupMin.update_forward_refs()
+GroupAdmin.update_forward_refs()
 Tag.update_forward_refs()
 Ticket.update_forward_refs()
 User.update_forward_refs()
