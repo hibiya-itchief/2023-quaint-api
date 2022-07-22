@@ -129,7 +129,7 @@ def get_group(group_id:str,db:Session=Depends(dep.get_db)):
     if not group_result:
         raise HTTPException(404,"Group Not Found")
     return group_result
-@app.put("/groups/{group_id}/tags",tags=["tags"],description="Required Authority: **Admin**")
+@app.put("/groups/{group_id}/tags",tags=["groups"],description="Required Authority: **Admin**")
 def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,db:Session=Depends(dep.get_db)):
     grouptag = crud.add_tag(db,group_id,tag_id)
     if not grouptag:
