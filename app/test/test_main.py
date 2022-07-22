@@ -1,3 +1,4 @@
+from typing_extensions import assert_type
 from fastapi.testclient import TestClient
 from requests import Session
 from app.main import app
@@ -50,48 +51,7 @@ def test_JWTトークンの取得に失敗_password(db:Session):
     })
     assert response.status_code == 401
 
-def test_read_all_users_successfully(db:Session):
-    user_in = factories.Admin_UserCreateByAdmin()
-    crud.create_user_by_admin(db,user_in)
-    admin = crud.get_user_by_name(db,user_in.username)
-    crud.grant_admin(db,admin)
-    response = client.post(
-        "/token",
-        data={
-        "grant_type":"password",
-        "username":user_in.username,
-        "password":user_in.password
-    })
-    assert response.status_code == 200
-    jwt = response.json()
-    headers = {
-        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
-    }
-
-    response = client.get("/users/",headers=headers)
-    assert response.status_code == 200
-
-def test_read_all_users_fail_not_admin(db:Session):
-    user_in = factories.hogehoge_UserCreateByAdmin()
-    crud.create_user_by_admin(db,user_in)
-    
-    response = client.post(
-        "/token",
-        data={
-        "grant_type":"password",
-        "username":user_in.username,
-        "password":user_in.password
-    })
-    assert response.status_code == 200
-    jwt = response.json()
-    headers = {
-        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
-    }
-
-    response = client.get("/users/",headers=headers)
-    assert response.status_code == 403
-
-
+### User CRUD
 def test_create_user_by_public_successfully(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
@@ -101,7 +61,6 @@ def test_create_user_by_public_successfully(db:Session):
         "username":"fugafuga",
         "password":"password"
     })
-    
     assert response.status_code == 200
 def test_create_user_by_public_fail_short_username(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
@@ -153,6 +112,79 @@ def test_create_user_by_public_fail_registered_name(db:Session):
         "password":"password"
     })
     assert response.status_code == 400
+def test_create_user_by_admin(db:Session):
+    user_in = factories.hogehoge_UserCreateByAdmin()
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    response = client.post(
+        url="/admin/users",
+        json={
+            "username":user_in.username,
+            "password":user_in.password,
+            "is_student":user_in.is_student,
+            "is_family":user_in.is_family,
+            "is_active":user_in.is_active,
+            "password_expired":user_in.password_expired
+        },
+        headers=headers
+    )
+    assert response.status_code == 200
+    assert type(response.json()["id"]) is str #hashidsされているか
+
+def test_read_all_users_successfully(db:Session):
+    user_in = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_in)
+    admin = crud.get_user_by_name(db,user_in.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_in.username,
+        "password":user_in.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    response = client.get("/users/",headers=headers)
+    assert response.status_code == 200
+def test_read_all_users_fail_not_admin(db:Session):
+    user_in = factories.hogehoge_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_in)
+    
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_in.username,
+        "password":user_in.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    response = client.get("/users/",headers=headers)
+    assert response.status_code == 403
+
 
 
 def test_change_password_successfully(db:Session):
@@ -167,7 +199,6 @@ def test_change_password_successfully(db:Session):
         "new_password":"newpassword"
     })
     assert response.status_code == 200
-
 def test_change_password_fail_invalid_name(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
@@ -205,7 +236,7 @@ def test_change_password_fail_same_password(db:Session):
     })
     assert response.status_code == 400
 
-def test_grant_authority_successfully(db:Session):
+def test_grant_authority_admin_successfully(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
     user_admin = factories.Admin_UserCreateByAdmin()
@@ -227,16 +258,12 @@ def test_grant_authority_successfully(db:Session):
 
     user = crud.get_user_by_name(db,user_in.username)
 
-    request_uri = "/users/"+str(user.id)+"/authority"
-    print(request_uri)
-
     response = client.put(
-        url=request_uri,
-        params={"role":schemas.AuthorityRole.Authorizer,
-        "group_id":1},
+        url="/users/"+user.id+"/authority",
+        params={"role":schemas.AuthorityRole.Admin},
         headers=headers
         )
-    assert response.status_code == 404
+    assert response.status_code == 200
     
     
 def test_create_user_by_admin(db:Session):
@@ -273,10 +300,10 @@ def test_create_user_by_admin(db:Session):
     print(response.json())
     assert response.status_code == 200
 
+    
 
 def test_get_user_by_name(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
-    user = crud.get_user_by_name(db,"hogehoge")
-    print(user)
+    user = crud.get_user_by_name(db,user_in.username)
     assert user
