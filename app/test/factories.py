@@ -27,10 +27,16 @@ class group1_GroupCreateByAdmin():
     description="ここに説明文"
     page_content="<html><h1>宣伝ページ</h1></html>"
     enable_vote=True
+    twitter_url=None
+    instagram_url=None
+    stream_url=None
 class group2_GroupCreateByAdmin():
     groupname="1年8組"
     title="あああああ"
     description="ここに説明文"
     page_content="<html><h1>宣伝ページ</h1></html>"
     enable_vote=True
+    twitter_url=None
+    instagram_url=None
+    stream_url=None
     

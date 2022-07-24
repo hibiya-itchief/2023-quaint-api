@@ -158,7 +158,7 @@ def create_tag(db:Session,tag:schemas.TagCreate):
     db.add(db_tag)
     db.commit()
     db.refresh(db_tag)
-    tag = models.Tag(id=hashids.encode(db_tag.id),tagname=db_tag.tagname,groups=db_tag.groups)
+    tag = models.Tag(id=hashids.encode(db_tag.id),tagname=db_tag.tagname)
     return tag
 def get_all_tags(db:Session):
     db_tags=db.query(models.Tag).all()
@@ -174,7 +174,7 @@ def get_tag(db:Session,hashids_id:str):
     except:
         return None
     if db_tag:
-        tag = models.Tag(id=hashids.encode(db_tag.id),tagname=db_tag.tagname,groups=db_tag.groups)
+        tag = models.Tag(id=hashids.encode(db_tag.id),tagname=db_tag.tagname)
         return tag
     return None
 def put_tag(db:Session,hashids_id:str,tag:schemas.TagCreate):
@@ -186,7 +186,7 @@ def put_tag(db:Session,hashids_id:str,tag:schemas.TagCreate):
     db_tag.tagname=tag.tagname
     db.commit()
     db.refresh(db_tag)
-    tag_result = models.Tag(id=hashids.encode(db_tag.id),tagname=db_tag.tagname,groups=db_tag.groups)
+    tag_result = models.Tag(id=hashids.encode(db_tag.id),tagname=db_tag.tagname)
     return tag_result
 def delete_tag(db:Session,hashids_id:str):
     try:
