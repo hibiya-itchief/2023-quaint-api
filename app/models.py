@@ -27,7 +27,6 @@ class Event(Base):
     lottery = Column(Boolean,default=False,nullable=False) # True:抽選 False:先着
     group_id = Column(Integer, ForeignKey("groups.id"),nullable=False)
 
-    group = relationship("Group",back_populates="events")
     tickets = relationship("Ticket",back_populates="events")
 
 class Admin(Base):
@@ -56,8 +55,7 @@ class Tag(Base):
     __tablename__ = "tags"
     id = Column(Integer,primary_key=True,index=True,autoincrement=True)
     tagname = Column(VARCHAR(255),unique=True,nullable=False)
-
-    groups = relationship("Group",secondary=GroupTag.__tablename__,back_populates="tags")
+    #groups = relationship("Group",secondary=GroupTag.__tablename__,back_populates="tags")
 
 class Vote(Base):
     __tablename__ = "votes"
@@ -65,8 +63,6 @@ class Vote(Base):
     group_id = Column(Integer,ForeignKey("groups.id"),nullable=False)
     user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
 
-    groups = relationship("Group",back_populates="votes")
-    users = relationship("User",back_populates="votes")
 
 class Group(Base):
     __tablename__ = "groups"
@@ -80,12 +76,13 @@ class Group(Base):
     page_content = Column(TEXT(16383))#宣伝ページのHTML
 
     enable_vote = Column(Boolean,default=True)#投票機能を使うか
+    twitter_url = Column(VARCHAR(255))
+    instagram_url = Column(VARCHAR(255))
+    stream_url = Column(VARCHAR(255))
 
 
-    events = relationship("Event",back_populates="group")
-    users = relationship("User",secondary=Authority.__tablename__,back_populates="groups")
-    tags = relationship("Tag",secondary=GroupTag.__tablename__,back_populates="groups")
-    votes = relationship("Vote",back_populates="groups")
+    events = relationship("Event",backref="group")
+    tags = relationship("Tag",secondary=GroupTag.__tablename__)
     
 
 class Ticket(Base):
@@ -103,7 +100,6 @@ class Ticket(Base):
     is_used = Column(Boolean,default=False)
 
     events = relationship("Event", back_populates="tickets")
-    owner = relationship("User", back_populates="tickets")
 
 class User(Base):
     __tablename__ = "users"
@@ -117,6 +113,4 @@ class User(Base):
     is_active = Column(Boolean, default=False)#学校にいるか
     password_expired=Column(Boolean,default=False)#Password変更を要求
 
-    tickets = relationship("Ticket",back_populates="owner")
-    groups = relationship("Group",secondary=Authority.__tablename__,back_populates="users")
-    votes = relationship("Vote",back_populates="users")
+    tickets = relationship("Ticket",backref="owner")

@@ -2,6 +2,7 @@ from datetime import datetime,timedelta
 from typing import Optional,List,Union
 
 from fastapi import FastAPI,Depends,HTTPException,status,Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer,OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -25,19 +26,30 @@ tags_metadata = [
     },
     {
         "name":"groups",
-        "description":"groups that has events"
+        "description":"groups that have events"
+    },
+    {
+        "name":"events",
+        "description":"events that have tickets"
     },
     {
         "name": "tags",
         "description": "Tags for Group"
-        
     },
 
 ]
 
 app = FastAPI(title="QUAINT-API",description=description,openapi_tags=tags_metadata)
 
+origins = ['*']
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -70,9 +82,9 @@ def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
         raise HTTPException(400,"Enter different password from present")
     crud.change_password(db,user)
     return HTTPException(200,"Password changed successfully")
-'''
+
 @app.put("/users/{user_id}/authority",tags=["users"])
-def grant_authority(user_id:int,role:schemas.AuthorityRole,group_id:Union[int,None]=None,permittion:schemas.user.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+def grant_authority(user_id:str,role:schemas.AuthorityRole,group_id:Union[str,None]=None,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
     user=crud.get_user(db,user_id)
     if not user:
         raise HTTPException(404,"User Not Found")
@@ -95,8 +107,6 @@ def grant_authority(user_id:int,role:schemas.AuthorityRole,group_id:Union[int,No
             if crud.check_authorizer_of(db,group,user):
                 raise HTTPException(200)
             return crud.grant_authorizer_of(db,group,user)
-'''
-
 
 
 @app.post("/groups",response_model=schemas.Group,tags=["groups"],description="Required Authority: **Admin**")
@@ -111,6 +121,31 @@ def get_group(group_id:str,db:Session=Depends(dep.get_db)):
     if not group_result:
         raise HTTPException(404,"Group Not Found")
     return group_result
+@app.put("/groups/{group_id}/tags",tags=["tags"],description="Required Authority: **Admin**")
+def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,db:Session=Depends(dep.get_db)):
+    grouptag = crud.add_tag(db,group_id,tag_id)
+    if not grouptag:
+        raise HTTPException(404,"Not Found")
+    return "Add Tag Successfully"
+
+### Event Crud
+@app.post("/groups/{group_id}/events",response_model=schemas.Event,tags=["events"],description="Required Authority: **Admin**")
+def create_event(group_id:str,event:schemas.EventCreate,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    event = crud.create_event(db,group_id,event)
+    if not event:
+        raise HTTPException(400,"Invalid Parameter")
+    return event
+@app.get("/groups/{group_id}/events",response_model=List[schemas.Event],tags=["events"])
+def get_all_events(group_id:str,db:Session=Depends(dep.get_db)):
+    return crud.get_all_events(db,group_id)
+@app.get("/groups/{group_id}/events/{event_id}",response_model=schemas.Event,tags=["events"])
+def get_event(group_id:str,event_id:str,db:Session=Depends(dep.get_db)):
+    event = crud.get_event(db,group_id,event_id)
+    if not event:
+        raise HTTPException(404,"Not Found")
+    return event
+
+
 
 
 @app.post("/tags",response_model=schemas.Tag,tags=["tags"])
@@ -138,31 +173,6 @@ def delete_tag(tag_id:str,permittion:schemas.User=Depends(dep.admin),db:Session 
         raise HTTPException(404,"Tag Not Found")
     return "Successfully Deleted"
     
-
-@app.put("/users/{user_id}/authority",tags=["users"])
-def grant_authority(user_id:int,role:schemas.AuthorityRole,group_id:Union[int,None]=None,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
-    user=crud.get_user(db,user_id)
-    if not user:
-        raise HTTPException(404,"User Not Found")
-
-    if role ==schemas.AuthorityRole.Admin:
-        if crud.check_admin(db,user):
-            raise HTTPException(200)
-        return crud.grant_admin(db,user)
-    else:
-        if not group_id:
-            raise HTTPException(400,"Invalid Parameter")
-        group = crud.get_group(db,group_id)
-        if not group:
-            raise HTTPException(404,"Group Not Found")
-        if role == schemas.AuthorityRole.Owner:
-            if crud.check_owner_of(db,group,user):
-                raise HTTPException(200)
-            return crud.grant_owner_of(db,group,user)
-        elif role == schemas.AuthorityRole.Authorizer:
-            if crud.check_authorizer_of(db,group,user):
-                raise HTTPException(200)
-            return crud.grant_authorizer_of(db,group,user)
 
     
 @app.post("/admin/users",response_model=schemas.User,tags=["admin"],description="Required Authority: **Admin**")
