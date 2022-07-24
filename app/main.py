@@ -149,7 +149,7 @@ def get_event(group_id:str,event_id:str,db:Session=Depends(dep.get_db)):
 
 
 @app.put("/groups/{group_id}/tags",tags=["groups"],description="Required Authority: **Admin**")
-def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,db:Session=Depends(dep.get_db)):
+def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
     grouptag = crud.add_tag(db,group_id,tag_id)
     if not grouptag:
         raise HTTPException(404,"Not Found")
