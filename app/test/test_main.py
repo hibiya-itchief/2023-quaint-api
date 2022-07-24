@@ -266,38 +266,6 @@ def test_grant_authority_admin_successfully(db:Session):
     assert response.status_code == 200
     
     
-def test_create_user_by_admin(db:Session):
-    user_in = factories.hogehoge_UserCreateByAdmin()
-    user_admin = factories.Admin_UserCreateByAdmin()
-    crud.create_user_by_admin(db,user_admin)
-    admin = crud.get_user_by_name(db,user_admin.username)
-    crud.grant_admin(db,admin)
-    response = client.post(
-        "/token",
-        data={
-        "grant_type":"password",
-        "username":user_admin.username,
-        "password":user_admin.password
-    })
-    assert response.status_code == 200
-    jwt = response.json()
-    headers = {
-        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
-    }
-    response = client.post(
-        url="/admin/users",
-        json={
-            "username":user_in.username,
-            "password":user_in.password,
-            "is_student":user_in.is_student,
-            "is_family":user_in.is_family,
-            "is_active":user_in.is_active,
-            "password_expired":user_in.password_expired
-        },
-        headers=headers
-    )
-    print(response.json())
-    assert response.status_code == 200
 
     
 

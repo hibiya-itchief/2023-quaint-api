@@ -66,7 +66,6 @@ def change_password(db:Session,user:schemas.PasswordChange):
     return user
 
 def create_group(db:Session,group:schemas.GroupCreate):
-
     db_group = models.Group(groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
     db.add(db_group)
     db.commit()
