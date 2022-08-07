@@ -1,6 +1,0 @@
-groups
-users
-programs
-authority
-tickets
-alembic_version
