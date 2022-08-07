@@ -27,7 +27,6 @@ class Event(Base):
     lottery = Column(Boolean,default=False,nullable=False) # True:抽選 False:先着
     group_id = Column(Integer, ForeignKey("groups.id"),nullable=False)
 
-    tickets = relationship("Ticket",back_populates="events")
 
 class Admin(Base):
     __tablename__ = "admin"
@@ -55,7 +54,6 @@ class Tag(Base):
     __tablename__ = "tags"
     id = Column(Integer,primary_key=True,index=True,autoincrement=True)
     tagname = Column(VARCHAR(255),unique=True,nullable=False)
-    #groups = relationship("Group",secondary=GroupTag.__tablename__,back_populates="tags")
 
 class Vote(Base):
     __tablename__ = "votes"
@@ -81,8 +79,6 @@ class Group(Base):
     stream_url = Column(VARCHAR(255))
 
 
-    events = relationship("Event",backref="group")
-    tags = relationship("Tag",secondary=GroupTag.__tablename__)
     
 
 class Ticket(Base):
@@ -99,7 +95,6 @@ class Ticket(Base):
     is_family_ticket = Column(Boolean,default=False)#家族の1枚保証制度で取られたチケットかどうか
     is_used = Column(Boolean,default=False)
 
-    events = relationship("Event", back_populates="tickets")
 
 class User(Base):
     __tablename__ = "users"
@@ -113,4 +108,3 @@ class User(Base):
     is_active = Column(Boolean, default=False)#学校にいるか
     password_expired=Column(Boolean,default=False)#Password変更を要求
 
-    tickets = relationship("Ticket",backref="owner")

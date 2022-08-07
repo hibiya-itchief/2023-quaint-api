@@ -44,8 +44,6 @@ class GroupCreate(GroupBase):
     pass
 class Group(GroupBase):
     id:str#hashids
-    tags:List['Tag']
-    events:List['Event']
     class Config:
         orm_mode=True
 
@@ -58,7 +56,6 @@ class TagCreate(TagBase):
     pass
 class Tag(TagBase):
     id:str#hashids
-    #groups:List['Group']
     class Config:
         orm_mode=True
 
@@ -74,8 +71,6 @@ class Ticket(TicketBase):
     created_at:int
     is_used:bool
 
-    events:List['Event']
-    owner:List['User']
     class Config:
         orm_mode=True
 
@@ -101,11 +96,6 @@ class User(UserBase):
     is_family:bool=False
     is_active:bool=False
     password_expired: bool=True
-
-    
-    groups: List['Group']=[]
-    votes: List['Vote']=[]
-    tickets: List['Ticket']=[]
 
     class Config:
         orm_mode=True

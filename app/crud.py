@@ -86,7 +86,7 @@ def get_group(db:Session,hashids_id:str):
         return None
     group = db.query(models.Group).filter(models.Group.id==id).first()
     if group:
-        group_result = models.Group(id=hashids.encode(group.id),groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url,tags=group.tags)
+        group_result = models.Group(id=hashids.encode(group.id),groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
         return group_result
     else:
         return None
