@@ -85,7 +85,7 @@ class Ticket(Base):
     __tablename__ = "tickets"
 
     id=Column(Integer,primary_key=True,index=True,autoincrement=True)
-    created_at = Column(Timestamp,server_default=current_timestamp())
+    created_at = Column(DateTime,server_default=current_timestamp())
 
     event_id = Column(Integer, ForeignKey("events.id"))
     owner_id = Column(Integer, ForeignKey("users.id"))

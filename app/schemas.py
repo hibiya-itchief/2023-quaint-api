@@ -68,7 +68,7 @@ class TicketCreate(TicketBase):
     pass
 class Ticket(TicketBase):
     id:str#hashids
-    created_at:int
+    created_at:datetime
     is_used:bool
 
     class Config:
