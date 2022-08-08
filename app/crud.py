@@ -65,6 +65,15 @@ def change_password(db:Session,user:schemas.PasswordChange):
     db.commit()
     return user
 
+def get_list_of_your_tickets(db:Session,user:schemas.User):
+    user_id = int(hashids.decode(user.id)[0])
+    db_tickets = db.query(models.Ticket).filter(models.Ticket.owner_id==user_id)
+    tickets=[]
+    for ticket in db_tickets:
+        ticket.id = hashids.encode(ticket.id)
+        tickets.append(ticket)
+    return tickets
+
 def create_group(db:Session,group:schemas.GroupCreate):
     db_group = models.Group(groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
     db.add(db_group)
@@ -86,7 +95,7 @@ def get_group(db:Session,hashids_id:str):
         return None
     group = db.query(models.Group).filter(models.Group.id==id).first()
     if group:
-        group_result = models.Group(id=hashids.encode(group.id),groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url,tags=group.tags)
+        group_result = models.Group(id=hashids.encode(group.id),groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
         return group_result
     else:
         return None
@@ -151,6 +160,39 @@ def get_event(db:Session,hashidsgroup_id:str,hashidsevent_id:str):
         return event_result
     else:
         return None
+
+## Ticket CRUD
+def count_tickets_for_event(db:Session,hashidsevent_id):
+    try:
+        event_id=int(hashids.decode(hashidsevent_id)[0])
+    except:
+        return None
+    db_tickets_count:int=db.query(models.Ticket).filter(models.Ticket.event_id==event_id).count()
+    return db_tickets_count
+
+def check_double_ticket(db:Session,hashidsevent_id,hashidsuser_id):
+    try:
+        event_id=int(hashids.decode(hashidsevent_id)[0])
+        user_id=int(hashids.decode(hashidsuser_id)[0])
+    except:
+        return None
+    db_already_taken:int = db.query(models.Ticket).filter(models.Ticket.event_id==event_id,models.Ticket.owner_id==user_id).count()
+    if db_already_taken>0:
+        return False
+    else:
+        return True
+def create_ticket(db:Session,hashidsevent_id,hashidsuser_id,person):
+    try:
+        event_id=int(hashids.decode(hashidsevent_id)[0])
+        user_id=int(hashids.decode(hashidsuser_id)[0])
+    except:
+        return None
+    db_ticket = models.Ticket(event_id=event_id,owner_id=user_id,person=person)
+    db.add(db_ticket)
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+
 
 ## Tag CRUD
 def create_tag(db:Session,tag:schemas.TagCreate):

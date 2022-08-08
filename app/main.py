@@ -33,6 +33,10 @@ tags_metadata = [
         "description":"events that have tickets"
     },
     {
+        "name":"tickets",
+        "description":"tickets"
+    },
+    {
         "name": "tags",
         "description": "Tags for Group"
     },
@@ -74,6 +78,12 @@ def create_user(user:schemas.UserCreate,db:Session=Depends(dep.get_db)):
 def read_all_users(permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
     users = crud.get_all_users(db)
     return users
+
+@app.get("/users/me/tickets",response_model=List[schemas.Ticket],tags=["users"],description="List your ticket")
+def get_list_of_your_tickets(user:schemas.User = Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    return crud.get_list_of_your_tickets(db,user)
+
+
 @app.put("/users/me/password",tags=["users"])
 def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
     if not dep.authenticate_user(db,user.username,user.password):
@@ -147,7 +157,28 @@ def get_event(group_id:str,event_id:str,db:Session=Depends(dep.get_db)):
         raise HTTPException(404,"Not Found")
     return event
 
+### Ticket CRUD
 
+###TODO:同じ時間帯に取ってるチケットがないかの確認をする
+@app.post("/groups/{group_id}/events/{event_id}/tickets",response_model=schemas.Ticket,tags=["tickets"],description="active user only")
+def create_ticket(group_id:str,event_id:str,person:int,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    if user.is_active:
+        event = crud.get_event(db,group_id,event_id)
+        if not event:
+            raise HTTPException(400,"Invalid Parameter")
+
+        if event.sell_at <= datetime.now() and datetime.now() <= event.sell_ends:
+            if crud.count_tickets_for_event(db,event_id)<event.ticket_stock and crud.check_double_ticket(db,event_id,user.id):##まだチケットが余ってなくて、2枚目取得ではない
+                if person<7:#1アカウントにつき6人まで入れる
+                    return crud.create_ticket(db,event_id,user.id,person)
+                else:
+                    raise HTTPException(400,"Invalid Parameter(6 Person for 1 Account)")
+            else:
+                raise HTTPException(404,"Sold out")
+        else:
+            raise HTTPException(404,"Not Selling")
+    else:
+        raise HTTPException(400,"active user only")
 
 
 @app.post("/tags",response_model=schemas.Tag,tags=["tags"],description="Required Authority: **Admin**")
