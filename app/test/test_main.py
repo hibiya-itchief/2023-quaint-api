@@ -16,7 +16,7 @@ def test_ルートにアクセス():
         "description":"日比谷高校オンライン整理券システム「QUAINT」のAPI"
     }
 
-'''
+
 def test_JWTトークンの取得に成功(db:Session):#もっと細かく書けるかも(https://nmomos.com/tips/2021/03/07/fastapi-docker-8/#toc_id_2)
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
@@ -63,6 +63,7 @@ def test_create_user_by_public_successfully(db:Session):
         "password":"password"
     })
     assert response.status_code == 200
+'''
 def test_create_user_by_public_fail_short_username(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
