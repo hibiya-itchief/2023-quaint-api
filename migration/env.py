@@ -12,8 +12,8 @@ import os
 # access to the values within the .ini file in use.
 config = context.config
 
-config.set_section_option("alembic", "DB_USER", settings.db_user)
-config.set_section_option("alembic", "DB_PASSWORD", settings.db_password)
+config.set_section_option("alembic", "DB_USER", settings.mysql_user)
+config.set_section_option("alembic", "DB_PASSWORD", settings.mysql_password)
 config.set_section_option("alembic", "DB_HOST", settings.db_host)
 
 connectable = engine_from_config(

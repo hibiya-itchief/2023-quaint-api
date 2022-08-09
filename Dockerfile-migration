@@ -1,0 +1,13 @@
+FROM python:3.8
+
+COPY ./app /app
+COPY ./.env /
+COPY ./requirements.txt /requirements.txt
+
+COPY ./alembic.ini /alembic.ini
+COPY ./migration /migration
+
+RUN pip install -r requirements.txt
+
+
+CMD ["alembic", "upgrade","head"]

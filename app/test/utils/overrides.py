@@ -7,7 +7,7 @@ from app.config import settings
 from app.main import app
 from app.dep import get_db
 
-TEST_DATABASE_URI = "mysql://"+ settings.db_user +":"+ settings.db_password +"@"+ settings.db_host +"/quaint-app-test"
+TEST_DATABASE_URI = "mysql://"+ settings.mysql_user +":"+ settings.mysql_password +"@"+ settings.db_host +"/quaint-app-test"
 
 engine = create_engine(TEST_DATABASE_URI)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

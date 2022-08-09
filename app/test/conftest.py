@@ -12,7 +12,7 @@ from app.main import app
 
 from app.test.utils.overrides import TestingSessionLocal,engine
 
-DATABASE_URI = "mysql://"+ settings.db_user +":"+ settings.db_password +"@"+ settings.db_host +"/quaint-app"
+DATABASE_URI = "mysql://"+ settings.mysql_user +":"+ settings.mysql_password +"@"+ settings.db_host +"/quaint-app"
 
 @pytest.fixture(scope="function")
 def db() -> Generator[Session, None, None]:
