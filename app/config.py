@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     HASHIDS_SALT = os.environ["QUAINT_HASHIDS_SALT"]
 
     class Config:
-        env_file = '../.env'
+        env_file = '.env'
         secrets_dir='/run/secrets'
 
 settings= Settings()

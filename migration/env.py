@@ -3,6 +3,8 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
+from app.config import settings
+
 from alembic import context
 import os
 
@@ -10,9 +12,9 @@ import os
 # access to the values within the .ini file in use.
 config = context.config
 
-config.set_section_option("alembic", "DB_USER", os.environ['QUAINT_DB_USER'])
-config.set_section_option("alembic", "DB_PASSWORD", os.environ['QUAINT_DB_PASSWORD'])
-config.set_section_option("alembic", "DB_HOST", os.environ['QUAINT_DB_HOST'])
+config.set_section_option("alembic", "DB_USER", settings.db_user)
+config.set_section_option("alembic", "DB_PASSWORD", settings.db_password)
+config.set_section_option("alembic", "DB_HOST", settings.db_host)
 
 connectable = engine_from_config(
     config.get_section(config.config_ini_section),
