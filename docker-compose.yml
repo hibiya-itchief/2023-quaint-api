@@ -1,7 +1,12 @@
-version: '2'
+version: '3'
 
 services:
   app:
     build: .
     ports:
-      - "8080:80"
+      - "8000:8000"
+    environment:
+      QUAINT_DB_USER:
+      QUAINT_DB_PASSWORD:
+      QUAINT_DB_HOST:
+      QUAINT_HASHIDS_SALT:
