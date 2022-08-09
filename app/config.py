@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     db_password:str
     db_host:str
 
-    HASHIDS_SALT = os.environ["QUAINT_HASHIDS_SALT"]
+    login_jwt_secret:str
 
     class Config:
         env_file = '.env'

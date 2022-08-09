@@ -8,7 +8,8 @@ from hashids import Hashids
 
 from app import schemas
 
-hashids = Hashids(salt=settings.HASHIDS_SALT,min_length=7)
+
+hashids = Hashids(salt="zweukodvmrgdl",min_length=7)
 
 def get_user(db:Session,user_id:str):
     try:
