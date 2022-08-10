@@ -13,21 +13,5 @@ services:
         - db-data:/var/lib/mysql
         - ./db/conf:/etc/mysql/conf.d
         - ./db/initdb:/docker-entrypoint-initdb.d # test用dbが必要な場合
-  migration:
-    build:
-      context: .
-      dockerfile: Dockerfile-migration
-    depends_on:
-      - db
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile-app
-    ports:
-      - "8000:8000"
-    depends_on:
-      - migration
-    environment:
-    - CHOKIDAR_USEPOLLING=true
 volumes:
   db-data:

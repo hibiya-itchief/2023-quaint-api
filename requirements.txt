@@ -14,3 +14,4 @@ SQLAlchemy_Utils==0.38.2
 typing_extensions==4.3.0
 yarg==0.1.9
 mysqlclient
+python-dotenv
