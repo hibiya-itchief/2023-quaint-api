@@ -22,7 +22,7 @@ class EventBase(BaseModel):
 class EventCreate(EventBase):
     pass
 class Event(EventBase):
-    id:str#hashids
+    id:str#ULID
     group_id:str#hashids
     class Config:
         orm_mode=True
@@ -31,7 +31,8 @@ class EventAdmin(Event):
     class Config:
         orm_mode=True
 
-class GroupBase(BaseModel):#hashidsのidをURLにする。groupnameは表示名
+class GroupBase(BaseModel):#userdefined idをURLにする。groupnameは表示名
+    id:str=Query(regex="^[a-zA-Z0-9_\-.]{3,16}$",min_length=3,max_length=16)
     groupname:str = Query(max_length=200)
     title:Union[str,None] = Query(default=None,max_length=200)
     description:Union[str,None] = Query(default=None,max_length=200)
@@ -43,7 +44,6 @@ class GroupBase(BaseModel):#hashidsのidをURLにする。groupnameは表示名
 class GroupCreate(GroupBase):
     pass
 class Group(GroupBase):
-    id:str#hashids
     class Config:
         orm_mode=True
 
@@ -55,7 +55,7 @@ class TagBase(BaseModel):
 class TagCreate(TagBase):
     pass
 class Tag(TagBase):
-    id:str#hashids
+    id:str#ULID
     class Config:
         orm_mode=True
 
@@ -67,7 +67,7 @@ class TicketBase(BaseModel):
 class TicketCreate(TicketBase):
     pass
 class Ticket(TicketBase):
-    id:str#hashids
+    id:str#ULID
     created_at:datetime
     is_used:bool
 
@@ -90,7 +90,7 @@ class UserCreateByAdmin(UserCreate):
     is_active:bool=False
     password_expired: bool=True
 class User(UserBase):
-    id : str#hashids
+    id : str#ULID
     
     is_student:bool=False
     is_family:bool=False
@@ -104,11 +104,12 @@ class PasswordChange(UserCreate):
     new_password:str=Query(min_length=6,regex="^[0-9a-zA-Z]*$",max_length=255)
 
 
-class VoteModel(BaseModel):
-    group_id:str#hashids
-    user_id:str#hashids
-class Vote(VoteModel):
-    id:str#hashids
+class VoteBase(BaseModel):
+    group_id:str#userdefined id
+    user_id:str#ULID
+class Vote(VoteBase):
+    class Config:
+        orm_mode=True
 
 
 Event.update_forward_refs()

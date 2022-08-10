@@ -4,22 +4,17 @@ from fastapi import HTTPException, Query
 from app import models,dep
 from app.config import settings
 
-from hashids import Hashids
+#from hashids import Hashids
+import ulid
 
 from app import schemas
 
 
-hashids = Hashids(salt="zweukodvmrgdl",min_length=7)
 
 def get_user(db:Session,user_id:str):
-    try:
-        id=int(hashids.decode(user_id)[0])
-    except:
-        return None
-    user = db.query(models.User).filter(models.User.id==id).first()
+    user = db.query(models.User).filter(models.User.id==user_id).first()
     if user:
-        user_result = models.User(id=hashids.encode(user.id),username=user.username,hashed_password=user.hashed_password,is_student=user.is_student,is_family=user.is_family,is_active=user.is_active,password_expired=user.password_expired)
-        return user_result
+        return user
     else:
         return None
     
@@ -27,36 +22,29 @@ def get_user(db:Session,user_id:str):
 def get_user_by_name(db:Session,username:str):
     user = db.query(models.User).filter(models.User.username==username).first()
     if user:
-        user_result = models.User(id=hashids.encode(user.id),username=user.username,hashed_password=user.hashed_password,is_student=user.is_student,is_family=user.is_family,is_active=user.is_active,password_expired=user.password_expired)
-        return user_result
+        return user
     else:
         return None
 
 def get_all_users(db:Session):
-    raw_users = db.query(models.User).all()
-    users=[]
-    for user in raw_users:
-        user.id = hashids.encode(user.id)
-        users.append(user)
+    users = db.query(models.User).all()
     return users
 
 def create_user(db:Session,user:schemas.UserCreate):
     hashed_password = dep.get_password_hash(user.password)
-    db_user = models.User(username=user.username, is_family=False,is_active=False,password_expired=False,hashed_password=hashed_password)
+    db_user = models.User(id=ulid.new(),username=user.username, is_family=False,is_active=False,password_expired=False,hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    user_result = models.User(id=hashids.encode(db_user.id),username=db_user.username,hashed_password=db_user.hashed_password,is_student=db_user.is_student,is_family=db_user.is_family,is_active=db_user.is_active,password_expired=db_user.password_expired)
-    return user_result
+    return db_user
 
 def create_user_by_admin(db:Session,user:schemas.UserCreateByAdmin):
     hashed_password = dep.get_password_hash(user.password)
-    db_user = models.User(username=user.username, is_family=user.is_family,is_active=user.is_active,password_expired=user.password_expired,hashed_password=hashed_password)
+    db_user = models.User(id=ulid.new(),username=user.username,is_student=user.is_student, is_family=user.is_family,is_active=user.is_active,password_expired=user.password_expired,hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    user_result = models.User(id=hashids.encode(db_user.id),username=db_user.username,hashed_password=db_user.hashed_password,is_student=db_user.is_student,is_family=db_user.is_family,is_active=db_user.is_active,password_expired=db_user.password_expired)
-    return user_result
+    return db_user
 
 def change_password(db:Session,user:schemas.PasswordChange):
     db_user=db.query(models.User).filter(models.User.username==user.username).first()
@@ -64,40 +52,25 @@ def change_password(db:Session,user:schemas.PasswordChange):
     db_user.hashed_password=hashed_new_password
     db_user.password_expired=False
     db.commit()
-    return user
+    return db_user
 
 def get_list_of_your_tickets(db:Session,user:schemas.User):
-    user_id = int(hashids.decode(user.id)[0])
-    db_tickets = db.query(models.Ticket).filter(models.Ticket.owner_id==user_id)
-    tickets=[]
-    for ticket in db_tickets:
-        ticket.id = hashids.encode(ticket.id)
-        tickets.append(ticket)
-    return tickets
+    db_tickets = db.query(models.Ticket).filter(models.Ticket.owner_id==user.id)
+    return db_tickets
 
 def create_group(db:Session,group:schemas.GroupCreate):
-    db_group = models.Group(groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
+    db_group = models.Group(id=group.id,groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
     db.add(db_group)
     db.commit()
     db.refresh(db_group)
-    group_result = models.Group(id=hashids.encode(db_group.id),groupname=db_group.groupname,title=db_group.title,description=db_group.description,page_content=db_group.page_content,enable_vote=db_group.enable_vote,twitter_url=db_group.twitter_url,instagram_url=db_group.instagram_url,stream_url=db_group.stream_url)
-    return group_result
+    return db_group
 def get_all_groups(db:Session):
     db_groups = db.query(models.Group).all()
-    groups=[]
-    for group in db_groups:
-        group.id = hashids.encode(group.id)
-        groups.append(group)
-    return groups
-def get_group(db:Session,hashids_id:str):
-    try:
-        id=int(hashids.decode(hashids_id)[0])
-    except:
-        return None
+    return db_groups
+def get_group(db:Session,id:str):
     group = db.query(models.Group).filter(models.Group.id==id).first()
     if group:
-        group_result = models.Group(id=hashids.encode(group.id),groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
-        return group_result
+        return group
     else:
         return None
 def add_tag(db:Session,hashidsgroup_id:str,tag:schemas.GroupTagCreate):

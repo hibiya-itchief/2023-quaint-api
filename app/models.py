@@ -12,7 +12,7 @@ from .database import Base
 class Event(Base):
     __tablename__ = "events"
 
-    id = Column(Integer,primary_key=True,index=True,autoincrement=True)
+    id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
 
     title = Column(VARCHAR(255),nullable=False) #Groupのtitleを継承
     description = Column(VARCHAR(255),nullable=False) # Groupのdescriptionを継承
@@ -25,46 +25,43 @@ class Event(Base):
     ticket_stock = Column(Integer,nullable=False)#0でチケット機能を使わない
 
     lottery = Column(Boolean,default=False,nullable=False) # True:抽選 False:先着
-    group_id = Column(Integer, ForeignKey("groups.id"),nullable=False)
+    group_id = Column(VARCHAR(255), ForeignKey("groups.id"),nullable=False)
 
 
 class Admin(Base):
     __tablename__ = "admin"
-    user_id = Column(Integer,ForeignKey("users.id"),nullable=False,primary_key=True)
+    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)#ULID
 
 
 class Authority(Base):
     #UserとGroupを結びつける中間テーブル権限管理
     __tablename__ = "authority"
-    id = Column(Integer,primary_key=True,index=True,autoincrement=True)
 
-    user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
-    group_id = Column(Integer,ForeignKey("groups.id"),nullable=False)
+    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False)
 
     role = Column(VARCHAR(255))
 
 class GroupTag(Base):
     __tablename__="grouptag"
-    id = Column(Integer,primary_key=True,index=True,autoincrement=True)
 
-    group_id = Column(Integer,ForeignKey("groups.id"),nullable=False)
-    tag_id = Column(Integer,ForeignKey("tags.id"),nullable=False)
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
+    tag_id = Column(VARCHAR(255),ForeignKey("tags.id"),nullable=False)
 
 class Tag(Base):
     __tablename__ = "tags"
-    id = Column(Integer,primary_key=True,index=True,autoincrement=True)
+    id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
     tagname = Column(VARCHAR(255),unique=True,nullable=False)
 
 class Vote(Base):
     __tablename__ = "votes"
-    id = Column(Integer,primary_key=True,index=True,autoincrement=True)
-    group_id = Column(Integer,ForeignKey("groups.id"),nullable=False)
-    user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False)#userdefined id
+    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)#ULID
 
 
 class Group(Base):
     __tablename__ = "groups"
-    id = Column(Integer, primary_key=True, index=True,autoincrement=True)
+    id = Column(VARCHAR(255), primary_key=True, index=True,unique=True)#user defined unique id
 
     groupname = Column(VARCHAR(255), index=True,nullable=False)#団体名
 
@@ -84,11 +81,11 @@ class Group(Base):
 class Ticket(Base):
     __tablename__ = "tickets"
 
-    id=Column(Integer,primary_key=True,index=True,autoincrement=True)
+    id=Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
     created_at = Column(DateTime,server_default=current_timestamp())
 
-    event_id = Column(Integer, ForeignKey("events.id"))
-    owner_id = Column(Integer, ForeignKey("users.id"))
+    event_id = Column(VARCHAR(255), ForeignKey("events.id"))
+    owner_id = Column(VARCHAR(255), ForeignKey("users.id"))
 
     person = Column(Integer,default=1)#何人分のチケットか
 
@@ -98,7 +95,7 @@ class Ticket(Base):
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True,autoincrement=True)
+    id = Column(VARCHAR(255), primary_key=True, index=True,unique=True)#ULID
 
     username = Column(VARCHAR(25), unique=True, index=True)
     hashed_password = Column(VARCHAR(255))
