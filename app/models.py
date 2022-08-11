@@ -24,7 +24,6 @@ class Event(Base):
 
     ticket_stock = Column(Integer,nullable=False)#0でチケット機能を使わない
 
-    lottery = Column(Boolean,default=False,nullable=False) # True:抽選 False:先着
     group_id = Column(VARCHAR(255), ForeignKey("groups.id"),nullable=False)
 
 

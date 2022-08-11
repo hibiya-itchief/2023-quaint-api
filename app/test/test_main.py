@@ -298,6 +298,7 @@ def test_create_group_successfully(db:Session):
     }
     group_in = factories.group1_GroupCreateByAdmin()
     response = client.post(url="/groups",json={
+        "id":group_in.id,
         "groupname":group_in.groupname,
         "title":group_in.title,
         "description":group_in.description,

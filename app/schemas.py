@@ -48,7 +48,7 @@ class Group(GroupBase):
         orm_mode=True
 
 class GroupTagCreate(BaseModel):
-    tag_id:str
+    tag_id:str#ULID
 
 class TagBase(BaseModel):
     tagname:str=Query(max_length=200)
