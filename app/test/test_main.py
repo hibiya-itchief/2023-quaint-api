@@ -63,7 +63,7 @@ def test_create_user_by_public_successfully(db:Session):
         "password":"password"
     })
     assert response.status_code == 200
-'''
+
 def test_create_user_by_public_fail_short_username(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
@@ -298,6 +298,7 @@ def test_create_group_successfully(db:Session):
     }
     group_in = factories.group1_GroupCreateByAdmin()
     response = client.post(url="/groups",json={
+        "id":group_in.id,
         "groupname":group_in.groupname,
         "title":group_in.title,
         "description":group_in.description,
@@ -546,4 +547,3 @@ def test_delete_tag_failed_not_admin(db:Session):
     response = client.delete(url="/tags/"+tag.id,headers=headers)
     assert response.status_code==403
 
-'''

@@ -22,6 +22,7 @@ class hogehoge_UserCreateByAdmin():
 class tag1_TagCreateByAdmin():
     tagname="タグ1"
 class group1_GroupCreateByAdmin():
+    id="28r"
     groupname="2年8組"
     title="SING"
     description="ここに説明文"
@@ -31,7 +32,8 @@ class group1_GroupCreateByAdmin():
     instagram_url=None
     stream_url=None
 class group2_GroupCreateByAdmin():
-    groupname="1年8組"
+    id="18R"
+    groupname="2年8組"
     title="あああああ"
     description="ここに説明文"
     page_content="<html><h1>宣伝ページ</h1></html>"
