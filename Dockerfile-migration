@@ -7,8 +7,8 @@ COPY ./requirements.txt /requirements.txt
 COPY ./migration /migration
 
 RUN echo 'nameserver 8.8.8.8' > /etc/resolv.conf && \
-    python3 -m pip install --upgrade pip && \
-    pip install -r requirements.txt
+    python3 -m pip install --upgrade pip -q && \
+    pip install -r requirements.txt -q
 
 WORKDIR /migration
 
