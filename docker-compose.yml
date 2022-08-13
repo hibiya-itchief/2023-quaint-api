@@ -31,6 +31,8 @@ services:
       - "8000:8000"
     depends_on:
       - migration
+    links:
+      - db
     environment:
     - CHOKIDAR_USEPOLLING=true
 
