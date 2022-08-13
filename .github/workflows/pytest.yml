@@ -29,5 +29,5 @@ jobs:
           
       - name: Test with pytest on Docker
         run: |
-          docker-compose up --build -d
-          docker-compose exec app pytest
+          docker-compose up -d
+          docker-compose exec -T app pytest
