@@ -79,11 +79,12 @@ def read_all_users(permittion:schemas.User = Depends(dep.admin),db:Session=Depen
     users = crud.get_all_users(db)
     return users
 
-@app.get("/users/me/tickets",response_model=List[schemas.Ticket],tags=["users"],description="List your ticket")
-def get_list_of_your_tickets(user:schemas.User = Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
-    return crud.get_list_of_your_tickets(db,user)
-
-
+@app.get("/users/me",response_model=schemas.User,tags=["users"],description="ログインしているユーザーの情報")
+def get_me(user:schemas.User = Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    return user
+@app.get("/users/me/authority",tags=["users"])
+def read_my_authority(user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    
 @app.put("/users/me/password",tags=["users"])
 def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
     if not dep.authenticate_user(db,user.username,user.password):
@@ -92,6 +93,13 @@ def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
         raise HTTPException(400,"Enter different password from present")
     crud.change_password(db,user)
     return HTTPException(200,"Password changed successfully")
+
+
+@app.get("/users/me/tickets",response_model=List[schemas.Ticket],tags=["users"],description="List your ticket")
+def get_list_of_your_tickets(user:schemas.User = Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    return crud.get_list_of_your_tickets(db,user)
+
+
 
 @app.put("/users/{user_id}/authority",tags=["users"])
 def grant_authority(user_id:str,role:schemas.AuthorityRole,group_id:Union[str,None]=None,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):

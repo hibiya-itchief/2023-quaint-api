@@ -157,6 +157,34 @@ def test_read_all_users_fail_not_admin(db:Session):
     response = client.get("/users/",headers=headers)
     assert response.status_code == 403
 
+def test_get_me_success(db:Session):
+    user_in = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_in)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_in.username,
+        "password":user_in.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    response = client.get("/users/me",headers=headers)
+    assert response.status_code == 200
+    assert response.json()["username"]==user_in.username
+def test_get_me_fail(db:Session):
+    user_in = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_in)
+
+    response = client.get("/users/me")
+    assert response.status_code == 401
+
+
+
 def test_get_list_of_your_ticckets(db:Session):
     # TODO これから大いに変わると思うので
     assert 1==2
