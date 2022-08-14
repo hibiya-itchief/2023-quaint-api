@@ -1,19 +1,10 @@
 # quaint-api
+[![pytest](https://github.com/hibiya-itchief/quaint-api/actions/workflows/pytest.yml/badge.svg)](https://github.com/hibiya-itchief/quaint-api/actions/workflows/pytest.yml)
+---
 星陵祭オンライン整理券システム「QUAINT」のバックエンドAPI
-## 目次
-- [quaint-api](#quaint-api)
-  - [目次](#目次)
-  - [動かす](#動かす)
-    - [必要条件](#必要条件)
-    - [手順](#手順)
-  - [ディレクトリ構成(ただのメモ)](#ディレクトリ構成ただのメモ)
-  - [開発するときに(僕が)よく使うコマンド(ただのメモ)](#開発するときに僕がよく使うコマンドただのメモ)
-    - [FastAPI](#fastapi)
-    - [migration](#migration)
-    - [pip package](#pip-package)
 
-## 動かす
-### 必要条件
+## Dockerを使用した起動
+### 依存関係
 - docker https://docs.docker.com/get-docker/
 - docker-compose
 - git https://github.com/git-guides/install-git
@@ -30,27 +21,8 @@ dockerコンテナを立ち上げ
 $ docker-compose up -d
 ```
 
-http://127.0.0.1:8080/docs でAPIドキュメントが読める
+http://127.0.0.1:8000/docs でAPIドキュメントが読める
 
-## ディレクトリ構成(ただのメモ)
-- app/
-  - main.py
-    - アプリケーションルート的なやつ
-  - database.py
-    - SQLAlchemyを使ってDBに接続
-  - schemas/
-    - Pydamicを使用したスキーマの定義
-  - routers/
-    - パスオペレーションの実装
-  - models/
-    - sqlalchemyによるモデル定義(DBとPythonのクラスをつなぐ)
-  - cruds/
-    - クエリを発行
-- db/
-  - quaint-api-app.db
-    - SQLiteのデータベースを置いておく。（将来的にはSQLサーバーに変更して消そう）
-- migration/
-  - alembic init migration で生成されたファイル
 
 ## 開発するときに(僕が)よく使うコマンド(ただのメモ)
 ### FastAPI
