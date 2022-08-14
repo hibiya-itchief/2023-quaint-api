@@ -19,6 +19,7 @@ services:
       dockerfile: Dockerfile-migration
     depends_on:
       - db
+    command: ./wait-for-it.sh db:3306 -t 30-- alembic upgrade head
 
   app:
     dns: 8.8.8.8
@@ -31,10 +32,9 @@ services:
       - "8000:8000"
     depends_on:
       - migration
-    links:
-      - db
     environment:
     - CHOKIDAR_USEPOLLING=true
+    command: ./wait-for-it.sh db:3306 -t 30 -- uvicorn app.main:app --host 0.0.0.0 --reload
 
 volumes:
   db-data:
