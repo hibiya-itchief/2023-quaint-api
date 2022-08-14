@@ -85,7 +85,12 @@ def get_me(user:schemas.User = Depends(dep.get_current_user),db:Session=Depends(
     return user
 @app.get("/users/me/authority",tags=["users"])
 def read_my_authority(user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
-    pass
+    return schemas.UserAuthority(
+        user_id=user.id,
+        is_admin=crud.check_admin(db,user),
+        is_entry=crud.check_entry(db,user),
+        owner_of=crud.get_owner_list(db,user),
+        authorizer_of=crud.get_authorizer_list(db,user))
 @app.put("/users/me/password",tags=["users"])
 def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
     if not dep.authenticate_user(db,user.username,user.password):

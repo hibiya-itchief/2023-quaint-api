@@ -38,16 +38,17 @@ class Entry(Base):
 class Authority(Base):
     #UserとGroupを結びつける中間テーブル権限管理
     __tablename__ = "authority"
+    id = Column(Integer,unique=True,autoincrement=True,primary_key=True)
 
-    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)
+    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False)
     group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False)
 
     role = Column(VARCHAR(255))
 
 class GroupTag(Base):
     __tablename__="grouptag"
-
-    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
+    id = Column(Integer,unique=True,autoincrement=True,primary_key=True)
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False)
     tag_id = Column(VARCHAR(255),ForeignKey("tags.id"),nullable=False)
 
 class Tag(Base):

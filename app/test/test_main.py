@@ -183,6 +183,36 @@ def test_get_me_fail(db:Session):
     response = client.get("/users/me")
     assert response.status_code == 401
 
+def test_read_my_authority_success(db:Session):
+    user_in = factories.Admin_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,user_in)
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+
+    crud.grant_admin(db,user)
+    crud.grant_entry(db,user)
+    crud.grant_owner_of(db,group,user)
+    crud.grant_authorizer_of(db,group,user)
+
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_in.username,
+        "password":user_in.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    response = client.get("/users/me/authority",headers=headers)
+    assert response.status_code == 200
+    assert response.json()["is_admin"]==True
+    assert response.json()["is_entry"]==True
+    assert response.json()["owner_of"][0]==group_in1.id
+    assert response.json()["authorizer_of"][0]==group_in1.id
 
 
 def test_get_list_of_your_ticckets(db:Session):

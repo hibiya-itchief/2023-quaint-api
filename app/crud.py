@@ -210,6 +210,13 @@ def check_owner(db:Session,user:schemas.User):
         return False
     return True
 
+def get_owner_list(db:Session,user:schemas.User):
+    db_result = db.query(models.Authority).filter(models.Authority.user_id==user.id,models.Authority.role==schemas.AuthorityRole.Owner)
+    owner_list = []
+    for row in db_result:
+        owner_list.append(row.group_id)
+    return owner_list
+
 def check_authorizer_of(db:Session,group:schemas.Group,user:schemas.User):
     if not db.query(models.Authority).filter(models.Authority.user_id==user.id,models.Authority.group_id==group.id,models.Authority.role==schemas.AuthorityRole.Authorizer).first():
         return False
@@ -220,3 +227,9 @@ def check_authorizer(db:Session,user:schemas.User):
         return False
     return True
 
+def get_authorizer_list(db:Session,user:schemas.User):
+    db_result = db.query(models.Authority).filter(models.Authority.user_id==user.id,models.Authority.role==schemas.AuthorityRole.Authorizer)
+    authorizer_list = []
+    for row in db_result:
+        authorizer_list.append(row.group_id)
+    return authorizer_list
