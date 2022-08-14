@@ -30,4 +30,4 @@ jobs:
       - name: Test with pytest on Docker
         run: |
           docker-compose up -d
-          docker-compose exec -T app bash /app/wait-for-it.sh db:3306 -t 30 pytest
+          docker-compose exec -T app bash /app/wait-for-it.sh db:3306 -t 30 -- pytest
