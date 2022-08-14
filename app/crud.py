@@ -169,6 +169,13 @@ def grant_admin(db:Session,user:schemas.User):
     db.refresh(db_admin)
     return "Grant Admin Successfully"
 
+def grant_entry(db:Session,user:schemas.User):
+    db_entry = models.Entry(user_id=user.id)
+    db.add(db_entry)
+    db.commit()
+    db.refresh(db_entry)
+    return "Grant Entry Successfully"
+
 def grant_owner_of(db:Session,group:schemas.Group,user:schemas.User):
     db_owner = models.Authority(user_id=user.id,group_id=group.id,role=schemas.AuthorityRole.Owner)
     db.add(db_owner)
@@ -185,6 +192,11 @@ def grant_authorizer_of(db:Session,group:schemas.Group,user:schemas.User):
 
 def check_admin(db:Session,user:schemas.User):
     if not db.query(models.Admin).filter(models.Admin.user_id==user.id).first():
+        return False
+    return True
+
+def check_entry(db:Session,user:schemas.User):
+    if not db.query(models.Entry).filter(models.Entry.user_id==user.id).first():
         return False
     return True
 

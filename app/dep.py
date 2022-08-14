@@ -96,6 +96,11 @@ def admin(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_u
         raise HTTPException(403,detail="Permittion Error")
     return user
 
+def entry(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
+    if not crud.check_entry(db,user):
+        raise HTTPException(403,detail="Permittion Error")
+    return user
+
 def owner_of(groupname:str,db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
     group=crud.get_group_by_name(db,groupname)###
     if not group:

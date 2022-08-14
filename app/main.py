@@ -1,5 +1,6 @@
 from datetime import datetime,timedelta
 from typing import Optional,List,Union
+from xml.dom.minidom import Entity
 
 from fastapi import FastAPI,Depends,HTTPException,status,Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -84,7 +85,7 @@ def get_me(user:schemas.User = Depends(dep.get_current_user),db:Session=Depends(
     return user
 @app.get("/users/me/authority",tags=["users"])
 def read_my_authority(user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
-    
+    pass
 @app.put("/users/me/password",tags=["users"])
 def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
     if not dep.authenticate_user(db,user.username,user.password):
@@ -111,6 +112,10 @@ def grant_authority(user_id:str,role:schemas.AuthorityRole,group_id:Union[str,No
         if crud.check_admin(db,user):
             raise HTTPException(200)
         return crud.grant_admin(db,user)
+    elif role == schemas.AuthorityRole.Entry:
+        if crud.check_entry(db,user):
+            raise HTTPException(200)
+        return crud.grant_entry(db,user)
     else:
         if not group_id:
             raise HTTPException(400,"Invalid Parameter")

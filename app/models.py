@@ -31,6 +31,9 @@ class Admin(Base):
     __tablename__ = "admin"
     user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)#ULID
 
+class Entry(Base):
+    __tablename__ = "entry"
+    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)#ULID
 
 class Authority(Base):
     #UserとGroupを結びつける中間テーブル権限管理

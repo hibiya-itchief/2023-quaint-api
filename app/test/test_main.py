@@ -265,7 +265,35 @@ def test_grant_authority_success_admin(db:Session):
         params={"role":schemas.AuthorityRole.Admin},
         headers=headers
         )
-    assert response.status_code == 200 
+    assert response.status_code == 200
+def test_grant_authority_success_entry(db:Session):
+    user_in = factories.hogehoge_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_in)
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    user = crud.get_user_by_name(db,user_in.username)
+
+    response = client.put(
+        url="/users/"+user.id+"/authority",
+        params={"role":schemas.AuthorityRole.Entry},
+        headers=headers
+        )
+    assert response.status_code == 200
 def test_grant_authority_success_owner(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)

@@ -9,6 +9,7 @@ class AuthorityRole(str,Enum):
     Authorizer = "Authorizer"
     Owner = "Owner"
     Admin = "Admin"
+    Entry = "Entry"
 
 class EventBase(BaseModel):
     title:str=Query(max_length=200)
@@ -99,6 +100,14 @@ class User(UserBase):
 
     class Config:
         orm_mode=True
+
+class UserAuthority(BaseModel):
+    user_id : str#ULID
+
+    is_admin:bool
+    is_entry:bool
+    owner_of:List[str]
+    authorizer_of:List[str]
 
 class PasswordChange(UserCreate):
     new_password:str=Query(min_length=6,regex="^[0-9a-zA-Z]*$",max_length=255)
