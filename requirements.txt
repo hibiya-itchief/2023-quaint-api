@@ -16,3 +16,4 @@ yarg==0.1.9
 mysqlclient
 python-dotenv
 ulid-py
+pytest-cov
