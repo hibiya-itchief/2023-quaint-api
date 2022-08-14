@@ -21,6 +21,8 @@ class hogehoge_UserCreateByAdmin():
     password_expired=False
 class tag1_TagCreateByAdmin():
     tagname="タグ1"
+class tag2_TagCreateByAdmin():
+    tagname="タグ2"
 class group1_GroupCreateByAdmin():
     id="28r"
     groupname="2年8組"

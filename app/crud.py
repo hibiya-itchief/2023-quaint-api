@@ -73,19 +73,18 @@ def get_group(db:Session,id:str):
         return group
     else:
         return None
-def add_tag(db:Session,group_id:str,tag:schemas.GroupTagCreate):
-    db_group = db.query(models.Group).filter(models.Group.id==group_id).first()
-    db_tag = db.query(models.Tag).filter(models.Tag.id==tag.id).first()
-    db_group.tags.append(db_tag)
-    '''
-    group = get_group(db,hashidsgroup_id)
-    group_result = models.Group(id=int(hashids.decode(group.id)[0]),groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote)
-    db_tag = get_tag(db,tag.tag_id)
-    tag = models.Tag(id=int(hashids.decode(db_tag.id)[0]),tagname=db_tag.tagname,groups=db_tag.groups)
-    group_result.tags.append(tag)
-    '''
+def add_tag(db:Session,group_id:str,tag_input:schemas.GroupTagCreate):
+    group = get_group(db,group_id)
+    tag = get_tag(db,tag_input.tag_id)
+    if not group:
+        return None
+    if not tag:
+        return None
+    db_grouptag = models.GroupTag(group_id=group.id,tag_id=tag.id)
+    db.add(db_grouptag)
     db.commit()
-    return "Add Tag Successfully"
+    db.refresh(db_grouptag)
+    return db_grouptag
 
 
 def create_event(db:Session,group_id:str,event:schemas.EventCreate):
@@ -131,7 +130,7 @@ def create_ticket(db:Session,event_id,user_id,person):
 
 ## Tag CRUD
 def create_tag(db:Session,tag:schemas.TagCreate):
-    db_tag=models.Tag(tagname=tag.tagname)
+    db_tag=models.Tag(id=ulid.new(),tagname=tag.tagname)
     db.add(db_tag)
     db.commit()
     db.refresh(db_tag)
@@ -143,18 +142,16 @@ def get_tag(db:Session,id:str):
     db_tag = db.query(models.Tag).filter(models.Tag.id==id).first()
     return db_tag
 def put_tag(db:Session,id:str,tag:schemas.TagCreate):
-    try:
-        db_tag = db.query(models.Tag).filter(models.Tag.id==id).first()
-    except:
+    db_tag = db.query(models.Tag).filter(models.Tag.id==id).first()
+    if not db_tag:
         return None
     db_tag.tagname=tag.tagname
     db.commit()
     db.refresh(db_tag)
     return db_tag
 def delete_tag(db:Session,id:str):
-    try:
-        db_tag = db.query(models.Tag).filter(models.Tag.id==id).first()
-    except:
+    db_tag = db.query(models.Tag).filter(models.Tag.id==id).first()
+    if not db_tag:
         return None
     db.delete(db_tag)
     db.commit()
@@ -173,14 +170,10 @@ def grant_admin(db:Session,user:schemas.User):
     return "Grant Admin Successfully"
 
 def grant_owner_of(db:Session,group:schemas.Group,user:schemas.User):
-    #db_owner = models.Authority(user_id=user_id,group_id=group_id,role=schemas.AuthorityRole.Owner)
-    #db.add(db_owner)
-    #db.commit()
-    #db.refresh(db_owner)
-    user = db.query(models.User).filter(models.User.id==user.id).first()
-    group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    user.groups.append(group)
+    db_owner = models.Authority(user_id=user.id,group_id=group.id,role=schemas.AuthorityRole.Owner)
+    db.add(db_owner)
     db.commit()
+    db.refresh(db_owner)
     return "Grant Owner Successfully"
 
 def grant_authorizer_of(db:Session,group:schemas.Group,user:schemas.User):
