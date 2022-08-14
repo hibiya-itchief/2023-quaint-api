@@ -173,14 +173,10 @@ def grant_admin(db:Session,user:schemas.User):
     return "Grant Admin Successfully"
 
 def grant_owner_of(db:Session,group:schemas.Group,user:schemas.User):
-    #db_owner = models.Authority(user_id=user_id,group_id=group_id,role=schemas.AuthorityRole.Owner)
-    #db.add(db_owner)
-    #db.commit()
-    #db.refresh(db_owner)
-    user = db.query(models.User).filter(models.User.id==user.id).first()
-    group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    user.groups.append(group)
+    db_owner = models.Authority(user_id=user.id,group_id=group.id,role=schemas.AuthorityRole.Owner)
+    db.add(db_owner)
     db.commit()
+    db.refresh(db_owner)
     return "Grant Owner Successfully"
 
 def grant_authorizer_of(db:Session,group:schemas.Group,user:schemas.User):

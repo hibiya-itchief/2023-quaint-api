@@ -239,7 +239,7 @@ def test_change_password_fail_same_password(db:Session):
     })
     assert response.status_code == 400
 
-def test_grant_authority_admin_successfully(db:Session):
+def test_grant_authority_success_admin(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
     user_admin = factories.Admin_UserCreateByAdmin()
@@ -266,17 +266,177 @@ def test_grant_authority_admin_successfully(db:Session):
         params={"role":schemas.AuthorityRole.Admin},
         headers=headers
         )
-    assert response.status_code == 200
-    
-    
-
-    
-
-def test_get_user_by_name(db:Session):
+    assert response.status_code == 200 
+def test_grant_authority_success_owner(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
     user = crud.get_user_by_name(db,user_in.username)
-    assert user
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    crud.create_group(db,group_in1)
+
+    response = client.put(
+        url="/users/"+user.id+"/authority",
+        params={
+            "role":schemas.AuthorityRole.Owner,
+            "group_id":group_in1.id
+        },
+        headers=headers
+        )
+    assert response.status_code == 200
+def test_grant_authority_success_authorizer(db:Session):
+    user_in = factories.hogehoge_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_in)
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    user = crud.get_user_by_name(db,user_in.username)
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    crud.create_group(db,group_in1)
+
+    response = client.put(
+        url="/users/"+user.id+"/authority",
+        params={
+            "role":schemas.AuthorityRole.Authorizer,
+            "group_id":group_in1.id
+        },
+        headers=headers
+        )
+    assert response.status_code == 200
+def test_grant_authority_fail_not_admin(db:Session):
+    user_in = factories.hogehoge_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_in)
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    user = crud.get_user_by_name(db,user_in.username)
+    
+    group_in1=factories.group1_GroupCreateByAdmin()
+    crud.create_group(db,group_in1)
+    
+    response = client.put(
+        url="/users/"+user.id+"/authority",
+        params={
+            "role":schemas.AuthorityRole.Owner,
+            "group_id":group_in1.id
+        },
+        headers=headers
+        )
+    assert response.status_code == 403
+def test_grant_authority_fail_owner_authorizer_no_groupid(db:Session):
+    user_in = factories.hogehoge_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_in)
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    user = crud.get_user_by_name(db,user_in.username)
+    
+    group_in1=factories.group1_GroupCreateByAdmin()
+    crud.create_group(db,group_in1)
+
+    response = client.put(
+        url="/users/"+user.id+"/authority",
+        params={
+            "role":schemas.AuthorityRole.Owner
+        },
+        headers=headers
+        )
+    assert response.status_code == 400
+def test_grant_authority_fail_owner_authorizer_group_not_exist(db:Session):
+    user_in = factories.hogehoge_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_in)
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    user = crud.get_user_by_name(db,user_in.username)
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    crud.create_group(db,group_in1)
+
+    response = client.put(
+        url="/users/"+user.id+"/authority",
+        params={
+            "role":schemas.AuthorityRole.Owner,
+            "group_id":"invalidgroupid"
+        },
+        headers=headers
+        )
+    assert response.status_code == 404
+
+
 
 
 ### Group CRUD
