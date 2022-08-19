@@ -86,13 +86,29 @@ def add_tag(db:Session,group_id:str,tag_input:schemas.GroupTagCreate):
     db.refresh(db_grouptag)
     return db_grouptag
 
+# Timetable
+def create_timetable(db:Session,timetable:schemas.TimetableCreate):
+    if not (timetable.sell_at<timetable.sell_ends and timetable.sell_ends<=timetable.starts_at and timetable.starts_at<timetable.ends_at):
+        return None
+    db_timetable = models.Timetable(id=ulid.new().str,timetablename=timetable.timetablename,sell_at=timetable.sell_at,sell_ends=timetable.sell_ends,starts_at=timetable.starts_at,ends_at=timetable.ends_at)
+    db.add(db_timetable)
+    db.commit()
+    db.refresh(db_timetable)
+    return db_timetable
+def get_all_timetable(db:Session):
+    return db.query(models.Timetable).all()
+def get_timetable(db:Session,timetable_id:str):
+    return db.query(models.Timetable).filter(models.Timetable.id==timetable_id).first()
+    
 
+# Event
 def create_event(db:Session,group_id:str,event:schemas.EventCreate):
     group = get_group(db,group_id) 
     if not group:
         return None
     if not (event.sell_at<event.sell_ends and event.sell_ends<event.starts_at and event.starts_at<event.ends_at):
         return None
+    # TODO Timetableに書き換え
     db_event = models.Event(id=ulid.new().str,title=event.title,description=event.description,sell_at=event.sell_at,sell_ends=event.sell_ends,starts_at=event.starts_at,ends_at=event.ends_at,ticket_stock=event.ticket_stock,lottery=event.lottery,group_id=group_id)
     db.add(db_event)
     db.commit()

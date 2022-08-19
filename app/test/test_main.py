@@ -703,6 +703,144 @@ def test_create_ticket_success(db:Session):
     # TODO まだ変わる
     assert 1==2
 
+# Timetable
+def test_create_timetable_success(db:Session):
+    timetable = factories.valid_timetable1()
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    response = client.post(
+        url="/timetable",
+        json={
+            "timetablename":timetable.timetablename,
+            "sell_at":timetable.sell_at,
+            "sell_ends":timetable.sell_ends,
+            "starts_at":timetable.starts_at,
+            "ends_at":timetable.ends_at
+            },
+        headers=headers)
+    assert response.status_code==200
+def test_create_timetable_fail_invalid_date1(db:Session):
+    timetable = factories.invalid_timetable1()
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    response = client.post(
+        url="/timetable",
+        json={
+            "timetablename":timetable.timetablename,
+            "sell_at":timetable.sell_at,
+            "sell_ends":timetable.sell_ends,
+            "starts_at":timetable.starts_at,
+            "ends_at":timetable.ends_at
+            },
+        headers=headers)
+    assert response.status_code==400
+def test_create_timetable_fail_invalid_date2(db:Session):
+    timetable = factories.invalid_timetable2()
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    response = client.post(
+        url="/timetable",
+        json={
+            "timetablename":timetable.timetablename,
+            "sell_at":timetable.sell_at,
+            "sell_ends":timetable.sell_ends,
+            "starts_at":timetable.starts_at,
+            "ends_at":timetable.ends_at
+            },
+        headers=headers)
+    assert response.status_code==400
+def test_create_timetable_fail_invalid_date3(db:Session):
+    timetable = factories.invalid_timetable3()
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    response = client.post(
+        url="/timetable",
+        json={
+            "timetablename":timetable.timetablename,
+            "sell_at":timetable.sell_at,
+            "sell_ends":timetable.sell_ends,
+            "starts_at":timetable.starts_at,
+            "ends_at":timetable.ends_at
+            },
+        headers=headers)
+    assert response.status_code==400
+def test_get_all_timetable_success(db:Session):
+    timetable1 = factories.valid_timetable1()
+    timetable2 = factories.valid_timetable2()
+    crud.create_timetable(db,timetable1)
+    crud.create_timetable(db,timetable2)
+    response = client.get("/timetable")
+    assert response.status_code==200
+    assert response.json()[0]["timetablename"]== timetable1.timetablename
+    assert response.json()[1]["timetablename"]== timetable2.timetablename
+
+def test_get_timetable_success(db:Session):
+    timetable=factories.valid_timetable1()
+    db_timetable = crud.create_timetable(db,timetable)
+    response = client.get(url="/timetable/"+db_timetable.id)
+    assert response.status_code==200
+    assert response.json()["timetablename"]==timetable.timetablename
+
 ###Tag CRUD
 def test_create_tag_success(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()

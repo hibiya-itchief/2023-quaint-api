@@ -38,6 +38,10 @@ tags_metadata = [
         "description":"tickets"
     },
     {
+        "name":"timetable",
+        "description":"公演の時間帯情報"
+    },
+    {
         "name": "tags",
         "description": "Tags for Group"
     },
@@ -45,7 +49,7 @@ tags_metadata = [
 ]
 
 app = FastAPI(title="QUAINT-API",description=description,openapi_tags=tags_metadata)
-
+### TODO 同一オリジンにアップロードしてcorsは許可しない
 origins = ['*']
 
 app.add_middleware(
@@ -199,6 +203,24 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.User=Depends
         raise HTTPException(400,"active user only")
 
 
+# Timetable
+@app.post("/timetable",response_model=schemas.Timetable,tags=["timetable"],description="Required Authority: **Admin**")
+def create_timetable(timetable:schemas.TimetableCreate,permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    result = crud.create_timetable(db,timetable=timetable)
+    if not result:
+        raise HTTPException(400,"Invalid Parameter")
+    return result
+@app.get("/timetable",response_model=List[schemas.Timetable],tags=["timetable"])
+def get_all_timetable(db:Session=Depends(dep.get_db)):
+    return crud.get_all_timetable(db)
+@app.get("/timetable/{timetable_id}",response_model=schemas.Timetable,tags=["timetable"])
+def get_timetable(timetable_id:str,db:Session=Depends(dep.get_db)):
+    timetable = crud.get_timetable(db,timetable_id)
+    if not timetable:
+        raise HTTPException(404,"Not Found")
+    return timetable
+
+# Tag
 @app.post("/tags",response_model=schemas.Tag,tags=["tags"],description="Required Authority: **Admin**")
 def create_tag(tag:schemas.TagCreate,permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
     return crud.create_tag(db,tag)

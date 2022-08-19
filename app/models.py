@@ -9,21 +9,26 @@ from sqlalchemy.orm import relationship
 from .database import Base
 
 
-class Event(Base):
-    __tablename__ = "events"
+class Timetable(Base):
+    __tablename__ = "timetable"
 
     id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
-
-    title = Column(VARCHAR(255),nullable=False) #Groupのtitleを継承
-    description = Column(VARCHAR(255),nullable=False) # Groupのdescriptionを継承
+    timetablename = Column(VARCHAR(255))
 
     sell_at = Column(DateTime,nullable=False)
     sell_ends = Column(DateTime,nullable=False)
     starts_at = Column(DateTime,nullable=False)
     ends_at = Column(DateTime,nullable=False)
 
-    ticket_stock = Column(Integer,nullable=False)#0でチケット機能を使わない
+class Event(Base):
+    __tablename__ = "events"
 
+    id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
+
+    timetable_id = Column(VARCHAR(255),ForeignKey("timetable.id"),nullable=False)
+
+    ticket_stock = Column(Integer,nullable=False)#0でチケット機能を使わない
+    lottery = Column(Boolean)
     group_id = Column(VARCHAR(255), ForeignKey("groups.id"),nullable=False)
 
 
