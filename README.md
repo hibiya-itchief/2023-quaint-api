@@ -1,4 +1,5 @@
 # quaint-api
+[![pytest](https://github.com/hibiya-itchief/quaint-api/actions/workflows/pytest.yml/badge.svg)](https://github.com/hibiya-itchief/quaint-api/actions/workflows/pytest.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Ekke-kuru2/81370c9284b6c64224021c2c6520c2e3/raw/pytest-coverage-comment.json)](https://github.com/hibiya-itchief/quaint-api/actions)
 ---
 星陵祭オンライン整理券システム「QUAINT」のバックエンドAPI
