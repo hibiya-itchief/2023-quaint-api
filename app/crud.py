@@ -21,7 +21,7 @@ def get_user(db:Session,user_id:str):
     
 
 def get_user_by_name(db:Session,username:str):
-    user = db.query(models.User).filter(models.User.username==username).first()
+    user:schemas.User = db.query(models.User).filter(models.User.username==username).first()
     if user:
         return user
     else:
