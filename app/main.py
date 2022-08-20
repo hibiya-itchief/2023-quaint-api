@@ -255,7 +255,7 @@ def create_user_by_admin(user:schemas.UserCreateByAdmin,permittion:schemas.User 
     db_user = crud.get_user_by_name(db,username=user.username)
     if db_user:
         raise HTTPException(status_code=400,detail="username already registered")
-    return crud.create_user(db=db,user=user)
+    return crud.create_user_by_admin(db=db,user=user)
 
 
 

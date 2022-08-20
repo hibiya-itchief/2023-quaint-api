@@ -62,6 +62,12 @@ def login_for_access_token(username:str,password:str,db:Session):
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if user.password_expired:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Password expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     access_token_expires = timedelta(days=10)
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
