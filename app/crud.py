@@ -1,4 +1,5 @@
 from curses import has_ic
+from typing import List
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, Query
 from app import models,dep
@@ -55,7 +56,7 @@ def change_password(db:Session,user:schemas.PasswordChange):
     return db_user
 
 def get_list_of_your_tickets(db:Session,user:schemas.User):
-    db_tickets = db.query(models.Ticket).filter(models.Ticket.owner_id==user.id)
+    db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==user.id).all()
     return db_tickets
 
 def create_group(db:Session,group:schemas.GroupCreate):
@@ -98,7 +99,8 @@ def create_timetable(db:Session,timetable:schemas.TimetableCreate):
 def get_all_timetable(db:Session):
     return db.query(models.Timetable).all()
 def get_timetable(db:Session,timetable_id:str):
-    return db.query(models.Timetable).filter(models.Timetable.id==timetable_id).first()
+    timetable:schemas.Timetable =  db.query(models.Timetable).filter(models.Timetable.id==timetable_id).first()
+    return timetable
     
 
 # Event
@@ -106,10 +108,10 @@ def create_event(db:Session,group_id:str,event:schemas.EventCreate):
     group = get_group(db,group_id) 
     if not group:
         return None
-    if not (event.sell_at<event.sell_ends and event.sell_ends<event.starts_at and event.starts_at<event.ends_at):
+    if not get_timetable(db,event.timetable_id):
         return None
     # TODO Timetableに書き換え
-    db_event = models.Event(id=ulid.new().str,title=event.title,description=event.description,sell_at=event.sell_at,sell_ends=event.sell_ends,starts_at=event.starts_at,ends_at=event.ends_at,ticket_stock=event.ticket_stock,lottery=event.lottery,group_id=group_id)
+    db_event = models.Event(id=ulid.new().str,timetable_id=event.timetable_id,ticket_stock=event.ticket_stock,lottery=event.lottery,group_id=group_id)
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
@@ -119,25 +121,36 @@ def get_all_events(db:Session,group_id:str):
     db_events = db.query(models.Event).filter(models.Event.group_id==group_id).all()
     return db_events
 def get_event(db:Session,group_id:str,event_id:str):
-    db_event = db.query(models.Event).filter(models.Event.group_id==group_id,models.Event.id==event_id).first()
+    db_event:schemas.Event = db.query(models.Event).filter(models.Event.group_id==group_id,models.Event.id==event_id).first()
     if db_event:
         return db_event
     else:
         return None
+def get_events_by_timetable(db:Session,timetable:schemas.Timetable):
+    db_events:List[schemas.Event] = db.query(models.Event).filter(models.Event.timetable_id==timetable.id).all()
+    return db_events
 
 ## Ticket CRUD
-def count_tickets_for_event(db:Session,event_id):
-    db_tickets_count:int=db.query(models.Ticket).filter(models.Ticket.event_id==event_id).count()
+def count_tickets_for_event(db:Session,event:schemas.Event):
+    db_tickets:List[schemas.Ticket]=db.query(models.Ticket).filter(models.Ticket.event_id==event.id).all()
+    db_tickets_count:int = 0
+    for ticket in db_tickets:
+        db_tickets_count += ticket.person
     return db_tickets_count
 
-def check_double_ticket(db:Session,event_id,user_id):
-    db_already_taken:int = db.query(models.Ticket).filter(models.Ticket.event_id==event_id,models.Ticket.owner_id==user_id).count()
+def check_double_ticket(db:Session,event:schemas.Event,user:schemas.User):
+    db_already_taken:int = 0
+    ### このユーザーが同じ時間帯で他の公演のチケットを取っていないか(この公演の2枚目も含む)
+    timetable = get_timetable(db,event.timetable_id)
+    same_timetable_events = get_events_by_timetable(db,timetable)
+    for same_timetable_event in same_timetable_events:
+        db_already_taken += db.query(models.Ticket).filter(models.Ticket.event_id==same_timetable_event.id,models.Ticket.owner_id==user.id).count()
     if db_already_taken>0:
         return False
     else:
         return True
-def create_ticket(db:Session,event_id,user_id,person):
-    db_ticket = models.Ticket(id=ulid.new().str,event_id=event_id,owner_id=user_id,person=person)
+def create_ticket(db:Session,event:schemas.Event,user:schemas.User,person:int):
+    db_ticket = models.Ticket(id=ulid.new().str,event_id=event.id,owner_id=user.id,person=person,is_used=False)
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)

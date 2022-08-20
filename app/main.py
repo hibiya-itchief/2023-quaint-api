@@ -181,20 +181,22 @@ def get_event(group_id:str,event_id:str,db:Session=Depends(dep.get_db)):
 
 ### Ticket CRUD
 
-###TODO:同じ時間帯に取ってるチケットがないかの確認をする
+
 @app.post("/groups/{group_id}/events/{event_id}/tickets",response_model=schemas.Ticket,tags=["tickets"],description="active user only")
 def create_ticket(group_id:str,event_id:str,person:int,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
-    if user.is_active:
+    if user.is_active:#学校に来場しているか
         event = crud.get_event(db,group_id,event_id)
         if not event:
             raise HTTPException(400,"Invalid Parameter")
-
-        if event.sell_at <= datetime.now() and datetime.now() <= event.sell_ends:
-            if crud.count_tickets_for_event(db,event_id)<event.ticket_stock and crud.check_double_ticket(db,event_id,user.id):##まだチケットが余ってなくて、2枚目取得ではない
-                if person<7:#1アカウントにつき6人まで入れる
-                    return crud.create_ticket(db,event_id,user.id,person)
+        timetable = crud.get_timetable(db,event.timetable_id)
+        if timetable.sell_at <= datetime.now() and datetime.now() <= timetable.sell_ends:
+            if crud.count_tickets_for_event(db,event)+person<=event.ticket_stock and crud.check_double_ticket(db,event,user):##まだチケットが余っていて、同時間帯の公演の整理券取得ではない
+                if user.is_student==False and 0<person<4:#一般アカウント(家族アカウント含む)は1アカウントにつき3人まで入れる
+                    return crud.create_ticket(db,event,user,person)
+                elif user.is_student and person==1:
+                    return crud.create_ticket(db,event,user,person)
                 else:
-                    raise HTTPException(400,"Invalid Parameter(6 Person for 1 Account)")
+                    raise HTTPException(400,"Invalid Parameter(3 Person for 1 Account)")
             else:
                 raise HTTPException(404,"Sold out")
         else:

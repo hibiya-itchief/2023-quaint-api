@@ -1,4 +1,6 @@
 from typing_extensions import assert_type
+from urllib import response
+import datetime
 from fastapi.testclient import TestClient
 from requests import Session
 from app.main import app
@@ -215,9 +217,51 @@ def test_read_my_authority_success(db:Session):
     assert response.json()["authorizer_of"][0]==group_in1.id
 
 
-def test_get_list_of_your_ticckets(db:Session):
-    # TODO これから大いに変わると思うので
-    assert 1==2
+def test_get_list_of_your_tickets(db:Session):
+    fac_group = factories.group1_GroupCreateByAdmin()
+    fac_user = factories.active_UserCreateByAdmin()
+    fac_other_user = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,fac_user)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":fac_user.username,
+        "password":fac_user.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    other_user = crud.create_user_by_admin(db,fac_other_user)
+    group1 = crud.create_group(db,fac_group)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()-datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=60)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    crud.create_ticket(db,event1,other_user,person=22)
+    response = client.post(
+        url="/groups/"+group1.id+"/events/"+event1.id+"/tickets",
+        params={
+            "person":3
+        },
+        headers=headers
+    )
+    assert response.status_code==200
+
+    response = client.get("/users/me/tickets",headers=headers)
+    assert response.status_code==200
+    assert response.json()[0]["owner_id"]==user.id
+    assert response.json()[0]["event_id"]==event1.id
 ### Change Password
 def test_change_password_success(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
@@ -688,20 +732,537 @@ def test_add_tag_fail_not_admin(db:Session):
 
 # Event CRUD
 def test_create_event_success(db:Session):
-    # TODO Timetalbe方式にするので
-    assert 1==2
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    group = factories.group1_GroupCreateByAdmin()
+    timetable = factories.valid_timetable1()
+    db_group = crud.create_group(db,group)
+    db_timetable = crud.create_timetable(db,timetable)
+
+    response = client.post(
+        url="/groups/"+db_group.id+"/events",
+        json={
+                "timetable_id":db_timetable.id,
+                "ticket_stock":25,
+                "lottery":False
+            },
+        headers=headers)
+    assert response.status_code==200
+    assert response.json()["group_id"]==db_group.id
+    assert response.json()["timetable_id"]==db_timetable.id
+def test_create_event_fail_group_not_exist(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    group = factories.group1_GroupCreateByAdmin()
+    timetable = factories.valid_timetable1()
+    db_group = crud.create_group(db,group)
+    db_timetable = crud.create_timetable(db,timetable)
+
+    response = client.post(
+        url="/groups/"+"invalidgroupid"+"/events",
+        json={
+                "timetable_id":db_timetable.id,
+                "ticket_stock":25,
+                "lottery":False
+            },
+        headers=headers)
+    assert response.status_code==400
+def test_create_event_fail_timetable_not_exist(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    group = factories.group1_GroupCreateByAdmin()
+    timetable = factories.valid_timetable1()
+    db_group = crud.create_group(db,group)
+    db_timetable = crud.create_timetable(db,timetable)
+
+    response = client.post(
+        url="/groups/"+db_group.id+"/events",
+        json={
+                "timetable_id":"invalidtimatableid",
+                "ticket_stock":25,
+                "lottery":False
+            },
+        headers=headers)
+    assert response.status_code==400
+def test_create_event_fail_not_admin(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    group = factories.group1_GroupCreateByAdmin()
+    timetable = factories.valid_timetable1()
+    db_group = crud.create_group(db,group)
+    db_timetable = crud.create_timetable(db,timetable)
+
+    response = client.post(
+        url="/groups/"+db_group.id+"/events",
+        json={
+                "timetable_id":db_timetable.id,
+                "ticket_stock":25,
+                "lottery":False
+            },
+        headers=headers)
+    assert response.status_code==403
+
 def test_get_all_events_success(db:Session):
-    # TODO Timetable方式にするので
-    assert 1==2
+    group = factories.group1_GroupCreateByAdmin()
+    timetable1 = factories.valid_timetable1()
+    timetable2 = factories.valid_timetable2()
+    db_group = crud.create_group(db,group)
+    db_timetable1 = crud.create_timetable(db,timetable1)
+    db_timetable2 = crud.create_timetable(db,timetable2)
+    db_event1 = crud.create_event(db,db_group.id,schemas.EventCreate(timetable_id=db_timetable1.id,ticket_stock=25,lottery=False))
+    db_event2 = crud.create_event(db,db_group.id,schemas.EventCreate(timetable_id=db_timetable2.id,ticket_stock=25,lottery=False))
+    response = client.get(url="/groups/"+db_group.id+"/events",)
+    assert response.status_code==200
+    assert response.json()[0]["timetable_id"]==db_timetable1.id
+    assert response.json()[1]["timetable_id"]==db_timetable2.id
+
 def test_get_event_success(db:Session):
-    # TODO Timetable方式にするので
-    assert 1==2
+    group = factories.group1_GroupCreateByAdmin()
+    timetable1 = factories.valid_timetable1()
+    db_group = crud.create_group(db,group)
+    db_timetable1 = crud.create_timetable(db,timetable1)
+    db_event1 = crud.create_event(db,db_group.id,schemas.EventCreate(timetable_id=db_timetable1.id,ticket_stock=25,lottery=False))
+    response = client.get(url="/groups/"+db_group.id+"/events/"+db_event1.id,)
+    assert response.status_code==200
+    assert response.json()["timetable_id"]==db_timetable1.id
 
 
 # Ticket Crud
 def test_create_ticket_success(db:Session):
-    # TODO まだ変わる
-    assert 1==2
+    fac_group = factories.group1_GroupCreateByAdmin()
+    fac_user = factories.active_UserCreateByAdmin()
+    fac_other_user = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,fac_user)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":fac_user.username,
+        "password":fac_user.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    other_user = crud.create_user_by_admin(db,fac_other_user)
+    group1 = crud.create_group(db,fac_group)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()-datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=60)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    crud.create_ticket(db,event1,other_user,person=22)
+    response = client.post(
+        url="/groups/"+group1.id+"/events/"+event1.id+"/tickets",
+        params={
+            "person":3
+        },
+        headers=headers
+    )
+    assert response.status_code==200
+def test_create_ticket_fail_not_active(db:Session):
+    fac_group = factories.group1_GroupCreateByAdmin()
+    fac_user = factories.inactive_UserCreateByAdmin()
+    fac_other_user = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,fac_user)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":fac_user.username,
+        "password":fac_user.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    other_user = crud.create_user_by_admin(db,fac_other_user)
+    group1 = crud.create_group(db,fac_group)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()-datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=60)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    crud.create_ticket(db,event1,other_user,person=22)
+    response = client.post(
+        url="/groups/"+group1.id+"/events/"+event1.id+"/tickets",
+        params={
+            "person":3
+        },
+        headers=headers
+    )
+    assert response.status_code==400
+def test_create_ticket_fail_not_selling(db:Session):
+    fac_group = factories.group1_GroupCreateByAdmin()
+    fac_user = factories.active_UserCreateByAdmin()
+    fac_other_user = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,fac_user)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":fac_user.username,
+        "password":fac_user.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    other_user = crud.create_user_by_admin(db,fac_other_user)
+    group1 = crud.create_group(db,fac_group)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=30),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=30),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=90)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    crud.create_ticket(db,event1,other_user,person=22)
+    response = client.post(
+        url="/groups/"+group1.id+"/events/"+event1.id+"/tickets",
+        params={
+            "person":3
+        },
+        headers=headers
+    )
+    assert response.status_code==404
+def test_create_ticket_fail_soldout_stock(db:Session):
+    fac_group = factories.group1_GroupCreateByAdmin()
+    fac_user = factories.active_UserCreateByAdmin()
+    fac_other_user = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,fac_user)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":fac_user.username,
+        "password":fac_user.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    other_user = crud.create_user_by_admin(db,fac_other_user)
+    group1 = crud.create_group(db,fac_group)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()-datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=60)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    crud.create_ticket(db,event1,other_user,person=23)
+    response = client.post(
+        url="/groups/"+group1.id+"/events/"+event1.id+"/tickets",
+        params={
+            "person":3
+        },
+        headers=headers
+    )
+    assert response.status_code==404
+def test_create_ticket_fail_soldout_same_timetable(db:Session):
+    fac_group = factories.group1_GroupCreateByAdmin()
+    fac_group2 = factories.group2_GroupCreateByAdmin()
+    fac_user = factories.active_UserCreateByAdmin()
+    fac_other_user = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,fac_user)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":fac_user.username,
+        "password":fac_user.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    other_user = crud.create_user_by_admin(db,fac_other_user)
+    group1 = crud.create_group(db,fac_group)
+    group2 = crud.create_group(db,fac_group2)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()-datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=60)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    event2 = crud.create_event(db,group2.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    crud.create_ticket(db,event1,other_user,person=22)
+    response = client.post(
+        url="/groups/"+group1.id+"/events/"+event1.id+"/tickets",
+        params={
+            "person":3
+        },
+        headers=headers
+    )
+    response = client.post(
+        url="/groups/"+group2.id+"/events/"+event2.id+"/tickets",
+        params={
+            "person":3
+        },
+        headers=headers
+    )
+    assert response.status_code==404
+def test_create_ticket_fail_soldout_same_event(db:Session):
+    fac_group = factories.group1_GroupCreateByAdmin()
+    fac_user = factories.active_UserCreateByAdmin()
+    fac_other_user = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,fac_user)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":fac_user.username,
+        "password":fac_user.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    other_user = crud.create_user_by_admin(db,fac_other_user)
+    group1 = crud.create_group(db,fac_group)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()-datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=60)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    crud.create_ticket(db,event1,other_user,person=10)
+    response = client.post(
+        url="/groups/"+group1.id+"/events/"+event1.id+"/tickets",
+        params={
+            "person":3
+        },
+        headers=headers
+    )
+    response = client.post(
+        url="/groups/"+group1.id+"/events/"+event1.id+"/tickets",
+        params={
+            "person":3
+        },
+        headers=headers
+    )
+    assert response.status_code==404
+def test_create_ticket_fail_invalid_person1(db:Session):
+    fac_group = factories.group1_GroupCreateByAdmin()
+    fac_user = factories.active_UserCreateByAdmin()
+    fac_other_user = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,fac_user)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":fac_user.username,
+        "password":fac_user.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    other_user = crud.create_user_by_admin(db,fac_other_user)
+    group1 = crud.create_group(db,fac_group)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()-datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=60)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    crud.create_ticket(db,event1,other_user,person=10)
+    response = client.post(
+        url="/groups/"+group1.id+"/events/"+event1.id+"/tickets",
+        params={
+            "person":4
+        },
+        headers=headers
+    )
+    assert response.status_code==400
+def test_create_ticket_fail_invalid_person2(db:Session):
+    fac_group = factories.group1_GroupCreateByAdmin()
+    fac_user = factories.active_UserCreateByAdmin()
+    fac_other_user = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,fac_user)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":fac_user.username,
+        "password":fac_user.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    other_user = crud.create_user_by_admin(db,fac_other_user)
+    group1 = crud.create_group(db,fac_group)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()-datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=60)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    crud.create_ticket(db,event1,other_user,person=10)
+    response = client.post(
+        url="/groups/"+group1.id+"/events/"+event1.id+"/tickets",
+        params={
+            "person":-1
+        },
+        headers=headers
+    )
+    assert response.status_code==400
+def test_create_ticket_fail_invalid_student(db:Session):
+    fac_group = factories.group1_GroupCreateByAdmin()
+    fac_user = factories.active_student_UserCreateByAdmin()
+    fac_other_user = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,fac_user)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":fac_user.username,
+        "password":fac_user.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    other_user = crud.create_user_by_admin(db,fac_other_user)
+    group1 = crud.create_group(db,fac_group)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()-datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=60)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    crud.create_ticket(db,event1,other_user,person=10)
+    response = client.post(
+        url="/groups/"+group1.id+"/events/"+event1.id+"/tickets",
+        params={
+            "person":2
+        },
+        headers=headers
+    )
+    assert response.status_code==400
 
 # Timetable
 def test_create_timetable_success(db:Session):
