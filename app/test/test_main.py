@@ -43,6 +43,19 @@ def test_login_for_access_token_fail_username(db:Session):
         "password":user_in.password
     })
     assert response.status_code == 401
+    assert response.json()["detail"]=="Incorrect username or password"
+def test_login_for_access_token_fail_password_expired(db:Session):
+    user_in = factories.passwordexpired_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_in)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_in.username,
+        "password":user_in.password
+    })
+    assert response.status_code == 401
+    assert response.json()["detail"]=="Password expired"
 def test_login_for_access_token_fail_password(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
@@ -54,6 +67,7 @@ def test_login_for_access_token_fail_password(db:Session):
         "password":"invalidpassword"
     })
     assert response.status_code == 401
+    assert response.json()["detail"]=="Incorrect username or password"
 
 ## User CRUD
 def test_create_user_success_by_public(db:Session):

@@ -21,6 +21,13 @@ class hogehoge_UserCreateByAdmin():
     is_family=False
     is_active=False
     password_expired=False
+class passwordexpired_UserCreateByAdmin():
+    username = "hoge_hoge"
+    password = "password"
+    is_student=False
+    is_family=False
+    is_active=False
+    password_expired=True
 class active_UserCreateByAdmin():
     username = "active_hoge_hoge"
     password = "password"
