@@ -203,7 +203,16 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.User=Depends
             raise HTTPException(404,"Not Selling")
     else:
         raise HTTPException(400,"active user only")
-
+@app.get("/groups/{group_id}/events/{event_id}/tickets",response_model=schemas.TakenTickets,tags=["tickets"])
+def count_already_taken_tickets(group_id:str,event_id:str,db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise status.HTTP_404_NOT_FOUND
+    event = crud.get_event(db,group.id,event_id)
+    if not event:
+        raise status.HTTP_404_NOT_FOUND
+    tickets_number:int=crud.count_tickets_for_event(db,event)
+    return schemas.TakenTickets(taken_tickets=tickets_number)
 
 # Timetable
 @app.post("/timetable",response_model=schemas.Timetable,tags=["timetable"],description="Required Authority: **Admin**")

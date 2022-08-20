@@ -121,7 +121,7 @@ def get_all_events(db:Session,group_id:str):
     db_events = db.query(models.Event).filter(models.Event.group_id==group_id).all()
     return db_events
 def get_event(db:Session,group_id:str,event_id:str):
-    db_event:schemas.Event = db.query(models.Event).filter(models.Event.group_id==group_id,models.Event.id==event_id).first()
+    db_event = db.query(models.Event).filter(models.Event.group_id==group_id,models.Event.id==event_id).first()
     if db_event:
         return db_event
     else:

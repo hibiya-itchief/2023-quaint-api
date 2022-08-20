@@ -80,6 +80,9 @@ class Ticket(TicketBase):
     class Config:
         orm_mode=True
 
+class TakenTickets(BaseModel):
+    taken_tickets:int
+
 class Token(BaseModel):
     access_token:str
     token_type:str
