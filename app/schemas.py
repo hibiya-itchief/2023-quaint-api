@@ -11,24 +11,29 @@ class AuthorityRole(str,Enum):
     Admin = "Admin"
     Entry = "Entry"
 
-class EventBase(BaseModel):
-    title:str=Query(max_length=200)
-    description:str=Query(max_length=200)
+class TimetableBase(BaseModel):
+    timetablename:str=Query(max_length=200)
+
     sell_at:datetime
     sell_ends:datetime
     starts_at:datetime
     ends_at:datetime
+class TimetableCreate(TimetableBase):
+    pass
+class Timetable(TimetableBase):
+    id:str
+    class Config:
+        orm_mode=True
+
+class EventBase(BaseModel):
+    timetable_id:str
     ticket_stock:int
     lottery:bool=False
 class EventCreate(EventBase):
     pass
 class Event(EventBase):
     id:str#ULID
-    group_id:str#hashids
-    class Config:
-        orm_mode=True
-class EventAdmin(Event):
-    tickets:List['Ticket']#Ticketのリストに一般ユーザーはアクセスできない方がいい
+    group_id:str#ULID
     class Config:
         orm_mode=True
 
@@ -122,7 +127,6 @@ class Vote(VoteBase):
 
 
 Event.update_forward_refs()
-EventAdmin.update_forward_refs()
 Group.update_forward_refs()
 Tag.update_forward_refs()
 Ticket.update_forward_refs()
