@@ -150,7 +150,7 @@ def check_double_ticket(db:Session,event:schemas.Event,user:schemas.User):
     else:
         return True
 def create_ticket(db:Session,event:schemas.Event,user:schemas.User,person:int):
-    db_ticket = models.Ticket(id=ulid.new().str,event_id=event.id,owner_id=user.id,person=person,is_used=False)
+    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=user.id,person=person,is_used=False)
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
