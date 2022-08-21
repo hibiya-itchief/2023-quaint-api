@@ -66,6 +66,7 @@ class Tag(TagBase):
         orm_mode=True
 
 class TicketBase(BaseModel):
+    group_id:str
     event_id:str#hashids
     owner_id:str#hashids
     is_family_ticket:bool = False

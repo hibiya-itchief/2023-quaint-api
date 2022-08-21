@@ -92,6 +92,7 @@ class Ticket(Base):
     id=Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
     created_at = Column(DateTime,server_default=current_timestamp())
 
+    group_id = Column(VARCHAR(255), ForeignKey("groups.id"))
     event_id = Column(VARCHAR(255), ForeignKey("events.id"))
     owner_id = Column(VARCHAR(255), ForeignKey("users.id"))
 
