@@ -86,6 +86,15 @@ def add_tag(db:Session,group_id:str,tag_input:schemas.GroupTagCreate):
     db.commit()
     db.refresh(db_grouptag)
     return db_grouptag
+def get_tags_of_group(db:Session,group:schemas.Group):
+    group = get_group(db,group.id)
+    if not group:
+        return None
+    db_grouptags = db.query(models.GroupTag).filter(models.GroupTag.group_id==group.id).all()
+    tags=[]
+    for db_grouptag in db_grouptags:
+        tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
+    return tags
 
 # Timetable
 def create_timetable(db:Session,timetable:schemas.TimetableCreate):
