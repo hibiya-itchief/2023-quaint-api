@@ -213,7 +213,16 @@ def count_already_taken_tickets(group_id:str,event_id:str,db:Session=Depends(dep
         raise status.HTTP_404_NOT_FOUND
     tickets_number:int=crud.count_tickets_for_event(db,event)
     return schemas.TakenTickets(taken_tickets=tickets_number)
-
+'''    
+@app.get("/tickets/{ticket_id}",response_model=schemas.Ticket,tags=["tickets"],description="admin、その整理券の団体のownerまたはauthorizer")
+def get_ticket(ticket_id:str,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    ticket = crud.get_ticket(db,ticket_id)
+    if not ticket:
+        raise status.HTTP_404_NOT_FOUND
+    group = crud.get_event()
+    crud.check_owner_of(db,)
+    # TODO Ticket のschemaにgroup_idを追加話はそれからだ
+'''
 # Timetable
 @app.post("/timetable",response_model=schemas.Timetable,tags=["timetable"],description="Required Authority: **Admin**")
 def create_timetable(timetable:schemas.TimetableCreate,permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):

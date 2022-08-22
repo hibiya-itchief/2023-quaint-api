@@ -1,4 +1,3 @@
-from curses import has_ic
 from typing import List
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, Query
@@ -154,6 +153,9 @@ def create_ticket(db:Session,event:schemas.Event,user:schemas.User,person:int):
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
+    return db_ticket
+def get_ticket(db:Session,ticket_id):
+    db_ticket:schemas.Ticket = db.query(models.Ticket).filter(models.Ticket.id==ticket_id)
     return db_ticket
 
 
