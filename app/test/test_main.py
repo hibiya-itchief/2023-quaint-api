@@ -742,7 +742,19 @@ def test_add_tag_fail_not_admin(db:Session):
         headers=headers
     )
     assert response.status_code==403
-
+def test_get_tags_of_group(db:Session):
+    group1_in = factories.group1_GroupCreateByAdmin()
+    tag1_in = factories.tag1_TagCreateByAdmin()
+    tag2_in = factories.tag2_TagCreateByAdmin()
+    group1 = crud.create_group(db,group1_in)
+    tag1 = crud.create_tag(db,tag1_in)
+    tag2 = crud.create_tag(db,tag2_in)
+    crud.add_tag(db,group1.id,schemas.GroupTagCreate(tag_id=tag1.id))
+    crud.add_tag(db,group1.id,schemas.GroupTagCreate(tag_id=tag2.id))
+    response = client.get("/groups/"+group1.id+"/tags")
+    assert response.status_code==200
+    assert response.json()[0]["tagname"]==tag1_in.tagname
+    assert response.json()[1]["tagname"]==tag2_in.tagname
 
 # Event CRUD
 def test_create_event_success(db:Session):

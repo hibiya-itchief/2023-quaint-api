@@ -161,6 +161,12 @@ def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,permittion:schemas.User=D
     if not grouptag:
         raise HTTPException(404,"Not Found")
     return "Add Tag Successfully"
+@app.get("/groups/{group_id}/tags",response_model=List[schemas.Tag],tags=["groups"])
+def get_tags_of_group(group_id:str,db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise status.HTTP_404_NOT_FOUND
+    return crud.get_tags_of_group(db,group)
 
 ### Event Crud
 @app.post("/groups/{group_id}/events",response_model=schemas.Event,tags=["events"],description="Required Authority: **Admin**")
