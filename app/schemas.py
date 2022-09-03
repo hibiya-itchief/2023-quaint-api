@@ -68,6 +68,7 @@ class Tag(TagBase):
         orm_mode=True
 
 class TicketBase(BaseModel):
+    group_id:str
     event_id:str#hashids
     owner_id:str#hashids
     is_family_ticket:bool = False
@@ -81,6 +82,11 @@ class Ticket(TicketBase):
 
     class Config:
         orm_mode=True
+
+class TicketsNumberData(BaseModel):
+    taken_tickets:int
+    left_tickets:int
+    stock:int
 
 class Token(BaseModel):
     access_token:str

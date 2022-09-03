@@ -289,6 +289,28 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.User=Depends
             raise HTTPException(404,"Not Selling")
     else:
         raise HTTPException(400,"active user only")
+@app.get("/groups/{group_id}/events/{event_id}/tickets",response_model=schemas.TicketsNumberData,tags=["tickets"])
+def count_tickets(group_id:str,event_id:str,db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404)
+    event = crud.get_event(db,group.id,event_id)
+    if not event:
+        raise HTTPException(404)
+    taken_tickets:int=crud.count_tickets_for_event(db,event)
+    stock:int=event.ticket_stock
+    left_tickets:int=stock-taken_tickets
+    return schemas.TicketsNumberData(taken_tickets=taken_tickets,left_tickets=left_tickets,stock=stock)
+
+@app.get("/tickets/{ticket_id}",response_model=schemas.Ticket,tags=["tickets"],description="admin、その整理券の団体のownerまたはauthorizer")
+def get_ticket(ticket_id:str,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    ticket = crud.get_ticket(db,ticket_id)
+    if not ticket:
+        raise HTTPException(404)
+    group = crud.get_group(db,ticket.group_id)
+    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user) or crud.check_authorizer_of(db,group,user)):
+        raise HTTPException(404)
+    return ticket
 
 
 # Timetable
