@@ -60,7 +60,7 @@ def get_list_of_your_tickets(db:Session,user:schemas.User):
     return db_tickets
 
 def create_group(db:Session,group:schemas.GroupCreate):
-    db_group = models.Group(id=group.id,groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
+    db_group = models.Group(id=group.id,groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote)
     db.add(db_group)
     db.commit()
     db.refresh(db_group)
@@ -104,17 +104,20 @@ def update_stream_url(db:Session,group:schemas.Group,stream_url:Union[str,None])
     db.commit()
     db.refresh(db_group)
     return db_group
-def add_tag(db:Session,group_id:str,tag_input:schemas.GroupTagCreate):
+def add_tag(db:Session,group_id:str,tag_id:schemas.GroupTagCreate):
     group = get_group(db,group_id)
-    tag = get_tag(db,tag_input.tag_id)
+    tag = get_tag(db,tag_id.tag_id)
     if not group:
         return None
     if not tag:
         return None
-    db_grouptag = models.GroupTag(group_id=group.id,tag_id=tag.id)
-    db.add(db_grouptag)
-    db.commit()
-    db.refresh(db_grouptag)
+    try:
+        db_grouptag = models.GroupTag(group_id=group.id,tag_id=tag.id)
+        db.add(db_grouptag)
+        db.commit()
+        db.refresh(db_grouptag)
+    except:
+        raise HTTPException(200,"Already Registed")
     return db_grouptag
 def get_tags_of_group(db:Session,group:schemas.Group):
     group = get_group(db,group.id)

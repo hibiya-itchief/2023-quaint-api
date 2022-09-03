@@ -154,7 +154,7 @@ def get_group(group_id:str,db:Session=Depends(dep.get_db)):
     return group_result
 
 @app.put("/groups/{group_id}/title",response_model=schemas.Group,tags=["groups"],description="Required Authority:Admin or Owner")
-def update_description(group_id:str,title:Union[str,None]=Query(default=None,max_length=200),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+def update_title(group_id:str,title:Union[str,None]=Query(default=None,max_length=200),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
     group = crud.get_group(db,group_id)
     if not group:
         raise HTTPException(404,"Not Found")
@@ -184,15 +184,15 @@ def update_instagram_url(group_id:str,instagram_url:Union[str,None]=Query(defaul
         raise HTTPException(404,"Not Found")
     if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
         raise HTTPException(401,"Required Authority: Admin or Owner")
-    return crud.update_twitter_url(db,group,instagram_url)
+    return crud.update_instagram_url(db,group,instagram_url)
 @app.put("/groups/{group_id}/stream_url",response_model=schemas.Group,tags=["groups"],description="Required Authority:Admin")
-def update_instagram_url(group_id:str,stream_url:Union[str,None]=Query(default=None,regex="https?://web.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?"),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+def update_stream_url(group_id:str,stream_url:Union[str,None]=Query(default=None,regex="https?://web.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?"),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
     group = crud.get_group(db,group_id)
     if not group:
         raise HTTPException(404,"Not Found")
     if not crud.check_admin(db,user):
         raise HTTPException(401,"Required Authority: Admin")
-    return crud.update_twitter_url(db,group,stream_url)
+    return crud.update_stream_url(db,group,stream_url)
 
 @app.put("/groups/{group_id}/thumbnail_image",response_model=schemas.Group,tags=["groups"],description="Required Authority: **Admin** or **Owner**")
 def upload_thumbnail_image(group_id:str,file:bytes = File(),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
@@ -215,12 +215,9 @@ def upload_cover_image(group_id:str,file:bytes = File(),user:schemas.User=Depend
 
 @app.put("/groups/{group_id}/tags",tags=["groups"],description="Required Authority: **Admin**")
 def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
-    try:
-        grouptag = crud.add_tag(db,group_id,tag_id)
-        if not grouptag:
-            raise HTTPException(404,"Not Found")
-    except:
-        raise HTTPException(200,"Already Registed")
+    grouptag = crud.add_tag(db,group_id,tag_id)
+    if not grouptag:
+        raise HTTPException(404,"Not Found")
     return "Add Tag Successfully"
 @app.get("/groups/{group_id}/tags",response_model=List[schemas.Tag],tags=["groups"])
 def get_tags_of_group(group_id:str,db:Session=Depends(dep.get_db)):
