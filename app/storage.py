@@ -7,13 +7,16 @@ import ulid
 from fastapi import HTTPException
 
 COMPRESS_QUALITY=50
-s3 = boto3.client(
- 's3',
- region_name=settings.region_name,
- aws_secret_access_key=settings.aws_secret_access_key,
- aws_access_key_id=settings.aws_access_key_id,
- endpoint_url=settings.endpoint_url
-)
+try:
+    s3 = boto3.client(
+    's3',
+    region_name=settings.region_name,
+    aws_secret_access_key=settings.aws_secret_access_key,
+    aws_access_key_id=settings.aws_access_key_id,
+    endpoint_url=settings.endpoint_url
+    )
+except:
+    pass
 
 def upload_to_oos(binary:bytes) ->str:
     try:
