@@ -573,16 +573,16 @@ def test_create_group_success(db:Session):
         'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
     }
     group_in = factories.group1_GroupCreateByAdmin()
-    response = client.post(url="/groups",json={
+    response = client.post(url="/groups",json=[{
         "id":group_in.id,
         "groupname":group_in.groupname,
         "title":group_in.title,
         "description":group_in.description,
         "page_content":group_in.page_content,
         "enable_vote":group_in.enable_vote
-    },headers=headers)
+    }],headers=headers)
     assert response.status_code==200
-    assert response.json()["groupname"]==group_in.groupname
+    assert response.json()[0]["groupname"]==group_in.groupname
 def test_create_group_fail_not_admin(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)

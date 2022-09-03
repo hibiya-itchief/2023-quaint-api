@@ -140,9 +140,12 @@ def grant_authority(user_id:str,role:schemas.AuthorityRole,group_id:Union[str,No
 
 
 
-@app.post("/groups",response_model=schemas.Group,tags=["groups"],description="Required Authority: **Admin**")
-def create_group(group:schemas.GroupCreate,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
-    return crud.create_group(db,group)
+@app.post("/groups",response_model=List[schemas.Group],tags=["groups"],description="Required Authority: **Admin**")
+def create_group(groups:List[schemas.GroupCreate],permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    result=[]
+    for group in groups:
+        result.append(crud.create_group(db,group))
+    return result
 @app.get("/groups",response_model=List[schemas.Group],tags=["groups"])
 def get_all_groups(db:Session=Depends(dep.get_db)):
     return crud.get_all_groups(db)
@@ -186,7 +189,7 @@ def update_instagram_url(group_id:str,instagram_url:Union[str,None]=Query(defaul
         raise HTTPException(401,"Required Authority: Admin or Owner")
     return crud.update_instagram_url(db,group,instagram_url)
 @app.put("/groups/{group_id}/stream_url",response_model=schemas.Group,tags=["groups"],description="Required Authority:Admin")
-def update_stream_url(group_id:str,stream_url:Union[str,None]=Query(default=None,regex="https?://web.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?"),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+def update_stream_url(group_id:str,stream_url:Union[str,None]=Query(default=None,regex="https?://web\.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?"),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
     group = crud.get_group(db,group_id)
     if not group:
         raise HTTPException(404,"Not Found")
