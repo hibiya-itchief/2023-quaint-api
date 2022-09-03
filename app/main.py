@@ -203,26 +203,30 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.User=Depends
             raise HTTPException(404,"Not Selling")
     else:
         raise HTTPException(400,"active user only")
-@app.get("/groups/{group_id}/events/{event_id}/tickets",response_model=schemas.TakenTickets,tags=["tickets"])
-def count_already_taken_tickets(group_id:str,event_id:str,db:Session=Depends(dep.get_db)):
+@app.get("/groups/{group_id}/events/{event_id}/tickets",response_model=schemas.TicketsNumberData,tags=["tickets"])
+def count_tickets(group_id:str,event_id:str,db:Session=Depends(dep.get_db)):
     group = crud.get_group(db,group_id)
     if not group:
-        raise status.HTTP_404_NOT_FOUND
+        raise HTTPException(404)
     event = crud.get_event(db,group.id,event_id)
     if not event:
-        raise status.HTTP_404_NOT_FOUND
-    tickets_number:int=crud.count_tickets_for_event(db,event)
-    return schemas.TakenTickets(taken_tickets=tickets_number)
-'''    
+        raise HTTPException(404)
+    taken_tickets:int=crud.count_tickets_for_event(db,event)
+    stock:int=event.ticket_stock
+    left_tickets:int=stock-taken_tickets
+    return schemas.TicketsNumberData(taken_tickets=taken_tickets,left_tickets=left_tickets,stock=stock)
+
 @app.get("/tickets/{ticket_id}",response_model=schemas.Ticket,tags=["tickets"],description="admin、その整理券の団体のownerまたはauthorizer")
 def get_ticket(ticket_id:str,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
     ticket = crud.get_ticket(db,ticket_id)
     if not ticket:
-        raise status.HTTP_404_NOT_FOUND
-    group = crud.get_event()
-    crud.check_owner_of(db,)
-    # TODO Ticket のschemaにgroup_idを追加話はそれからだ
-'''
+        raise HTTPException(404)
+    group = crud.get_group(db,ticket.group_id)
+    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user) or crud.check_authorizer_of(db,group,user)):
+        raise HTTPException(404)
+    return ticket
+
+
 # Timetable
 @app.post("/timetable",response_model=schemas.Timetable,tags=["timetable"],description="Required Authority: **Admin**")
 def create_timetable(timetable:schemas.TimetableCreate,permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):

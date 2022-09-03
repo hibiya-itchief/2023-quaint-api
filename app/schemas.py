@@ -81,8 +81,10 @@ class Ticket(TicketBase):
     class Config:
         orm_mode=True
 
-class TakenTickets(BaseModel):
+class TicketsNumberData(BaseModel):
     taken_tickets:int
+    left_tickets:int
+    stock:int
 
 class Token(BaseModel):
     access_token:str
