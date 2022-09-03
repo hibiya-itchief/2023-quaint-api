@@ -44,12 +44,14 @@ class GroupBase(BaseModel):#userdefined idをURLにする。groupnameは表示�
     description:Union[str,None] = Query(default=None,max_length=200)
     page_content:Union[str,None] = Query(default=None,max_length=16000)
     enable_vote:bool = True
-    twitter_url:Union[str,None]=Query(default=None,regex="https?://twitter\.com/[0-9a-zA-Z_]{1,15}/?")
-    instagram_url:Union[str,None]=Query(default=None,regex="https?://instagram\.com/[0-9a-zA-Z_.]{1,30}/?")
-    stream_url:Union[str,None]=Query(default=None,regex="https?://web.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?")
 class GroupCreate(GroupBase):
     pass
 class Group(GroupBase):
+    twitter_url:Union[str,None]
+    instagram_url:Union[str,None]
+    stream_url:Union[str,None]
+    thumbnail_image_url:Union[str,None]
+    cover_image_url:Union[str,None]
     class Config:
         orm_mode=True
 

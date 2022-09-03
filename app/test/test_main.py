@@ -631,6 +631,236 @@ def test_get_group_fail_invalid_id(db:Session):
     group = crud.create_group(db,group_in1)
     response = client.get("/groups/"+"invalid-id")
     assert response.status_code==404
+def test_update_title_success(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    response = client.put("/groups/"+group.id+"/title",params={"title":"ChangedTitle"},headers=headers)
+    assert response.status_code==200
+    assert response.json()["title"]=="ChangedTitle"
+def test_update_title_empty_success(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    response = client.put("/groups/"+group.id+"/title",params={"title":""},headers=headers)
+    assert response.status_code==200
+    assert response.json()["title"]==""
+def test_update_description_success(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    response = client.put("/groups/"+group.id+"/description",params={"description":"ChangedDescription"},headers=headers)
+    assert response.status_code==200
+    assert response.json()["description"]=="ChangedDescription"
+def test_update_description_empty_success(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    response = client.put("/groups/"+group.id+"/description",params={"description":""},headers=headers)
+    assert response.status_code==200
+    assert response.json()["description"]==""
+def test_update_twitter_url_success(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    response = client.put("/groups/"+group.id+"/twitter_url",params={"twitter_url":"https://twitter.com/tucyvub"},headers=headers)
+    assert response.status_code==200
+    assert response.json()["twitter_url"]=="https://twitter.com/tucyvub"
+def test_update_twitter_url_empty_success(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    response = client.put("/groups/"+group.id+"/twitter_url",params={},headers=headers)
+    assert response.status_code==200
+    assert response.json()["twitter_url"]==None
+def test_update_instagram_url_success(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    response = client.put("/groups/"+group.id+"/instagram_url",params={"instagram_url":"http://instagram.com/feZnGP"},headers=headers)
+    assert response.status_code==200
+    assert response.json()["instagram_url"]=="http://instagram.com/feZnGP"
+def test_update_instagram_url_empty_success(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    response = client.put("/groups/"+group.id+"/instagram_url",params={},headers=headers)
+    assert response.status_code==200
+    assert response.json()["instagram_url"]==None
+def test_update_stream_url_success(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    response = client.put("/groups/"+group.id+"/stream_url",params={"stream_url":"http://web.microsoftstream.com/video/test"},headers=headers)
+    assert response.status_code==200
+    assert response.json()["stream_url"]=="http://web.microsoftstream.com/video/test"
+def test_update_stream_url_empty_success(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    response = client.put("/groups/"+group.id+"/stream_url",params={},headers=headers)
+    assert response.status_code==200
+    assert response.json()["stream_url"]==None
 def test_add_tag_success(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)
@@ -742,7 +972,48 @@ def test_add_tag_fail_not_admin(db:Session):
         headers=headers
     )
     assert response.status_code==403
+def test_get_tags_of_group(db:Session):
+    group1_in = factories.group1_GroupCreateByAdmin()
+    tag1_in = factories.tag1_TagCreateByAdmin()
+    tag2_in = factories.tag2_TagCreateByAdmin()
+    group1 = crud.create_group(db,group1_in)
+    tag1 = crud.create_tag(db,tag1_in)
+    tag2 = crud.create_tag(db,tag2_in)
+    crud.add_tag(db,group1.id,schemas.GroupTagCreate(tag_id=tag1.id))
+    crud.add_tag(db,group1.id,schemas.GroupTagCreate(tag_id=tag2.id))
+    response = client.get("/groups/"+group1.id+"/tags")
+    assert response.status_code==200
+    assert response.json()[0]["tagname"]==tag1_in.tagname
+    assert response.json()[1]["tagname"]==tag2_in.tagname
 
+def test_delete_grouptag_success(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    
+    group1_in = factories.group1_GroupCreateByAdmin()
+    tag1_in = factories.tag1_TagCreateByAdmin()
+    tag2_in = factories.tag2_TagCreateByAdmin()
+    group1 = crud.create_group(db,group1_in)
+    tag1 = crud.create_tag(db,tag1_in)
+    tag2 = crud.create_tag(db,tag2_in)
+    crud.add_tag(db,group1.id,schemas.GroupTagCreate(tag_id=tag1.id))
+    crud.add_tag(db,group1.id,schemas.GroupTagCreate(tag_id=tag2.id))
+    response = client.delete(url="/groups/"+group1.id+"/tags/"+tag1.id,headers=headers)
+    assert response.status_code==200
 
 # Event CRUD
 def test_create_event_success(db:Session):

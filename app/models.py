@@ -1,6 +1,6 @@
 #from numpy import integer
 #from pandas import notnull
-from sqlalchemy import TEXT, VARCHAR, Boolean, Column, ForeignKey, Integer, String, DateTime
+from sqlalchemy import TEXT, VARCHAR, Boolean, Column, ForeignKey, Integer, String, DateTime,UniqueConstraint
 from sqlalchemy.dialects.sqlite import TIMESTAMP as Timestamp
 # from sqlalchemy.dialects.mysql import TIMESTAMP as Timestamp
 from sqlalchemy.sql.functions import current_timestamp
@@ -34,27 +34,28 @@ class Event(Base):
 
 class Admin(Base):
     __tablename__ = "admin"
-    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)#ULID
+    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True,unique=True)#ULID
 
 class Entry(Base):
     __tablename__ = "entry"
-    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)#ULID
+    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True,unique=True)#ULID
 
 class Authority(Base):
     #UserとGroupを結びつける中間テーブル権限管理
     __tablename__ = "authority"
-    id = Column(Integer,unique=True,autoincrement=True,primary_key=True)
+    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
 
-    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False)
-    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False)
-
-    role = Column(VARCHAR(255))
+    role = Column(VARCHAR(255),primary_key=True)
+    # 複数カラムのunique constraint
+    __table_args__ = (UniqueConstraint("user_id", "group_id","role", name="unique_idx_groupid_tagid"),)
 
 class GroupTag(Base):
     __tablename__="grouptag"
-    id = Column(Integer,unique=True,autoincrement=True,primary_key=True)
-    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False)
-    tag_id = Column(VARCHAR(255),ForeignKey("tags.id"),nullable=False)
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
+    tag_id = Column(VARCHAR(255),ForeignKey("tags.id"),nullable=False,primary_key=True)
+    # 複数カラムのunique constraint
+    __table_args__ = (UniqueConstraint("group_id", "tag_id", name="unique_idx_groupid_tagid"),)
 
 class Tag(Base):
     __tablename__ = "tags"
@@ -83,6 +84,8 @@ class Group(Base):
     instagram_url = Column(VARCHAR(255))
     stream_url = Column(VARCHAR(255))
 
+    thumbnail_image_url=Column(VARCHAR(255))
+    cover_image_url=Column(VARCHAR(255))
 
     
 

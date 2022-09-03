@@ -1,4 +1,5 @@
-from typing import List
+from curses import has_ic
+from typing import List, Union
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, Query
 from app import models,dep
@@ -59,7 +60,7 @@ def get_list_of_your_tickets(db:Session,user:schemas.User):
     return db_tickets
 
 def create_group(db:Session,group:schemas.GroupCreate):
-    db_group = models.Group(id=group.id,groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
+    db_group = models.Group(id=group.id,groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote)
     db.add(db_group)
     db.commit()
     db.refresh(db_group)
@@ -73,18 +74,79 @@ def get_group(db:Session,id:str):
         return group
     else:
         return None
-def add_tag(db:Session,group_id:str,tag_input:schemas.GroupTagCreate):
+def update_title(db:Session,group:schemas.Group,title:Union[str,None]):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.title=title
+    db.commit()
+    db.refresh(db_group)
+    return db_group
+def update_description(db:Session,group:schemas.Group,description:Union[str,None]):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.description=description
+    db.commit()
+    db.refresh(db_group)
+    return db_group
+def update_twitter_url(db:Session,group:schemas.Group,twitter_url:Union[str,None]):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.twitter_url=twitter_url
+    db.commit()
+    db.refresh(db_group)
+    return db_group
+def update_instagram_url(db:Session,group:schemas.Group,instagram_url:Union[str,None]):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.instagram_url=instagram_url
+    db.commit()
+    db.refresh(db_group)
+    return db_group
+def update_stream_url(db:Session,group:schemas.Group,stream_url:Union[str,None]):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.stream_url=stream_url
+    db.commit()
+    db.refresh(db_group)
+    return db_group
+def add_tag(db:Session,group_id:str,tag_id:schemas.GroupTagCreate):
     group = get_group(db,group_id)
-    tag = get_tag(db,tag_input.tag_id)
+    tag = get_tag(db,tag_id.tag_id)
     if not group:
         return None
     if not tag:
         return None
-    db_grouptag = models.GroupTag(group_id=group.id,tag_id=tag.id)
-    db.add(db_grouptag)
-    db.commit()
-    db.refresh(db_grouptag)
+    try:
+        db_grouptag = models.GroupTag(group_id=group.id,tag_id=tag.id)
+        db.add(db_grouptag)
+        db.commit()
+        db.refresh(db_grouptag)
+    except:
+        raise HTTPException(200,"Already Registed")
     return db_grouptag
+def get_tags_of_group(db:Session,group:schemas.Group):
+    group = get_group(db,group.id)
+    if not group:
+        return None
+    db_grouptags = db.query(models.GroupTag).filter(models.GroupTag.group_id==group.id).all()
+    tags=[]
+    for db_grouptag in db_grouptags:
+        tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
+    return tags
+
+def update_thumbnail_image_url(db:Session,group:schemas.Group,image_url:str):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.thumbnail_image_url = image_url
+    db.commit()
+    return db_group
+def update_cover_image_url(db:Session,group:schemas.Group,image_url:str):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.cover_image_url = image_url
+    db.commit()
+    return db_group
+
+def delete_grouptag(db:Session,group:schemas.Group,tag:schemas.Tag):
+    db.query(models.GroupTag).filter(models.GroupTag.group_id==group.id,models.GroupTag.tag_id==tag.id).delete()
+    db.commit()
+    return 0
+def delete_group(db:Session,group:schemas.Group):
+    db.query(models.Group).filter(models.Group.id==group.id).delete()
+    db.commit()
 
 # Timetable
 def create_timetable(db:Session,timetable:schemas.TimetableCreate):
