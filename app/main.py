@@ -264,6 +264,19 @@ def get_event(group_id:str,event_id:str,db:Session=Depends(dep.get_db)):
     if not event:
         raise HTTPException(404,"Not Found")
     return event
+@app.delete("/groups/{group_id}/events/{event_id}",tags=["events"],description="Required Authority: Admin or Owner")
+def delete_events(group_id:str,event_id:str,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    event = crud.get_event(db,group_id,event_id)
+    if not event:
+        raise HTTPException(404)
+    group = crud.get_group(db,event.group_id)
+    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
+        raise HTTPException(403)
+    try:
+        crud.delete_events(db,event)
+        return {"OK":True}
+    except:
+        raise HTTPException(400,"You can't delete this event until all dependencies are deleted")
 
 ### Ticket CRUD
 
