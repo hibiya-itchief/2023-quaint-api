@@ -1,6 +1,6 @@
-from curses import has_ic
 from typing import List, Union
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from fastapi import HTTPException, Query
 from app import models,dep
 from app.config import settings
@@ -147,6 +147,11 @@ def delete_grouptag(db:Session,group:schemas.Group,tag:schemas.Tag):
 def delete_group(db:Session,group:schemas.Group):
     db.query(models.Group).filter(models.Group.id==group.id).delete()
     db.commit()
+
+
+def search_groups(db:Session,q:str):
+    return db.query(models.Group).filter(or_(models.Group.groupname.contains(q),models.Group.title.contains(q),models.Group.description.contains(q))).all()
+
 
 # Timetable
 def create_timetable(db:Session,timetable:schemas.TimetableCreate):
