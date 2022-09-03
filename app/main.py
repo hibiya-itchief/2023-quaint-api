@@ -107,7 +107,12 @@ def change_password(user:schemas.PasswordChange,db:Session=Depends(dep.get_db)):
 def get_list_of_your_tickets(user:schemas.User = Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
     return crud.get_list_of_your_tickets(db,user)
 
-
+@app.put("/users/{user_id}/activation",response_model=schemas.User,tags=["users"],description="Required Authority:Admin")
+def activate_user(user_id:str,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    user=crud.get_user(db,user_id)
+    if not user:
+        raise HTTPException(404)
+    return crud.activate_user(db,user)
 
 @app.put("/users/{user_id}/authority",tags=["users"])
 def grant_authority(user_id:str,role:schemas.AuthorityRole,group_id:Union[str,None]=None,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):

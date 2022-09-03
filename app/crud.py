@@ -47,6 +47,12 @@ def create_user_by_admin(db:Session,user:schemas.UserCreateByAdmin):
     db.refresh(db_user)
     return db_user
 
+def activate_user(db:Session,user:schemas.User):
+    db_user = db.query(models.User).filter(models.User.id==user.id).first()
+    db_user.is_active=True
+    db.commit()
+    return db_user
+
 def change_password(db:Session,user:schemas.PasswordChange):
     db_user=db.query(models.User).filter(models.User.username==user.username).first()
     hashed_new_password = dep.get_password_hash(user.new_password)
