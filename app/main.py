@@ -2,7 +2,7 @@ from datetime import datetime,timedelta
 from typing import Optional,List,Union
 from xml.dom.minidom import Entity
 
-from fastapi import FastAPI,Depends,HTTPException,status,File,UploadFile
+from fastapi import FastAPI,Depends,HTTPException,status,File,UploadFile,Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer,OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -153,6 +153,47 @@ def get_group(group_id:str,db:Session=Depends(dep.get_db)):
         raise HTTPException(404,"Group Not Found")
     return group_result
 
+@app.put("/groups/{group_id}/title",response_model=schemas.Group,tags=["groups"],description="Required Authority:Admin or Owner")
+def update_description(group_id:str,title:Union[str,None]=Query(default=None,max_length=200),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404,"Not Found")
+    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
+        raise HTTPException(401,"Required Authority: Admin or Owner")
+    return crud.update_title(db,group,title)
+@app.put("/groups/{group_id}/description",response_model=schemas.Group,tags=["groups"],description="Required Authority:Admin or Owner")
+def update_description(group_id:str,description:Union[str,None]=Query(default=None,max_length=200),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404,"Not Found")
+    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
+        raise HTTPException(401,"Required Authority: Admin or Owner")
+    return crud.update_description(db,group,description)
+@app.put("/groups/{group_id}/twitter_url",response_model=schemas.Group,tags=["groups"],description="Required Authority:Admin or Owner")
+def update_twitter_url(group_id:str,twitter_url:Union[str,None]=Query(default=None,regex="https?://twitter\.com/[0-9a-zA-Z_]{1,15}/?"),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404,"Not Found")
+    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
+        raise HTTPException(401,"Required Authority: Admin or Owner")
+    return crud.update_twitter_url(db,group,twitter_url)
+@app.put("/groups/{group_id}/instagram_url",response_model=schemas.Group,tags=["groups"],description="Required Authority:Admin or Owner")
+def update_instagram_url(group_id:str,instagram_url:Union[str,None]=Query(default=None,regex="https?://instagram\.com/[0-9a-zA-Z_.]{1,30}/?"),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404,"Not Found")
+    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
+        raise HTTPException(401,"Required Authority: Admin or Owner")
+    return crud.update_twitter_url(db,group,instagram_url)
+@app.put("/groups/{group_id}/stream_url",response_model=schemas.Group,tags=["groups"],description="Required Authority:Admin")
+def update_instagram_url(group_id:str,stream_url:Union[str,None]=Query(default=None,regex="https?://web.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?"),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404,"Not Found")
+    if not crud.check_admin(db,user):
+        raise HTTPException(401,"Required Authority: Admin")
+    return crud.update_twitter_url(db,group,stream_url)
+
 @app.put("/groups/{group_id}/thumbnail_image",response_model=schemas.Group,tags=["groups"],description="Required Authority: **Admin** or **Owner**")
 def upload_thumbnail_image(group_id:str,file:bytes = File(),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
     group = crud.get_group(db,group_id)
@@ -187,6 +228,28 @@ def get_tags_of_group(group_id:str,db:Session=Depends(dep.get_db)):
     if not group:
         raise status.HTTP_404_NOT_FOUND
     return crud.get_tags_of_group(db,group)
+@app.delete("/groups/{group_id}/tags/{tag_id}",tags=["groups"],description="Required Authority:Admin")
+def delete_grouptag(group_id:str,tag_id:str,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise status.HTTP_404_NOT_FOUND
+    tag = crud.get_tag(db,tag_id)
+    if not tag:
+        raise status.HTTP_404_NOT_FOUND
+    return crud.delete_grouptag(db,group,tag)
+@app.delete("/groups/{group_id}",tags=["groups"],description="Required Authority:Admin")
+def delete_group(group_id:str,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404)
+    try:
+        crud.delete_group(db,group)
+        return {"OK":True}
+    except:
+        raise HTTPException(400,"You can't delete this group until all dependencies are deleted")
+        
+    
+
 
 ### Event Crud
 @app.post("/groups/{group_id}/events",response_model=schemas.Event,tags=["events"],description="Required Authority: **Admin**")

@@ -1,5 +1,5 @@
 from curses import has_ic
-from typing import List
+from typing import List, Union
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, Query
 from app import models,dep
@@ -74,6 +74,36 @@ def get_group(db:Session,id:str):
         return group
     else:
         return None
+def update_title(db:Session,group:schemas.Group,title:Union[str,None]):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.title=title
+    db.commit()
+    db.refresh(db_group)
+    return db_group
+def update_description(db:Session,group:schemas.Group,description:Union[str,None]):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.description=description
+    db.commit()
+    db.refresh(db_group)
+    return db_group
+def update_twitter_url(db:Session,group:schemas.Group,twitter_url:Union[str,None]):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.twitter_url=twitter_url
+    db.commit()
+    db.refresh(db_group)
+    return db_group
+def update_instagram_url(db:Session,group:schemas.Group,instagram_url:Union[str,None]):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.instagram_url=instagram_url
+    db.commit()
+    db.refresh(db_group)
+    return db_group
+def update_stream_url(db:Session,group:schemas.Group,stream_url:Union[str,None]):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.stream_url=stream_url
+    db.commit()
+    db.refresh(db_group)
+    return db_group
 def add_tag(db:Session,group_id:str,tag_input:schemas.GroupTagCreate):
     group = get_group(db,group_id)
     tag = get_tag(db,tag_input.tag_id)
@@ -106,6 +136,14 @@ def update_cover_image_url(db:Session,group:schemas.Group,image_url:str):
     db_group.cover_image_url = image_url
     db.commit()
     return db_group
+
+def delete_grouptag(db:Session,group:schemas.Group,tag:schemas.Tag):
+    db.query(models.GroupTag).filter(models.GroupTag.group_id==group.id,models.GroupTag.tag_id==tag.id).delete()
+    db.commit()
+    return 0
+def delete_group(db:Session,group:schemas.Group):
+    db.query(models.Group).filter(models.Group.id==group.id).delete()
+    db.commit()
 
 # Timetable
 def create_timetable(db:Session,timetable:schemas.TimetableCreate):
