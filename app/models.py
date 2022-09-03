@@ -1,6 +1,6 @@
 #from numpy import integer
 #from pandas import notnull
-from sqlalchemy import TEXT, VARCHAR, Boolean, Column, ForeignKey, Integer, String, DateTime
+from sqlalchemy import TEXT, VARCHAR, Boolean, Column, ForeignKey, Integer, String, DateTime,UniqueConstraint
 from sqlalchemy.dialects.sqlite import TIMESTAMP as Timestamp
 # from sqlalchemy.dialects.mysql import TIMESTAMP as Timestamp
 from sqlalchemy.sql.functions import current_timestamp
@@ -52,9 +52,10 @@ class Authority(Base):
 
 class GroupTag(Base):
     __tablename__="grouptag"
-    id = Column(Integer,unique=True,autoincrement=True,primary_key=True)
-    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False)
-    tag_id = Column(VARCHAR(255),ForeignKey("tags.id"),nullable=False)
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
+    tag_id = Column(VARCHAR(255),ForeignKey("tags.id"),nullable=False,primary_key=True)
+    # 複数カラムのunique constraint
+    __table_args__ = (UniqueConstraint("group_id", "tag_id", name="unique_idx_groupid_tagid"),)
 
 class Tag(Base):
     __tablename__ = "tags"

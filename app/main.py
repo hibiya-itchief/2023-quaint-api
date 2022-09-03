@@ -174,9 +174,12 @@ def upload_cover_image(group_id:str,file:bytes = File(),user:schemas.User=Depend
 
 @app.put("/groups/{group_id}/tags",tags=["groups"],description="Required Authority: **Admin**")
 def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
-    grouptag = crud.add_tag(db,group_id,tag_id)
-    if not grouptag:
-        raise HTTPException(404,"Not Found")
+    try:
+        grouptag = crud.add_tag(db,group_id,tag_id)
+        if not grouptag:
+            raise HTTPException(404,"Not Found")
+    except:
+        raise HTTPException(200,"Already Registed")
     return "Add Tag Successfully"
 @app.get("/groups/{group_id}/tags",response_model=List[schemas.Tag],tags=["groups"])
 def get_tags_of_group(group_id:str,db:Session=Depends(dep.get_db)):
