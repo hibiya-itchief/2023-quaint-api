@@ -140,9 +140,12 @@ def grant_authority(user_id:str,role:schemas.AuthorityRole,group_id:Union[str,No
 
 
 
-@app.post("/groups",response_model=schemas.Group,tags=["groups"],description="Required Authority: **Admin**")
-def create_group(group:schemas.GroupCreate,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
-    return crud.create_group(db,group)
+@app.post("/groups",response_model=List[schemas.Group],tags=["groups"],description="Required Authority: **Admin**")
+def create_group(groups:List[schemas.GroupCreate],permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    result=[]
+    for group in groups:
+        result.append(crud.create_group(db,group))
+    return result
 @app.get("/groups",response_model=List[schemas.Group],tags=["groups"])
 def get_all_groups(db:Session=Depends(dep.get_db)):
     return crud.get_all_groups(db)
@@ -186,7 +189,7 @@ def update_instagram_url(group_id:str,instagram_url:Union[str,None]=Query(defaul
         raise HTTPException(401,"Required Authority: Admin or Owner")
     return crud.update_instagram_url(db,group,instagram_url)
 @app.put("/groups/{group_id}/stream_url",response_model=schemas.Group,tags=["groups"],description="Required Authority:Admin")
-def update_stream_url(group_id:str,stream_url:Union[str,None]=Query(default=None,regex="https?://web.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?"),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+def update_stream_url(group_id:str,stream_url:Union[str,None]=Query(default=None,regex="https?://web\.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?"),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
     group = crud.get_group(db,group_id)
     if not group:
         raise HTTPException(404,"Not Found")
@@ -252,12 +255,15 @@ def search_groups(q:str,db:Session=Depends(dep.get_db)):
 
 
 ### Event Crud
-@app.post("/groups/{group_id}/events",response_model=schemas.Event,tags=["events"],description="Required Authority: **Admin**")
-def create_event(group_id:str,event:schemas.EventCreate,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
-    event = crud.create_event(db,group_id,event)
-    if not event:
-        raise HTTPException(400,"Invalid Parameter")
-    return event
+@app.post("/groups/{group_id}/events",response_model=List[schemas.Event],tags=["events"],description="Required Authority: **Admin**")
+def create_event(group_id:str,events:List[schemas.EventCreate],permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    result=[]
+    for event in events:
+        event = crud.create_event(db,group_id,event)
+        if not event:
+            raise HTTPException(400,"Invalid Parameter")
+        result.append(event)
+    return result
 @app.get("/groups/{group_id}/events",response_model=List[schemas.Event],tags=["events"])
 def get_all_events(group_id:str,db:Session=Depends(dep.get_db)):
     return crud.get_all_events(db,group_id)
@@ -330,12 +336,15 @@ def get_ticket(ticket_id:str,user:schemas.User=Depends(dep.get_current_user),db:
 
 
 # Timetable
-@app.post("/timetable",response_model=schemas.Timetable,tags=["timetable"],description="Required Authority: **Admin**")
-def create_timetable(timetable:schemas.TimetableCreate,permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
-    result = crud.create_timetable(db,timetable=timetable)
-    if not result:
-        raise HTTPException(400,"Invalid Parameter")
-    return result
+@app.post("/timetable",response_model=List[schemas.Timetable],tags=["timetable"],description="Required Authority: **Admin**")
+def create_timetable(timetables:List[schemas.TimetableCreate],permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    results=[]
+    for timetable in timetables:
+        result = crud.create_timetable(db,timetable=timetable)
+        if not result:
+            raise HTTPException(400,"Invalid Parameter")
+        results.append(result)
+    return results
 @app.get("/timetable",response_model=List[schemas.Timetable],tags=["timetable"])
 def get_all_timetable(db:Session=Depends(dep.get_db)):
     return crud.get_all_timetable(db)
@@ -347,9 +356,12 @@ def get_timetable(timetable_id:str,db:Session=Depends(dep.get_db)):
     return timetable
 
 # Tag
-@app.post("/tags",response_model=schemas.Tag,tags=["tags"],description="Required Authority: **Admin**")
-def create_tag(tag:schemas.TagCreate,permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
-    return crud.create_tag(db,tag)
+@app.post("/tags",response_model=List[schemas.Tag],tags=["tags"],description="Required Authority: **Admin**")
+def create_tag(tags:List[schemas.TagCreate],permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    result=[]
+    for tag in tags:
+        result.append(crud.create_tag(db,tag))
+    return result
 @app.get("/tags",response_model=List[schemas.Tag],tags=["tags"])
 def get_all_tags(db:Session=Depends(dep.get_db)):
     return crud.get_all_tags(db)
@@ -374,12 +386,15 @@ def delete_tag(tag_id:str,permittion:schemas.User=Depends(dep.admin),db:Session 
     
 
 
-@app.post("/admin/users",response_model=schemas.User,tags=["admin"],description="Required Authority: **Admin**")
-def create_user_by_admin(user:schemas.UserCreateByAdmin,permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
-    db_user = crud.get_user_by_name(db,username=user.username)
-    if db_user:
-        raise HTTPException(status_code=400,detail="username already registered")
-    return crud.create_user_by_admin(db=db,user=user)
+@app.post("/admin/users",response_model=List[schemas.User],tags=["admin"],description="Required Authority: **Admin**")
+def create_user_by_admin(users:List[schemas.UserCreateByAdmin],permission:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    result=[]
+    for user in users:
+        db_user = crud.get_user_by_name(db,username=user.username)
+        if db_user:
+            raise HTTPException(status_code=400,detail="username already registered")
+        result.append(crud.create_user_by_admin(db=db,user=user))
+    return result
 
 
 

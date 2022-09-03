@@ -63,6 +63,8 @@ class group1_GroupCreateByAdmin():
     twitter_url=None
     instagram_url=None
     stream_url=None
+    thumbnail_image_url=None
+    cover_image_url=None
 class group2_GroupCreateByAdmin():
     id="18R"
     groupname="2年8組"
@@ -73,6 +75,8 @@ class group2_GroupCreateByAdmin():
     twitter_url=None
     instagram_url=None
     stream_url=None
+    thumbnail_image_url=None
+    cover_image_url=None
 
 class Timetable():
     timetablename:str

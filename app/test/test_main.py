@@ -573,16 +573,16 @@ def test_create_group_success(db:Session):
         'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
     }
     group_in = factories.group1_GroupCreateByAdmin()
-    response = client.post(url="/groups",json={
+    response = client.post(url="/groups",json=[{
         "id":group_in.id,
         "groupname":group_in.groupname,
         "title":group_in.title,
         "description":group_in.description,
         "page_content":group_in.page_content,
         "enable_vote":group_in.enable_vote
-    },headers=headers)
+    }],headers=headers)
     assert response.status_code==200
-    assert response.json()["groupname"]==group_in.groupname
+    assert response.json()[0]["groupname"]==group_in.groupname
 def test_create_group_fail_not_admin(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)
@@ -1040,15 +1040,15 @@ def test_create_event_success(db:Session):
 
     response = client.post(
         url="/groups/"+db_group.id+"/events",
-        json={
+        json=[{
                 "timetable_id":db_timetable.id,
                 "ticket_stock":25,
                 "lottery":False
-            },
+            }],
         headers=headers)
     assert response.status_code==200
-    assert response.json()["group_id"]==db_group.id
-    assert response.json()["timetable_id"]==db_timetable.id
+    assert response.json()[0]["group_id"]==db_group.id
+    assert response.json()[0]["timetable_id"]==db_timetable.id
 def test_create_event_fail_group_not_exist(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)
@@ -1073,11 +1073,11 @@ def test_create_event_fail_group_not_exist(db:Session):
 
     response = client.post(
         url="/groups/"+"invalidgroupid"+"/events",
-        json={
+        json=[{
                 "timetable_id":db_timetable.id,
                 "ticket_stock":25,
                 "lottery":False
-            },
+            }],
         headers=headers)
     assert response.status_code==400
 def test_create_event_fail_timetable_not_exist(db:Session):
@@ -1104,11 +1104,11 @@ def test_create_event_fail_timetable_not_exist(db:Session):
 
     response = client.post(
         url="/groups/"+db_group.id+"/events",
-        json={
+        json=[{
                 "timetable_id":"invalidtimatableid",
                 "ticket_stock":25,
                 "lottery":False
-            },
+            }],
         headers=headers)
     assert response.status_code==400
 def test_create_event_fail_not_admin(db:Session):
@@ -1735,13 +1735,13 @@ def test_create_timetable_success(db:Session):
 
     response = client.post(
         url="/timetable",
-        json={
+        json=[{
             "timetablename":timetable.timetablename,
             "sell_at":timetable.sell_at,
             "sell_ends":timetable.sell_ends,
             "starts_at":timetable.starts_at,
             "ends_at":timetable.ends_at
-            },
+            }],
         headers=headers)
     assert response.status_code==200
 def test_create_timetable_fail_invalid_date1(db:Session):
@@ -1765,13 +1765,13 @@ def test_create_timetable_fail_invalid_date1(db:Session):
 
     response = client.post(
         url="/timetable",
-        json={
+        json=[{
             "timetablename":timetable.timetablename,
             "sell_at":timetable.sell_at,
             "sell_ends":timetable.sell_ends,
             "starts_at":timetable.starts_at,
             "ends_at":timetable.ends_at
-            },
+            }],
         headers=headers)
     assert response.status_code==400
 def test_create_timetable_fail_invalid_date2(db:Session):
@@ -1795,13 +1795,13 @@ def test_create_timetable_fail_invalid_date2(db:Session):
 
     response = client.post(
         url="/timetable",
-        json={
+        json=[{
             "timetablename":timetable.timetablename,
             "sell_at":timetable.sell_at,
             "sell_ends":timetable.sell_ends,
             "starts_at":timetable.starts_at,
             "ends_at":timetable.ends_at
-            },
+            }],
         headers=headers)
     assert response.status_code==400
 def test_create_timetable_fail_invalid_date3(db:Session):
@@ -1825,13 +1825,13 @@ def test_create_timetable_fail_invalid_date3(db:Session):
 
     response = client.post(
         url="/timetable",
-        json={
+        json=[{
             "timetablename":timetable.timetablename,
             "sell_at":timetable.sell_at,
             "sell_ends":timetable.sell_ends,
             "starts_at":timetable.starts_at,
             "ends_at":timetable.ends_at
-            },
+            }],
         headers=headers)
     assert response.status_code==400
 def test_get_all_timetable_success(db:Session):
@@ -1871,9 +1871,9 @@ def test_create_tag_success(db:Session):
     }
     response = client.post(
         url="/tags",
-        json={
+        json=[{
             "tagname":"tag1"
-        },
+        }],
         headers=headers
     )
     assert response.status_code==200
@@ -2068,15 +2068,14 @@ def test_create_user_by_admin_success(db:Session):
     }
     response = client.post(
         url="/admin/users",
-        json={
+        json=[{
             "username":user_in.username,
             "password":user_in.password,
             "is_student":user_in.is_student,
             "is_family":user_in.is_family,
             "is_active":user_in.is_active,
             "password_expired":user_in.password_expired
-        },
+        }],
         headers=headers
     )
     assert response.status_code == 200
-    assert type(response.json()["id"]) is str #hashidsされているか
