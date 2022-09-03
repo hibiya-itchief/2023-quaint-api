@@ -276,6 +276,28 @@ def test_get_list_of_your_tickets(db:Session):
     assert response.status_code==200
     assert response.json()[0]["owner_id"]==user.id
     assert response.json()[0]["event_id"]==event1.id
+def test_activate_user_success(db:Session):
+    fac_user = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,fac_user)
+    fac_admin = factories.Admin_UserCreateByAdmin()
+    admin = crud.create_user_by_admin(db,fac_admin)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":fac_admin.username,
+        "password":fac_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    response = client.put(url="/users/"+user.id+"/activation",headers=headers)
+    assert response.status_code==200
+    assert response.json()["is_active"]==True
+
 ### Change Password
 def test_change_password_success(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
