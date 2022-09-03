@@ -1164,7 +1164,70 @@ def test_get_event_success(db:Session):
     response = client.get(url="/groups/"+db_group.id+"/events/"+db_event1.id,)
     assert response.status_code==200
     assert response.json()["timetable_id"]==db_timetable1.id
-
+def test_delete_event_success(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    
+    group = factories.group1_GroupCreateByAdmin()
+    timetable1 = factories.valid_timetable1()
+    db_group = crud.create_group(db,group)
+    db_timetable1 = crud.create_timetable(db,timetable1)
+    db_event1 = crud.create_event(db,db_group.id,schemas.EventCreate(timetable_id=db_timetable1.id,ticket_stock=25,lottery=False))
+    response = client.delete(url="/groups/"+db_group.id+"/events/"+db_event1.id,headers=headers)
+    assert response.status_code==200
+    assert response.json()["OK"]==True
+def test_delete_event_fail_dependencies(db:Session):
+    user_admin = factories.Admin_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_admin)
+    admin = crud.get_user_by_name(db,user_admin.username)
+    crud.grant_admin(db,admin)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_admin.username,
+        "password":user_admin.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    
+    fac_group = factories.group1_GroupCreateByAdmin()
+    fac_user = factories.active_UserCreateByAdmin()
+    fac_other_user = factories.hogehoge_UserCreateByAdmin()
+    other_user = crud.create_user_by_admin(db,fac_other_user)
+    group1 = crud.create_group(db,fac_group)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()-datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=60)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    ticket = crud.create_ticket(db,event1,other_user,person=2)
+    response = client.delete(url="/groups/"+group1.id+"/events/"+event1.id,headers=headers)
+    assert response.status_code==400
 
 # Ticket Crud
 def test_create_ticket_success(db:Session):

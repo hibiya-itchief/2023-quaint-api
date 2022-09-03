@@ -191,6 +191,10 @@ def get_events_by_timetable(db:Session,timetable:schemas.Timetable):
     db_events:List[schemas.Event] = db.query(models.Event).filter(models.Event.timetable_id==timetable.id).all()
     return db_events
 
+def delete_events(db:Session,event:schemas.Event):
+    db.query(models.Event).filter(models.Event.id==event.id).delete()
+    db.commit()
+
 ## Ticket CRUD
 def count_tickets_for_event(db:Session,event:schemas.Event):
     db_tickets:List[schemas.Ticket]=db.query(models.Ticket).filter(models.Ticket.event_id==event.id).all()
