@@ -244,8 +244,11 @@ def delete_group(group_id:str,permission:schemas.User=Depends(dep.admin),db:Sess
         return {"OK":True}
     except:
         raise HTTPException(400,"You can't delete this group until all dependencies are deleted")
-        
-    
+
+
+@app.get("/search",response_model=List[schemas.Group],tags=["groups"],description="")
+def search_groups(q:str,db:Session=Depends(dep.get_db)):
+    return crud.search_groups(db,q)
 
 
 ### Event Crud
