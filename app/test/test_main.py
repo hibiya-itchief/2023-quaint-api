@@ -1713,6 +1713,77 @@ def test_get_ticket_fail_not_admin(db:Session):
     response = client.get(url="/tickets/"+ticket.id,headers=headers)
     assert response.status_code==404
 
+def test_delete_ticket_success(db:Session):
+    user_hogehoge = factories.hogehoge_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_hogehoge)
+    user = crud.get_user_by_name(db,user_hogehoge.username)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_hogehoge.username,
+        "password":user_hogehoge.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    
+    fac_group = factories.group1_GroupCreateByAdmin()
+    group1 = crud.create_group(db,fac_group)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()-datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=60)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    ticket = crud.create_ticket(db,event1,user,person=2)
+    response = client.delete(url="/groups/"+ticket.group_id+"/events/"+ticket.event_id+"/tickets/"+ticket.id,headers=headers)
+    assert response.status_code==200
+def test_delete_ticket_fail_not_owner_of_ticket(db:Session):
+    user_hogehoge = factories.hogehoge_UserCreateByAdmin()
+    crud.create_user_by_admin(db,user_hogehoge)
+    user = crud.get_user_by_name(db,user_hogehoge.username)
+    response = client.post(
+        "/token",
+        data={
+        "grant_type":"password",
+        "username":user_hogehoge.username,
+        "password":user_hogehoge.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    
+    fac_group = factories.group1_GroupCreateByAdmin()
+    fac_owner_user = factories.active_UserCreateByAdmin()
+    owner_user = crud.create_user_by_admin(db,fac_owner_user)
+    group1 = crud.create_group(db,fac_group)
+    timetable1 = crud.create_timetable(db,schemas.TimetableCreate(
+            timetablename="1日目 - 第1公演",
+            sell_at=datetime.datetime.now()-datetime.timedelta(minutes=15),
+            sell_ends=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            starts_at=datetime.datetime.now()+datetime.timedelta(minutes=15),
+            ends_at=datetime.datetime.now()+datetime.timedelta(minutes=60)
+        ))
+    event1 = crud.create_event(db,group1.id,schemas.EventCreate(
+            timetable_id=timetable1.id,
+            ticket_stock=25,
+            lottery=False
+        ))
+    ticket = crud.create_ticket(db,event1,owner_user,person=2)
+    response = client.delete(url="/groups/"+ticket.group_id+"/events/"+ticket.event_id+"/tickets/"+ticket.id,headers=headers)
+    assert response.status_code==403
+
 # Timetable
 def test_create_timetable_success(db:Session):
     timetable = factories.valid_timetable1()

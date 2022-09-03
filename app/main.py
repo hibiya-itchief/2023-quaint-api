@@ -324,6 +324,17 @@ def count_tickets(group_id:str,event_id:str,db:Session=Depends(dep.get_db)):
     left_tickets:int=stock-taken_tickets
     return schemas.TicketsNumberData(taken_tickets=taken_tickets,left_tickets=left_tickets,stock=stock)
 
+@app.delete("/groups/{group_id}/events/{event_id}/tickets/{ticket_id}",tags=["tickets"],description="owner of ticket")
+def delete_ticket(group_id:str,event_id:str,ticket_id:str,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    ticket=crud.get_ticket(db,ticket_id)
+    if not ticket.owner_id==user.id:
+        raise HTTPException(403)
+    try:
+        crud.delete_ticket(db,ticket)
+        return {"OK":True}
+    except:
+        raise HTTPException(500)
+
 @app.get("/tickets/{ticket_id}",response_model=schemas.Ticket,tags=["tickets"],description="admin、その整理券の団体のownerまたはauthorizer")
 def get_ticket(ticket_id:str,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
     ticket = crud.get_ticket(db,ticket_id)
