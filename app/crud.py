@@ -96,6 +96,17 @@ def get_tags_of_group(db:Session,group:schemas.Group):
         tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
     return tags
 
+def update_thumbnail_image_url(db:Session,group:schemas.Group,image_url:str):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.thumbnail_image_url = image_url
+    db.commit()
+    return db_group
+def update_cover_image_url(db:Session,group:schemas.Group,image_url:str):
+    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.cover_image_url = image_url
+    db.commit()
+    return db_group
+
 # Timetable
 def create_timetable(db:Session,timetable:schemas.TimetableCreate):
     if not (timetable.sell_at<timetable.sell_ends and timetable.sell_ends<=timetable.starts_at and timetable.starts_at<timetable.ends_at):

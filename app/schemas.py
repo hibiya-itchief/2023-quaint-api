@@ -50,6 +50,8 @@ class GroupBase(BaseModel):#userdefined idをURLにする。groupnameは表示�
 class GroupCreate(GroupBase):
     pass
 class Group(GroupBase):
+    thumbnail_image_url:Union[str,None]
+    cover_image_url:Union[str,None]
     class Config:
         orm_mode=True
 

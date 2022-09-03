@@ -83,6 +83,8 @@ class Group(Base):
     instagram_url = Column(VARCHAR(255))
     stream_url = Column(VARCHAR(255))
 
+    thumbnail_image_url=Column(VARCHAR(255))
+    cover_image_url=Column(VARCHAR(255))
 
     
 
