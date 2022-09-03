@@ -17,3 +17,6 @@ mysqlclient
 python-dotenv
 ulid-py
 pytest-cov
+python-multipart
+boto3
+pillow

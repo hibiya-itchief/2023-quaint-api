@@ -2,17 +2,15 @@ from datetime import datetime,timedelta
 from typing import Optional,List,Union
 from xml.dom.minidom import Entity
 
-from fastapi import FastAPI,Depends,HTTPException,status,Query
+from fastapi import FastAPI,Depends,HTTPException,status,File,UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer,OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app import schemas
+from app import schemas,dep,models,crud,storage
 
 
 from .database import SessionLocal, engine
-
-from . import dep,models,crud
 
 
 #models.Base.metadata.create_all(bind=engine)
@@ -154,6 +152,25 @@ def get_group(group_id:str,db:Session=Depends(dep.get_db)):
     if not group_result:
         raise HTTPException(404,"Group Not Found")
     return group_result
+
+@app.put("/groups/{group_id}/thumbnail_image",response_model=schemas.Group,tags=["groups"],description="Required Authority: **Admin** or **Owner**")
+def upload_thumbnail_image(group_id:str,file:bytes = File(),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404,"Not Found")
+    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
+        raise HTTPException(401,"Required Authority: Admin or Owner")
+    image_url = storage.upload_to_oos(file)
+    return crud.update_thumbnail_image_url(db,group,image_url)
+@app.put("/groups/{group_id}/cover_image",response_model=schemas.Group,tags=["groups"],description="Required Authority: **Admin** or **Owner**")
+def upload_cover_image(group_id:str,file:bytes = File(),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404,"Group Not Found")
+    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
+        raise HTTPException(401,"Required Authority: Admin or Owner")
+    image_url = storage.upload_to_oos(file)
+    return crud.update_cover_image_url(db,group,image_url)
 
 @app.put("/groups/{group_id}/tags",tags=["groups"],description="Required Authority: **Admin**")
 def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):

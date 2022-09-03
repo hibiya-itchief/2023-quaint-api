@@ -1,8 +1,8 @@
-"""ulid
+"""empty message
 
-Revision ID: cf736ed0188b
+Revision ID: f93b4ff35ac4
 Revises: 
-Create Date: 2022-08-10 19:07:17.798978
+Create Date: 2022-09-03 12:36:42.991673
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'cf736ed0188b'
+revision = 'f93b4ff35ac4'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -39,6 +39,16 @@ def upgrade() -> None:
     sa.UniqueConstraint('tagname')
     )
     op.create_index(op.f('ix_tags_id'), 'tags', ['id'], unique=True)
+    op.create_table('timetable',
+    sa.Column('id', sa.VARCHAR(length=255), nullable=False),
+    sa.Column('timetablename', sa.VARCHAR(length=255), nullable=True),
+    sa.Column('sell_at', sa.DateTime(), nullable=False),
+    sa.Column('sell_ends', sa.DateTime(), nullable=False),
+    sa.Column('starts_at', sa.DateTime(), nullable=False),
+    sa.Column('ends_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_timetable_id'), 'timetable', ['id'], unique=True)
     op.create_table('users',
     sa.Column('id', sa.VARCHAR(length=255), nullable=False),
     sa.Column('username', sa.VARCHAR(length=25), nullable=True),
@@ -57,33 +67,39 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('user_id')
     )
     op.create_table('authority',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('user_id', sa.VARCHAR(length=255), nullable=False),
     sa.Column('group_id', sa.VARCHAR(length=255), nullable=False),
     sa.Column('role', sa.VARCHAR(length=255), nullable=True),
     sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('id')
+    )
+    op.create_table('entry',
+    sa.Column('user_id', sa.VARCHAR(length=255), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('user_id')
     )
     op.create_table('events',
     sa.Column('id', sa.VARCHAR(length=255), nullable=False),
-    sa.Column('title', sa.VARCHAR(length=255), nullable=False),
-    sa.Column('description', sa.VARCHAR(length=255), nullable=False),
-    sa.Column('sell_at', sa.DateTime(), nullable=False),
-    sa.Column('sell_ends', sa.DateTime(), nullable=False),
-    sa.Column('starts_at', sa.DateTime(), nullable=False),
-    sa.Column('ends_at', sa.DateTime(), nullable=False),
+    sa.Column('timetable_id', sa.VARCHAR(length=255), nullable=False),
     sa.Column('ticket_stock', sa.Integer(), nullable=False),
+    sa.Column('lottery', sa.Boolean(), nullable=True),
     sa.Column('group_id', sa.VARCHAR(length=255), nullable=False),
     sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ),
+    sa.ForeignKeyConstraint(['timetable_id'], ['timetable.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_events_id'), 'events', ['id'], unique=True)
     op.create_table('grouptag',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('group_id', sa.VARCHAR(length=255), nullable=False),
     sa.Column('tag_id', sa.VARCHAR(length=255), nullable=False),
     sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ),
     sa.ForeignKeyConstraint(['tag_id'], ['tags.id'], ),
-    sa.PrimaryKeyConstraint('group_id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('id')
     )
     op.create_table('votes',
     sa.Column('group_id', sa.VARCHAR(length=255), nullable=False),
@@ -116,11 +132,14 @@ def downgrade() -> None:
     op.drop_table('grouptag')
     op.drop_index(op.f('ix_events_id'), table_name='events')
     op.drop_table('events')
+    op.drop_table('entry')
     op.drop_table('authority')
     op.drop_table('admin')
     op.drop_index(op.f('ix_users_username'), table_name='users')
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_table('users')
+    op.drop_index(op.f('ix_timetable_id'), table_name='timetable')
+    op.drop_table('timetable')
     op.drop_index(op.f('ix_tags_id'), table_name='tags')
     op.drop_table('tags')
     op.drop_index(op.f('ix_groups_id'), table_name='groups')
