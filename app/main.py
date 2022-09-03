@@ -78,7 +78,7 @@ def create_user(user:schemas.UserCreate,db:Session=Depends(dep.get_db)):
     crud.create_user(db=db,user=user)
     return dep.login_for_access_token(user.username,user.password,db)
 @app.get("/users",response_model=List[schemas.User],tags=["users"],description="Required Authority: **Admin**")
-def read_all_users(permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
+def read_all_users(permission:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
     users = crud.get_all_users(db)
     return users
 
@@ -110,7 +110,7 @@ def get_list_of_your_tickets(user:schemas.User = Depends(dep.get_current_user),d
 
 
 @app.put("/users/{user_id}/authority",tags=["users"])
-def grant_authority(user_id:str,role:schemas.AuthorityRole,group_id:Union[str,None]=None,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+def grant_authority(user_id:str,role:schemas.AuthorityRole,group_id:Union[str,None]=None,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
     user=crud.get_user(db,user_id)
     if not user:
         raise HTTPException(404,"User Not Found")
@@ -217,7 +217,7 @@ def upload_cover_image(group_id:str,file:bytes = File(),user:schemas.User=Depend
     return crud.update_cover_image_url(db,group,image_url)
 
 @app.put("/groups/{group_id}/tags",tags=["groups"],description="Required Authority: **Admin**")
-def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
     grouptag = crud.add_tag(db,group_id,tag_id)
     if not grouptag:
         raise HTTPException(404,"Not Found")
@@ -256,7 +256,7 @@ def search_groups(q:str,db:Session=Depends(dep.get_db)):
 
 ### Event Crud
 @app.post("/groups/{group_id}/events",response_model=List[schemas.Event],tags=["events"],description="Required Authority: **Admin**")
-def create_event(group_id:str,events:List[schemas.EventCreate],permittion:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+def create_event(group_id:str,events:List[schemas.EventCreate],permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
     result=[]
     for event in events:
         event = crud.create_event(db,group_id,event)
@@ -337,7 +337,7 @@ def get_ticket(ticket_id:str,user:schemas.User=Depends(dep.get_current_user),db:
 
 # Timetable
 @app.post("/timetable",response_model=List[schemas.Timetable],tags=["timetable"],description="Required Authority: **Admin**")
-def create_timetable(timetables:List[schemas.TimetableCreate],permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
+def create_timetable(timetables:List[schemas.TimetableCreate],permission:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
     results=[]
     for timetable in timetables:
         result = crud.create_timetable(db,timetable=timetable)
@@ -357,7 +357,7 @@ def get_timetable(timetable_id:str,db:Session=Depends(dep.get_db)):
 
 # Tag
 @app.post("/tags",response_model=List[schemas.Tag],tags=["tags"],description="Required Authority: **Admin**")
-def create_tag(tags:List[schemas.TagCreate],permittion:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
+def create_tag(tags:List[schemas.TagCreate],permission:schemas.User = Depends(dep.admin),db:Session=Depends(dep.get_db)):
     result=[]
     for tag in tags:
         result.append(crud.create_tag(db,tag))
@@ -372,13 +372,13 @@ def get_tag(tag_id:str,db:Session = Depends(dep.get_db)):
         raise HTTPException(404,"Tag Not Found")
     return tag_result
 @app.put("/tags/{tag_id}",response_model=schemas.Tag,tags=["tags"],description="Required Authority: **Admin**")
-def change_tag_name(tag_id:str,tag:schemas.TagCreate,permittion:schemas.User=Depends(dep.admin),db:Session = Depends(dep.get_db)):
+def change_tag_name(tag_id:str,tag:schemas.TagCreate,permission:schemas.User=Depends(dep.admin),db:Session = Depends(dep.get_db)):
     tag_result = crud.put_tag(db,tag_id,tag)
     if not tag_result:
         raise HTTPException(404,"Tag Not Found")
     return tag_result
 @app.delete("/tags/{tag_id}",tags=["tags"],description="Required Authority: **Admin**")
-def delete_tag(tag_id:str,permittion:schemas.User=Depends(dep.admin),db:Session = Depends(dep.get_db)):
+def delete_tag(tag_id:str,permission:schemas.User=Depends(dep.admin),db:Session = Depends(dep.get_db)):
     result = crud.delete_tag(db,tag_id)
     if result==None:
         raise HTTPException(404,"Tag Not Found")
