@@ -228,6 +228,9 @@ def create_ticket(db:Session,event:schemas.Event,user:schemas.User,person:int):
 def get_ticket(db:Session,ticket_id):
     db_ticket:schemas.Ticket = db.query(models.Ticket).filter(models.Ticket.id==ticket_id).first()
     return db_ticket
+def delete_ticket(db:Session,ticket:schemas.Ticket):
+    db.query(models.Ticket).filter(models.Ticket.id==ticket.id).delete()
+    db.commit()
 
 
 ## Tag CRUD
