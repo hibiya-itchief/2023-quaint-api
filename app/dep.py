@@ -16,7 +16,7 @@ from . import crud
 
 LOGIN_JWT_SECRET = settings.login_jwt_secret#HMAC 共有シークレットで署名。署名者だけが検証できれば良いなら128bit以上のSHA-256 Hashでいいぽい
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE = settings.access_token_expire
 
 def get_db():
     db = SessionLocal()
@@ -70,7 +70,7 @@ def login_for_access_token(username:str,password:str,db:Session):
         )
     access_token_expires = timedelta(days=10)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": user.username}, expires_delta=ACCESS_TOKEN_EXPIRE
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
