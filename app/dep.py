@@ -16,7 +16,7 @@ from . import crud
 
 LOGIN_JWT_SECRET = settings.login_jwt_secret#HMAC 共有シークレットで署名。署名者だけが検証できれば良いなら128bit以上のSHA-256 Hashでいいぽい
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE = settings.access_token_expire
 
 def get_db():
     db = SessionLocal()
@@ -27,7 +27,7 @@ def get_db():
 
 
 pwd_context= CryptContext(schemes=["bcrypt"],deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/me/login")
 
 
 def get_password_hash(password):
@@ -59,18 +59,17 @@ def login_for_access_token(username:str,password:str,db:Session):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="ユーザー名かパスワードが間違っています",
             headers={"WWW-Authenticate": "Bearer"},
         )
     if user.password_expired:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Password expired",
+            detail="パスワードが失効しています。新しいパスワードを設定してください。",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(days=10)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": user.username}, expires_delta=ACCESS_TOKEN_EXPIRE
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -78,7 +77,7 @@ def login_for_access_token(username:str,password:str,db:Session):
 async def get_current_user(db:Session = Depends(get_db),token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="ログイン情報の有効性を確認できませんでした",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
@@ -93,47 +92,47 @@ async def get_current_user(db:Session = Depends(get_db),token: str = Depends(oau
     if user is None:
         raise credentials_exception
     if user.password_expired:
-        raise HTTPException(401,detail="Password expired")
+        raise HTTPException(401,detail="パスワードが失効しています。新しいパスワードを設定してください")
     return user
 
 
 def admin(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
     if not crud.check_admin(db,user):
-        raise HTTPException(403,detail="Permittion Error")
+        raise HTTPException(403,detail="Adminの権限がありません")
     return user
 
 def entry(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
     if not crud.check_entry(db,user):
-        raise HTTPException(403,detail="Permittion Error")
+        raise HTTPException(403,detail="Entryの権限がありません")
     return user
 
-def owner_of(groupname:str,db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
-    group=crud.get_group_by_name(db,groupname)###
+def owner_of(group_id:str,db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
+    group=crud.get_group(db,group_id)###
     if not group:
-        raise HTTPException(400,detail='Group "'+groupname+'" does not exist')
+        raise HTTPException(400,detail='Groupが見つかりません')
     if crud.check_admin(db,user):
         return user
     if not crud.check_owner_of(db,group,user):
-        raise HTTPException(403,detail="Permittion Error")
+        raise HTTPException(403,detail="Ownerの権限がありません")
     return user
 
 def owner(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
     if crud.check_admin(db,user):
         return user
     if not crud.check_owner(db,user):
-        raise HTTPException(403,detail="Permittion Error")
+        raise HTTPException(403,detail="Ownerの権限がありません")
     return user
 
-def authorizer_of(groupname:str,db:Session = Depends(get_db),user:schemas.User=Depends(get_current_user)):
-    group=crud.get_group_by_name(db,groupname)###
+def authorizer_of(group_id:str,db:Session = Depends(get_db),user:schemas.User=Depends(get_current_user)):
+    group=crud.get_group(db,group_id)###
     if not group:
-        raise HTTPException(400,detail='Group "'+groupname+'" does not exist')
+        raise HTTPException(400,detail='Groupが見つかりません')
     if crud.check_admin(db,user):
         return user
     if crud.check_owner_of(db,group,user):
         return user
     if not crud.check_authorizer_of(db,group,user):
-        raise HTTPException(403,detail="Permittion Error")
+        raise HTTPException(403,detail="Authorizerの権限がありません")
     return user
 
 def authorizer(db:Session = Depends(get_db),user:schemas.User=Depends(get_current_user)):
@@ -142,6 +141,6 @@ def authorizer(db:Session = Depends(get_db),user:schemas.User=Depends(get_curren
     if crud.check_owner(db,user):
         return user
     if not crud.check_authorizer(db,user):
-        raise HTTPException(403,detail="Permittion Error")
+        raise HTTPException(403,detail="Authorizerの権限がありません")
     return user
 

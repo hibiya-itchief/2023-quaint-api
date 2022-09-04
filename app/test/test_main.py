@@ -24,7 +24,7 @@ def test_login_for_access_token_success(db:Session):#もっと細かく書ける
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_in.username,
@@ -36,38 +36,38 @@ def test_login_for_access_token_fail_username(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":"invalidusername",
         "password":user_in.password
     })
     assert response.status_code == 401
-    assert response.json()["detail"]=="Incorrect username or password"
+    assert response.json()["detail"]=="ユーザー名かパスワードが間違っています"
 def test_login_for_access_token_fail_password_expired(db:Session):
     user_in = factories.passwordexpired_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_in.username,
         "password":user_in.password
     })
     assert response.status_code == 401
-    assert response.json()["detail"]=="Password expired"
+    assert response.json()["detail"]=="パスワードが失効しています。新しいパスワードを設定してください。"
 def test_login_for_access_token_fail_password(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_in.username,
         "password":"invalidpassword"
     })
     assert response.status_code == 401
-    assert response.json()["detail"]=="Incorrect username or password"
+    assert response.json()["detail"]=="ユーザー名かパスワードが間違っています"
 
 ## User CRUD
 def test_create_user_success_by_public(db:Session):
@@ -139,7 +139,7 @@ def test_read_all_users_success(db:Session):
     admin = crud.get_user_by_name(db,user_in.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_in.username,
@@ -158,7 +158,7 @@ def test_read_all_users_fail_not_admin(db:Session):
     crud.create_user_by_admin(db,user_in)
     
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_in.username,
@@ -177,7 +177,7 @@ def test_get_me_success(db:Session):
     user_in = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_in.username,
@@ -211,7 +211,7 @@ def test_read_my_authority_success(db:Session):
     crud.grant_authorizer_of(db,group,user)
 
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_in.username,
@@ -237,7 +237,7 @@ def test_get_list_of_your_tickets(db:Session):
     fac_other_user = factories.hogehoge_UserCreateByAdmin()
     user = crud.create_user_by_admin(db,fac_user)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":fac_user.username,
@@ -283,7 +283,7 @@ def test_activate_user_success(db:Session):
     admin = crud.create_user_by_admin(db,fac_admin)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":fac_admin.username,
@@ -356,7 +356,7 @@ def test_grant_authority_success_admin(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -372,7 +372,7 @@ def test_grant_authority_success_admin(db:Session):
 
     response = client.put(
         url="/users/"+user.id+"/authority",
-        params={"role":schemas.AuthorityRole.Admin},
+        json={"role":schemas.AuthorityRole.Admin},
         headers=headers
         )
     assert response.status_code == 200
@@ -384,7 +384,7 @@ def test_grant_authority_success_entry(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -400,7 +400,7 @@ def test_grant_authority_success_entry(db:Session):
 
     response = client.put(
         url="/users/"+user.id+"/authority",
-        params={"role":schemas.AuthorityRole.Entry},
+        json={"role":schemas.AuthorityRole.Entry},
         headers=headers
         )
     assert response.status_code == 200
@@ -412,7 +412,7 @@ def test_grant_authority_success_owner(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -431,7 +431,7 @@ def test_grant_authority_success_owner(db:Session):
 
     response = client.put(
         url="/users/"+user.id+"/authority",
-        params={
+        json={
             "role":schemas.AuthorityRole.Owner,
             "group_id":group_in1.id
         },
@@ -446,7 +446,7 @@ def test_grant_authority_success_authorizer(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -465,7 +465,7 @@ def test_grant_authority_success_authorizer(db:Session):
 
     response = client.put(
         url="/users/"+user.id+"/authority",
-        params={
+        json={
             "role":schemas.AuthorityRole.Authorizer,
             "group_id":group_in1.id
         },
@@ -479,7 +479,7 @@ def test_grant_authority_fail_not_admin(db:Session):
     crud.create_user_by_admin(db,user_admin)
     admin = crud.get_user_by_name(db,user_admin.username)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -513,7 +513,7 @@ def test_grant_authority_fail_owner_authorizer_no_groupid(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -532,7 +532,7 @@ def test_grant_authority_fail_owner_authorizer_no_groupid(db:Session):
 
     response = client.put(
         url="/users/"+user.id+"/authority",
-        params={
+        json={
             "role":schemas.AuthorityRole.Owner
         },
         headers=headers
@@ -546,7 +546,7 @@ def test_grant_authority_fail_owner_authorizer_group_not_exist(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -565,7 +565,7 @@ def test_grant_authority_fail_owner_authorizer_group_not_exist(db:Session):
 
     response = client.put(
         url="/users/"+user.id+"/authority",
-        params={
+        json={
             "role":schemas.AuthorityRole.Owner,
             "group_id":"invalidgroupid"
         },
@@ -583,7 +583,7 @@ def test_create_group_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -609,7 +609,7 @@ def test_create_group_fail_not_admin(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -659,7 +659,7 @@ def test_update_title_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -682,7 +682,7 @@ def test_update_title_empty_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -705,7 +705,7 @@ def test_update_description_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -728,7 +728,7 @@ def test_update_description_empty_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -751,7 +751,7 @@ def test_update_twitter_url_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -774,7 +774,7 @@ def test_update_twitter_url_empty_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -797,7 +797,7 @@ def test_update_instagram_url_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -820,7 +820,7 @@ def test_update_instagram_url_empty_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -843,7 +843,7 @@ def test_update_stream_url_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -866,7 +866,7 @@ def test_update_stream_url_empty_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -889,7 +889,7 @@ def test_add_tag_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -917,7 +917,7 @@ def test_add_tag_fail_invalid_groupid(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -945,7 +945,7 @@ def test_add_tag_fail_invalid_tagid(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -972,7 +972,7 @@ def test_add_tag_fail_not_admin(db:Session):
     crud.create_user_by_admin(db,user_admin)
     admin = crud.get_user_by_name(db,user_admin.username)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1014,7 +1014,7 @@ def test_delete_grouptag_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1044,7 +1044,7 @@ def test_create_event_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1077,7 +1077,7 @@ def test_create_event_fail_group_not_exist(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1101,14 +1101,14 @@ def test_create_event_fail_group_not_exist(db:Session):
                 "lottery":False
             }],
         headers=headers)
-    assert response.status_code==400
+    assert response.status_code==404
 def test_create_event_fail_timetable_not_exist(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1137,7 +1137,7 @@ def test_create_event_fail_not_admin(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1155,11 +1155,11 @@ def test_create_event_fail_not_admin(db:Session):
 
     response = client.post(
         url="/groups/"+db_group.id+"/events",
-        json={
+        json=[{
                 "timetable_id":db_timetable.id,
                 "ticket_stock":25,
                 "lottery":False
-            },
+            }],
         headers=headers)
     assert response.status_code==403
 
@@ -1192,7 +1192,7 @@ def test_delete_event_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1218,7 +1218,7 @@ def test_delete_event_fail_dependencies(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1258,7 +1258,7 @@ def test_create_ticket_success(db:Session):
     fac_other_user = factories.hogehoge_UserCreateByAdmin()
     user = crud.create_user_by_admin(db,fac_user)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":fac_user.username,
@@ -1298,7 +1298,7 @@ def test_create_ticket_fail_not_active(db:Session):
     fac_other_user = factories.hogehoge_UserCreateByAdmin()
     user = crud.create_user_by_admin(db,fac_user)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":fac_user.username,
@@ -1338,7 +1338,7 @@ def test_create_ticket_fail_not_selling(db:Session):
     fac_other_user = factories.hogehoge_UserCreateByAdmin()
     user = crud.create_user_by_admin(db,fac_user)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":fac_user.username,
@@ -1378,7 +1378,7 @@ def test_create_ticket_fail_soldout_stock(db:Session):
     fac_other_user = factories.hogehoge_UserCreateByAdmin()
     user = crud.create_user_by_admin(db,fac_user)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":fac_user.username,
@@ -1419,7 +1419,7 @@ def test_create_ticket_fail_soldout_same_timetable(db:Session):
     fac_other_user = factories.hogehoge_UserCreateByAdmin()
     user = crud.create_user_by_admin(db,fac_user)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":fac_user.username,
@@ -1472,7 +1472,7 @@ def test_create_ticket_fail_soldout_same_event(db:Session):
     fac_other_user = factories.hogehoge_UserCreateByAdmin()
     user = crud.create_user_by_admin(db,fac_user)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":fac_user.username,
@@ -1519,7 +1519,7 @@ def test_create_ticket_fail_invalid_person1(db:Session):
     fac_other_user = factories.hogehoge_UserCreateByAdmin()
     user = crud.create_user_by_admin(db,fac_user)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":fac_user.username,
@@ -1559,7 +1559,7 @@ def test_create_ticket_fail_invalid_person2(db:Session):
     fac_other_user = factories.hogehoge_UserCreateByAdmin()
     user = crud.create_user_by_admin(db,fac_user)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":fac_user.username,
@@ -1599,7 +1599,7 @@ def test_create_ticket_fail_invalid_student(db:Session):
     fac_other_user = factories.hogehoge_UserCreateByAdmin()
     user = crud.create_user_by_admin(db,fac_user)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":fac_user.username,
@@ -1664,7 +1664,7 @@ def test_get_ticket_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1702,7 +1702,7 @@ def test_get_ticket_fail_not_admin(db:Session):
     crud.create_user_by_admin(db,user_admin)
     admin = crud.get_user_by_name(db,user_admin.username)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1740,7 +1740,7 @@ def test_delete_ticket_success(db:Session):
     crud.create_user_by_admin(db,user_hogehoge)
     user = crud.get_user_by_name(db,user_hogehoge.username)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_hogehoge.username,
@@ -1774,7 +1774,7 @@ def test_delete_ticket_fail_not_owner_of_ticket(db:Session):
     crud.create_user_by_admin(db,user_hogehoge)
     user = crud.get_user_by_name(db,user_hogehoge.username)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_hogehoge.username,
@@ -1814,7 +1814,7 @@ def test_create_timetable_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1844,7 +1844,7 @@ def test_create_timetable_fail_invalid_date1(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1874,7 +1874,7 @@ def test_create_timetable_fail_invalid_date2(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1904,7 +1904,7 @@ def test_create_timetable_fail_invalid_date3(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1951,7 +1951,7 @@ def test_create_tag_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -1974,7 +1974,7 @@ def test_create_tag_fail_not_admin(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -2020,7 +2020,7 @@ def test_change_tag_name_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -2042,7 +2042,7 @@ def test_change_tag_name_fail_invalid_id(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -2061,7 +2061,7 @@ def test_change_tag_name_failed_not_admin(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -2083,7 +2083,7 @@ def test_delete_tag_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -2104,7 +2104,7 @@ def test_delete_tag_fail_invalid_id(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -2123,7 +2123,7 @@ def test_delete_tag_fail_not_admin(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
@@ -2148,7 +2148,7 @@ def test_create_user_by_admin_success(db:Session):
     admin = crud.get_user_by_name(db,user_admin.username)
     crud.grant_admin(db,admin)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_admin.username,
