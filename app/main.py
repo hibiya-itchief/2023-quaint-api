@@ -66,7 +66,7 @@ def read_root():
         "description":"日比谷高校オンライン整理券システム「QUAINT」のAPI"
     }
 
-@app.post("/token", response_model=schemas.Token)
+    "/users/me/login",
 async def login_for_access_token(db:Session = Depends(dep.get_db),form_data: OAuth2PasswordRequestForm = Depends()):
     return dep.login_for_access_token(form_data.username,form_data.password,db)
 

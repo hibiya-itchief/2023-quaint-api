@@ -24,7 +24,7 @@ def test_login_for_access_token_success(db:Session):#もっと細かく書ける
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_in.username,
@@ -36,7 +36,7 @@ def test_login_for_access_token_fail_username(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":"invalidusername",
@@ -48,7 +48,7 @@ def test_login_for_access_token_fail_password_expired(db:Session):
     user_in = factories.passwordexpired_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_in.username,
@@ -60,7 +60,7 @@ def test_login_for_access_token_fail_password(db:Session):
     user_in = factories.hogehoge_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_in)
     response = client.post(
-        "/token",
+        "/users/me/login",
         data={
         "grant_type":"password",
         "username":user_in.username,
