@@ -3,7 +3,7 @@ from typing import List, Union
 from fastapi import Query
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel,Field
 
 class AuthorityRole(str,Enum):
     Authorizer = "Authorizer"
