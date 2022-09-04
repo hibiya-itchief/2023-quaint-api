@@ -107,8 +107,8 @@ def entry(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_u
         raise HTTPException(403,detail="Permittion Error")
     return user
 
-def owner_of(groupname:str,db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
-    group=crud.get_group_by_name(db,groupname)###
+def owner_of(group_id:str,db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
+    group=crud.get_group(db,group_id)###
     if not group:
         raise HTTPException(400,detail='Group "'+groupname+'" does not exist')
     if crud.check_admin(db,user):
@@ -124,8 +124,8 @@ def owner(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_u
         raise HTTPException(403,detail="Permittion Error")
     return user
 
-def authorizer_of(groupname:str,db:Session = Depends(get_db),user:schemas.User=Depends(get_current_user)):
-    group=crud.get_group_by_name(db,groupname)###
+def authorizer_of(group_id:str,db:Session = Depends(get_db),user:schemas.User=Depends(get_current_user)):
+    group=crud.get_group(db,group_id)###
     if not group:
         raise HTTPException(400,detail='Group "'+groupname+'" does not exist')
     if crud.check_admin(db,user):
