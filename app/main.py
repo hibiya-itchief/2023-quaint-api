@@ -315,14 +315,19 @@ def update_stream_url(group_id:str,stream_url:Union[str,None]=Query(default=None
     description="### 必要な権限\nAdmin,当該GroupのOwner\n### ログインが必要か\nはい",
     responses={"404":{"description":"指定されたGroupが見つかりません"},
         "401":{"description":"Adminまたは当該GroupのOwnerの権限が必要です"}})
-def upload_thumbnail_image(group_id:str,file:bytes = File(),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+def upload_thumbnail_image(group_id:str,file:Union[bytes,None] = File(default=None),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
     group = crud.get_group(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
     if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
         raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
-    image_url = storage.upload_to_oos(file)
-    return crud.update_thumbnail_image_url(db,group,image_url)
+    if group.thumbnail_image_url:
+            storage.delete_image(group.thumbnail_image_url)
+    if file:
+        image_url = storage.upload_to_oos(file)
+        return crud.update_thumbnail_image_url(db,group,image_url)
+    else:
+        return crud.update_thumbnail_image_url(db,group,None)
 @app.put(
     "/groups/{group_id}/cover_image",
     response_model=schemas.Group,
@@ -331,14 +336,19 @@ def upload_thumbnail_image(group_id:str,file:bytes = File(),user:schemas.User=De
     description="### 必要な権限\nAdmin,当該GroupのOwner\n### ログインが必要か\nはい",
     responses={"404":{"description":"指定されたGroupが見つかりません"},
         "401":{"description":"Adminまたは当該GroupのOwnerの権限が必要です"}})
-def upload_cover_image(group_id:str,file:bytes = File(),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+def upload_cover_image(group_id:str,file:Union[bytes,None] = File(default=None),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
     group = crud.get_group(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
     if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
         raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
-    image_url = storage.upload_to_oos(file)
-    return crud.update_cover_image_url(db,group,image_url)
+    if group.cover_image_url:
+            storage.delete_image(group.cover_url)
+    if file:
+        image_url = storage.upload_to_oos(file)
+        return crud.update_cover_image_url(db,group,image_url)
+    else:
+        return crud.update_cover_image_url(db,group,None)
 
 @app.put(
     "/groups/{group_id}/tags",
@@ -403,6 +413,7 @@ def delete_group(group_id:str,permission:schemas.User=Depends(dep.admin),db:Sess
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n### 説明\n団体名・演目名・説明文に、qに与えられた文字列を含んでいるGroupのListが返されます")
 def search_groups(q:str,db:Session=Depends(dep.get_db)):
     return crud.search_groups(db,q)
+
 
 
 ### Event Crud

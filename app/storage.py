@@ -36,3 +36,10 @@ def upload_to_oos(binary:bytes) ->str:
         raise HTTPException(500,"Internal Server Error")
     fileurl = "https://objectstorage.ap-tokyo-1.oraclecloud.com/n/nryxxlkqcfe6/b/quaint/o/images/"+filename
     return fileurl
+
+def delete_image(image_url:str) ->None:
+    try:
+        image_url = image_url.replace("https://objectstorage.ap-tokyo-1.oraclecloud.com/n/nryxxlkqcfe6/b/quaint/o/",'')
+        s3.delete_object(Bucket='quaint', Key=image_url)
+    except:
+        raise HTTPException(500,"Internal Server Error")
