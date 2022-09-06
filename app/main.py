@@ -239,7 +239,7 @@ def get_group(group_id:str,db:Session=Depends(dep.get_db)):
     description="### 必要な権限\nAdmin,当該GroupのOwner\n### ログインが必要か\nはい",
     responses={"404":{"description":"指定されたGroupが見つかりません"},
         "401":{"description":"Adminまたは当該GroupのOwnerの権限が必要です"}})
-def update_title(group_id:str,title:Union[str,None]=Query(default=None,max_length=20),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+def update_title(group_id:str,title:Union[str,None]=Query(default=None,max_length=50),user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
     group = crud.get_group(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
