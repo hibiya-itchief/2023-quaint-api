@@ -198,6 +198,12 @@ def get_event(db:Session,group_id:str,event_id:str):
         return db_event
     else:
         return None
+def check_same_event(db:Session,group_id,timetable_id):
+    db_event = db.query(models.Event).filter(models.Event.group_id==group_id,models.Event.timetable_id==timetable_id).first()
+    if db_event:
+        return True
+    else:
+        return False
 def get_events_by_timetable(db:Session,timetable:schemas.Timetable):
     db_events:List[schemas.Event] = db.query(models.Event).filter(models.Event.timetable_id==timetable.id).all()
     return db_events

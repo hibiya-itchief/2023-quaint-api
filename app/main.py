@@ -434,6 +434,8 @@ def create_event(group_id:str,events:List[schemas.EventCreate],user:schemas.User
         raise HTTPException(403,"Adminまたは当該GroupのOwnerの権限が必要です")
     result=[]
     for event in events:
+        if crud.check_same_event(db,group.id,event.timetable_id):
+            raise HTTPException(400,"ひとつの団体が同一時間帯で2つ以上の公演を作ることはできません")
         event = crud.create_event(db,group_id,event)
         if not event:
             raise HTTPException(400,"パラメーターが不適切です")

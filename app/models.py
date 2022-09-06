@@ -31,6 +31,8 @@ class Event(Base):
     lottery = Column(Boolean)
     group_id = Column(VARCHAR(255), ForeignKey("groups.id"),nullable=False)
 
+    # 複数カラムのunique constraint
+    __table_args__ = (UniqueConstraint("timetable_id", "group_id", name="unique_timetablex_groupid"),)
 
 class Admin(Base):
     __tablename__ = "admin"
