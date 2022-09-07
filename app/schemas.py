@@ -133,6 +133,20 @@ class Vote(VoteBase):
     class Config:
         orm_mode=True
 
+class LogBase(BaseModel):
+    timestamp:datetime
+    user:Union[str,None]
+    object:Union[str,None]
+    operation:Union[str,None]
+    result:Union[bool,None]
+    detail:Union[str,None]
+class LogCreate(LogBase):
+    pass
+class Log(LogBase):
+    id:int
+    class Config:
+        orm_mode=True
+
 
 Event.update_forward_refs()
 Group.update_forward_refs()

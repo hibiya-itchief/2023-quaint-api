@@ -1,4 +1,4 @@
-from datetime import datetime,timedelta
+from datetime import date, datetime,timedelta
 from typing import Optional,List,Union
 from xml.dom.minidom import Entity
 
@@ -357,6 +357,7 @@ def upload_cover_image(group_id:str,file:Union[bytes,None] = File(default=None),
     description="### 必要な権限\nAdmin\n### ログインが必要か\nはい",
     responses={"404":{"description":"指定されたGroupまたはTagが見つかりません"}})
 def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/groups/"+group_id+"/tags [PUT]",operation='Add Tag to Group(tag_id:'+tag_id.tag_id+')'))
     grouptag = crud.add_tag(db,group_id,tag_id)
     if not grouptag:
         raise HTTPException(404,"指定されたGroupまたはTagが見つかりません")
@@ -677,6 +678,15 @@ def create_user_by_admin(users:List[schemas.UserCreateByAdmin],permission:schema
             raise HTTPException(status_code=400,detail="ユーザー名が既に使われています")
         result.append(crud.create_user_by_admin(db=db,user=user))
     return result
+
+@app.get(
+    "/admin/logs",
+    response_model=List[schemas.Log],
+    summary="全ログを取得",
+    tags=["admin"],
+    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい")
+def read_all_logs(permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+    return crud.read_all_logs(db)
 
 
 

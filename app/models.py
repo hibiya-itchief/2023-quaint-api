@@ -119,3 +119,12 @@ class User(Base):
     is_active = Column(Boolean, default=False)#学校にいるか
     password_expired=Column(Boolean,default=False)#Password変更を要求
 
+class Log(Base):
+    __tablename__ = "log"
+    id = Column(Integer,autoincrement=True,primary_key=True,index=True,unique=True)
+    timestamp = Column(DateTime,server_default=current_timestamp())
+    user = Column(VARCHAR(255))
+    object = Column(VARCHAR(255))
+    operation = Column(VARCHAR(255))
+    result =Column(Boolean)
+    detail = Column(VARCHAR(255))
