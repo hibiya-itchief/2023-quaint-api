@@ -47,11 +47,11 @@ class GroupBase(BaseModel):#userdefined idをURLにする。groupnameは表示�
     twitter_url:Union[str,None]=Query(default=None,regex="https?://twitter\.com/[0-9a-zA-Z_]{1,15}/?")
     instagram_url:Union[str,None]=Query(default=None,regex="https?://instagram\.com/[0-9a-zA-Z_.]{1,30}/?")
     stream_url:Union[str,None]=Query(default=None,regex="https?://web\.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?")
-    thumbnail_image_url:Union[str,None]=Query(default=None,regex="https?://objectstorage\.ap\-tokyo\-1\.oraclecloud\.com/n/nryxxlkqcfe6/b/quaint/o/images/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?")
-    cover_image_url:Union[str,None]=Query(default=None,regex="https?://objectstorage\.ap\-tokyo\-1\.oraclecloud\.com/n/nryxxlkqcfe6/b/quaint/o/images/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?")
 class GroupCreate(GroupBase):
     pass
 class Group(GroupBase):
+    thumbnail_image:Union[str,None] #Base64
+    cover_image:Union[str,None]#Base64
     class Config:
         orm_mode=True
 

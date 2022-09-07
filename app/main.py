@@ -223,8 +223,11 @@ def create_group(groups:List[schemas.GroupCreate],permission:schemas.User=Depend
     summary="全Groupの情報を取得",
     tags=["groups"],
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ")
-def get_all_groups(db:Session=Depends(dep.get_db)):
-    return crud.get_all_groups(db)
+def get_all_groups(db:Session=Depends(dep.get_db),user:Union[schemas.User,None]=Depends(dep.get_current_user_not_exception)):
+    if user is not None:
+        if crud.check_admin(db,user) or user.is_student or user.is_family:
+            return crud.get_all_groups(db,thumbnail=True,cover=True)
+    return crud.get_all_groups(db,thumbnail=True)
 @app.get(
     "/groups/{group_id}",
     response_model=schemas.Group,
@@ -232,10 +235,13 @@ def get_all_groups(db:Session=Depends(dep.get_db)):
     tags=["groups"],
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ",
     responses={"404":{"description":"指定されたGroupが見つかりません"}})
-def get_group(group_id:str,db:Session=Depends(dep.get_db)):
-    group_result = crud.get_group(db,group_id)
+def get_group(group_id:str,db:Session=Depends(dep.get_db),user:Union[schemas.User,None]=Depends(dep.get_current_user_not_exception)):
+    group_result = crud.get_group(db,group_id,thumbnail=True)
     if not group_result:
         raise HTTPException(404,"指定されたGroupが見つかりません")
+    if user is not None:
+        if crud.check_admin(db,user) or crud.check_owner_of(db,group_result,user) or user.is_student or user.is_family:
+            group_result = crud.get_group(db,group_id,thumbnail=True,cover=True)
     return group_result
 
 @app.put(
@@ -357,7 +363,7 @@ def upload_cover_image(group_id:str,file:Union[bytes,None] = File(default=None),
     if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
         raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
     if group.cover_image_url:
-            storage.delete_image(group.cover_url)
+            storage.delete_image(group.cover_image_url)
     if file:
         image_url = storage.upload_to_oos(file)
         crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=user.username,object="/groups/"+group_id+"/cover_image [PUT]",operation='Groupのカバー画像を変更',result=True))

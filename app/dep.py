@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Union
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status,Header
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -93,6 +93,27 @@ async def get_current_user(db:Session = Depends(get_db),token: str = Depends(oau
         raise credentials_exception
     if user.password_expired:
         raise HTTPException(401,detail="パスワードが失効しています。新しいパスワードを設定してください")
+    return user
+
+#例外を発生させないことで、ログインしてるならユーザー情報が取れるし、してないならNoneを返すようにする(顔出し画像が入る可能性があるカバー画像をレスポンスするか決める)
+def get_current_user_not_exception(db:Session=Depends(get_db),Authorization:Union[str, None] = Header(default=None)):
+    if Authorization is not None:
+        token=Authorization.replace("Bearer ","")
+    else:
+        return None
+    try:
+        payload = jwt.decode(token, LOGIN_JWT_SECRET, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            return None
+        token_data = schemas.TokenData(username=username)
+    except JWTError:
+        return None
+    user:schemas.User = crud.get_user_by_name(db, username=token_data.username)
+    if user is None:
+        return None
+    if user.password_expired:
+        return None
     return user
 
 

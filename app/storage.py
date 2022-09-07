@@ -1,3 +1,4 @@
+import base64
 import boto3
 import imghdr
 from PIL import Image
@@ -8,7 +9,14 @@ from fastapi import HTTPException
 
 COMPRESS_QUALITY=50
 try:
-    s3 = boto3.client(
+    s3_client = boto3.client(
+    's3',
+    region_name=settings.region_name,
+    aws_secret_access_key=settings.aws_secret_access_key,
+    aws_access_key_id=settings.aws_access_key_id,
+    endpoint_url=settings.endpoint_url
+    )
+    s3_resource = boto3.resource(
     's3',
     region_name=settings.region_name,
     aws_secret_access_key=settings.aws_secret_access_key,
@@ -31,15 +39,22 @@ def upload_to_oos(binary:bytes) ->str:
         im.save(im_io, 'JPEG', quality = COMPRESS_QUALITY)
         
         filename=ulid.new().str+".jpg"
-        s3.put_object(Bucket='quaint',Key='images/'+filename,Body=im_io.getvalue())
+        s3_client.put_object(Bucket='quaint',Key='images/'+filename,Body=im_io.getvalue())
     except:
         raise HTTPException(500,"Internal Server Error")
-    fileurl = "https://objectstorage.ap-tokyo-1.oraclecloud.com/n/nryxxlkqcfe6/b/quaint/o/images/"+filename
+    fileurl = "images/"+filename
     return fileurl
+
+def download_file_as_base64(key:str) ->str:
+    try:
+        response = s3_resource.Object("quaint", key).get()
+        bytes_data=response['Body'].read()
+        return base64.standard_b64encode(bytes_data)
+    except:#keyがNone(=まだ画像を登録していない)ときはNoneを返す
+        return None
 
 def delete_image(image_url:str) ->None:
     try:
-        image_url = image_url.replace("https://objectstorage.ap-tokyo-1.oraclecloud.com/n/nryxxlkqcfe6/b/quaint/o/",'')
-        s3.delete_object(Bucket='quaint', Key=image_url)
+        s3_client.delete_object(Bucket='quaint', Key=image_url)
     except:
         raise HTTPException(500,"Internal Server Error")

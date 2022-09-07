@@ -8,7 +8,7 @@ from app.config import settings
 #from hashids import Hashids
 import ulid
 
-from app import schemas
+from app import schemas , storage
 
 
 
@@ -66,17 +66,26 @@ def get_list_of_your_tickets(db:Session,user:schemas.User):
     return db_tickets
 
 def create_group(db:Session,group:schemas.GroupCreate):
-    db_group = models.Group(id=group.id,groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url,thumbnail_image_url=group.thumbnail_image_url,cover_image_url=group.cover_image_url)
+    db_group = models.Group(id=group.id,groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
     db.add(db_group)
     db.commit()
     db.refresh(db_group)
     return db_group
-def get_all_groups(db:Session):
+def get_all_groups(db:Session,thumbnail:Union[bool,None]=Query(default=False),cover:Union[bool,None]=Query(default=False)):
     db_groups = db.query(models.Group).all()
+    for db_group in db_groups:
+        if thumbnail==True:
+            db_group.thumbnail_image=storage.download_file_as_base64(db_group.thumbnail_image_url)
+        if cover==True:
+            db_group.cover_image=storage.download_file_as_base64(db_group.cover_image_url)
     return db_groups
-def get_group(db:Session,id:str):
+def get_group(db:Session,id:str,thumbnail:Union[bool,None]=Query(default=False),cover:Union[bool,None]=Query(default=False)):
     group = db.query(models.Group).filter(models.Group.id==id).first()
     if group:
+        if thumbnail==True:
+            group.thumbnail_image=storage.download_file_as_base64(group.thumbnail_image_url)
+        if cover==True:
+            group.cover_image=storage.download_file_as_base64(group.cover_image_url)
         return group
     else:
         return None
