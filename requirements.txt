@@ -20,3 +20,4 @@ pytest-cov
 python-multipart
 boto3
 pillow
+bcrypt
