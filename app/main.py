@@ -66,7 +66,7 @@ app.add_middleware(
 def read_root():
     return {
         "title": "QUAINT-API",
-        "description":"日比谷高校オンライン整理券システム「QUAINT」のAPI"
+        "description":"日比谷高校オンライン整理券システム「QUAINT」のバックエンドAPI"
     }
 
 @app.post(
