@@ -60,4 +60,4 @@ jobs:
         with:
           app-name: 'seiryofes2022api'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_E1C4784736764B4A9B00044F8B6D10BD }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_14A5476B807C4BCFB5B24109B20DF58C }}
