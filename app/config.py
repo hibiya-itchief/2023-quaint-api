@@ -3,17 +3,17 @@ import os
 import datetime
 
 class Settings(BaseSettings):
-    mysql_user:str
-    mysql_password:str
-    db_host:str
+    mysql_user:str=os.getenv('MYSQL_USER')
+    mysql_password:str=os.getenv('MYSQL_PASSWORD')
+    db_host:str=os.getenv('DB_HOST')
 
-    login_jwt_secret:str
+    login_jwt_secret:str=os.getenv('LOGIN_JWT_SECRET')
 
     #Oracle Object Storage
-    region_name:str=""
-    aws_secret_access_key:str=""
-    aws_access_key_id:str=""
-    endpoint_url:str=""
+    region_name:str=os.getenv('REGION_NAME',"")
+    aws_secret_access_key:str=os.getenv('AWS_SECRET_ACCESS_KEY',"")
+    aws_access_key_id:str=os.getenv('AWS_ACCESS_KEY_ID',"")
+    endpoint_url:str=os.getenv('ENDPOINT_URL',"")
 
     # Parameter
     ## JWT EXPIRE
