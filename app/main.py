@@ -162,7 +162,7 @@ def activate_user(user_id:str,permission:schemas.User=Depends(dep.admin),db:Sess
     user=crud.get_user(db,user_id)
     if not user:
         raise HTTPException(404,"ユーザーが見つかりません")
-    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/users/"+user.username+"/activation [PUT]",operation='ユーザーをアクティベート',result=True))
+    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/users/"+user.id+"/activation [PUT]",operation='ユーザー('+user.username+')をアクティベート',result=True))
     return crud.activate_user(db,user)
 
 @app.put(
@@ -179,12 +179,12 @@ def grant_authority(user_id:str,role:schemas.AuthorityRole=Body(),group_id:Union
     if role ==schemas.AuthorityRole.Admin:
         if crud.check_admin(db,user):
             raise HTTPException(200)
-        crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/users/"+user.username+"/authority [PUT]",operation='ユーザーに権限を付与(role:'+str(role)+')',result=True))
+        crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/users/"+user.id+"/authority [PUT]",operation='ユーザー('+user.username+')に権限を付与(role:'+str(role)+')',result=True))
         return crud.grant_admin(db,user)
     elif role == schemas.AuthorityRole.Entry:
         if crud.check_entry(db,user):
             raise HTTPException(200)
-        crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/users/"+user.username+"/authority [PUT]",operation='ユーザーに権限を付与(role:'+str(role)+')',result=True))
+        crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/users/"+user.id+"/authority [PUT]",operation='ユーザー('+user.username+')に権限を付与(role:'+str(role)+')',result=True))
         return crud.grant_entry(db,user)
     else:
         if not group_id:
@@ -195,12 +195,12 @@ def grant_authority(user_id:str,role:schemas.AuthorityRole=Body(),group_id:Union
         if role == schemas.AuthorityRole.Owner:
             if crud.check_owner_of(db,group,user):
                 raise HTTPException(200)
-            crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/users/"+user.username+"/authority [PUT]",operation='ユーザーに権限を付与(role : '+str(role)+',group : '+group.groupname+')',result=True))
+            crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/users/"+user.id+"/authority [PUT]",operation='ユーザー('+user.username+')に権限を付与(role : '+str(role)+',group : '+group.groupname+')',result=True))
             return crud.grant_owner_of(db,group,user)
         elif role == schemas.AuthorityRole.Authorizer:
             if crud.check_authorizer_of(db,group,user):
                 raise HTTPException(200)
-            crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/users/"+user.username+"/authority [PUT]",operation='ユーザーに権限を付与(role : '+str(role)+',group : '+group.groupname+')',result=True))
+            crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/users/"+user.id+"/authority [PUT]",operation='ユーザー('+user.username+')に権限を付与(role : '+str(role)+',group : '+group.groupname+')',result=True))
             return crud.grant_authorizer_of(db,group,user)
 
 
@@ -215,7 +215,7 @@ def create_group(groups:List[schemas.GroupCreate],permission:schemas.User=Depend
     result=[]
     for group in groups:
         result.append(crud.create_group(db,group))
-    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/groups [POT]",operation='新規Groupを作成(json:'+str(groups)+')',result=True))
+        crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/groups [POST]",operation='新規Groupを作成(groupname:'+str(group.groupname)+')',result=True,detail=str(group)))
     return result
 @app.get(
     "/groups",
@@ -382,7 +382,8 @@ def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,permission:schemas.User=D
     grouptag = crud.add_tag(db,group_id,tag_id)
     if not grouptag:
         raise HTTPException(404,"指定されたGroupまたはTagが見つかりません")
-    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/groups/"+group_id+"/tags [PUT]",operation='グループにタグを追加(tag_id:'+tag_id.tag_id+')',result=True))
+    tag=crud.get_tag(db,tag_id.tag_id)
+    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/groups/"+group_id+"/tags [PUT]",operation='グループにタグを追加(tagname: '+tag.tagname+')',result=True))
     return "Add Tag Successfully"
 @app.get(
     "/groups/{group_id}/tags",
@@ -409,7 +410,8 @@ def delete_grouptag(group_id:str,tag_id:str,permission:schemas.User=Depends(dep.
     tag = crud.get_tag(db,tag_id)
     if not tag:
         raise HTTPException(404,"指定されたTagが見つかりません")
-    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/groups/"+group_id+"/tags [DELETE]",operation='グループのタグを削除(tag_id:'+tag_id+')',result=True))
+    tag=crud.get_tag(db,tag_id)
+    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/groups/"+group_id+"/tags [DELETE]",operation='グループのタグを削除(tag_id: '+tag.tagname+')',result=True))
     return crud.delete_grouptag(db,group,tag)
 @app.delete(
     "/groups/{group_id}",
@@ -465,7 +467,7 @@ def create_event(group_id:str,events:List[schemas.EventCreate],user:schemas.User
         if not event:
             raise HTTPException(400,"パラメーターが不適切です")
         result.append(event)
-    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=user.username,object="/groups/"+group_id+"/events [POST]",operation='グループに公演を追加(json:'+str(result)+')',result=True))
+        crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=user.username,object="/groups/"+group_id+"/events [POST]",operation='グループに公演を追加(event_id:'+str(event.id)+')',result=True,detail=str(event)))
     return result
 @app.get(
     "/groups/{group_id}/events",
@@ -504,7 +506,7 @@ def delete_events(group_id:str,event_id:str,user:schemas.User=Depends(dep.get_cu
         raise HTTPException(403,"Adminまたは当該GroupのOwnerの権限が必要です")
     try:
         crud.delete_events(db,event)
-        crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=user.username,object="/groups/"+group_id+"/events/"+event_id+" [DELETE]",operation='グループの公演を削除',result=True))
+        crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=user.username,object="/groups/"+group_id+"/events/"+event_id+" [DELETE]",operation='グループの公演を削除',result=True,detail=str(event)))
         return {"OK":True}
     except:
         raise HTTPException(400,"指定されたEventに紐づけられたTicketを全て削除しないと削除できません")
@@ -611,7 +613,7 @@ def create_timetable(timetables:List[schemas.TimetableCreate],permission:schemas
         if not result:
             raise HTTPException(400,"パラメーターが不適切です")
         results.append(result)
-    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/timetable [POST]",operation='新規Timetableを作成(json:'+str(timetables)+')',result=True))
+        crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/timetable [POST]",operation='新規Timetableを作成(timetable_id:'+str(result.id)+')',result=True,detail=str(result)))
     return results
 @app.get(
     "/timetable",
@@ -645,7 +647,7 @@ def create_tag(tags:List[schemas.TagCreate],permission:schemas.User = Depends(de
     result=[]
     for tag in tags:
         result.append(crud.create_tag(db,tag))
-    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/tags [POST]",operation='新規タグを作成(json:'+str(tags)+')',result=True))
+        crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/tags [POST]",operation='新規タグを作成(tagname:'+str(tag.tagname)+')',result=True,detail=str(tag)))
     return result
 @app.get(
     "/tags",
@@ -709,7 +711,7 @@ def create_user_by_admin(users:List[schemas.UserCreateByAdmin],permission:schema
         if db_user:
             raise HTTPException(status_code=400,detail="ユーザー名が既に使われています")
         result.append(crud.create_user_by_admin(db=db,user=user))
-    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/admin/users [POST]",operation='管理者権限で新規ユーザーを作成(json:'+str(result)+')',result=True))
+        crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/admin/users [POST]",operation='管理者権限で新規ユーザーを作成(username:'+str(user.username)+')',result=True,detail=str(user)))
     return result
 
 @app.get(

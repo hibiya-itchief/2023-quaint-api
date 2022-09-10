@@ -125,6 +125,6 @@ class Log(Base):
     timestamp = Column(DateTime,server_default=current_timestamp())
     user = Column(VARCHAR(255))
     object = Column(VARCHAR(255))
-    operation = Column(TEXT(30000))
+    operation = Column(VARCHAR(255))
     result =Column(Boolean)
-    detail = Column(VARCHAR(255))
+    detail = Column(TEXT(60000))
