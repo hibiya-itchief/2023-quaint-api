@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from pydantic import Field
 
 from app import schemas,dep,models,crud,storage
-
+from app.config import settings
 
 from .database import SessionLocal, engine
 
@@ -19,8 +19,11 @@ from .database import SessionLocal, engine
 description="""
 日比谷高校オンライン整理券システム「QUAINT」のAPI \n
 <a href="https://seiryofes.com">seiryofes.com</a>
-<a href="https://github.com/hibiya-itchief/quaint-api">GitHub</a>
+<a href="https://github.com/hibiya-itchief/quaint-api">GitHub</a> \n \n
 """
+if settings.production_flag==1:
+    description+="<h2>本番環境</h2>"
+
 tags_metadata = [
     {
         "name": "users",

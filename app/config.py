@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     ## JWT EXPIRE
     access_token_expire:datetime.timedelta=datetime.timedelta(days=10)
 
+    production_flag:int=os.getenv("PRODUCTION_FLAG",0)
+
     class Config:
         env_file = '../.env'
         secrets_dir='/run/secrets'
