@@ -653,6 +653,74 @@ def test_get_group_fail_invalid_id(db:Session):
     group = crud.create_group(db,group_in1)
     response = client.get("/groups/"+"invalid-id")
     assert response.status_code==404
+def test_check_me_liked(db:Session):
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    user_in = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,user_in)
+
+    response = client.post(
+        "/users/me/login",
+        data={
+        "grant_type":"password",
+        "username":user_in.username,
+        "password":user_in.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    crud.create_like(db,group,user)
+    response = client.get("/groups/"+group.id+"/me_liked",headers=headers)
+    assert response.status_code==200
+    assert response.json()["me_liked"]==True
+
+def test_create_like(db:Session):
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    user_in = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,user_in)
+
+    response = client.post(
+        "/users/me/login",
+        data={
+        "grant_type":"password",
+        "username":user_in.username,
+        "password":user_in.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+
+    response = client.post("/groups/"+group.id+"/like",headers=headers)
+    assert response.status_code==200
+    assert response.json()["OK"]==True
+def test_delete_like(db:Session):
+    group_in1=factories.group1_GroupCreateByAdmin()
+    group = crud.create_group(db,group_in1)
+    user_in = factories.hogehoge_UserCreateByAdmin()
+    user = crud.create_user_by_admin(db,user_in)
+
+    response = client.post(
+        "/users/me/login",
+        data={
+        "grant_type":"password",
+        "username":user_in.username,
+        "password":user_in.password
+    })
+    assert response.status_code == 200
+    jwt = response.json()
+    headers = {
+        'Authorization': f'{jwt["token_type"].capitalize()} {jwt["access_token"]}'
+    }
+    crud.create_like(db,group,user)
+    response = client.delete("/groups/"+group.id+"/like",headers=headers)
+    assert response.status_code==200
+    assert response.json()["OK"]==True
 def test_update_title_success(db:Session):
     user_admin = factories.Admin_UserCreateByAdmin()
     crud.create_user_by_admin(db,user_admin)

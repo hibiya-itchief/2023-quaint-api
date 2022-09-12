@@ -245,7 +245,36 @@ def get_group(group_id:str,db:Session=Depends(dep.get_db),user:Union[schemas.Use
     if user is not None:
         if crud.check_admin(db,user) or crud.check_owner_of(db,group_result,user) or user.is_student or user.is_family:
             group_result = crud.get_group(db,group_id,thumbnail=True,cover=True)
+    group_result.like_num=crud.get_number_of_like(db,group_id)
     return group_result
+
+@app.get("/groups/{group_id}/me_liked",tags=["groups"],response_model=schemas.GroupMeLiked)
+def check_me_liked(group_id:str,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    if crud.check_liked(db,group,user):
+        return {"me_liked":True}
+    else:
+        return {"me_liked":False}
+
+@app.post("/groups/{group_id}/like",tags=["groups"])
+def create_like(group_id:str,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    if crud.check_liked(db,group,user):
+        return {"OK":True}
+    crud.create_like(db,group,user)
+    return {"OK":True}
+
+@app.delete("/groups/{group_id}/like",tags=["groups"])
+def delete_like(group_id:str,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    crud.delete_like(db,group,user)
+    return {"OK":True}
 
 @app.put(
     "/groups/{group_id}/title",
