@@ -74,6 +74,7 @@ def create_group(db:Session,group:schemas.GroupCreate):
 def get_all_groups(db:Session,thumbnail:Union[bool,None]=Query(default=False),cover:Union[bool,None]=Query(default=False)):
     db_groups = db.query(models.Group).all()
     for db_group in db_groups:
+        db_group.like_num=get_number_of_like(db,db_group.id)
         if thumbnail==True:
             db_group.thumbnail_image=storage.download_file_as_base64(db_group.thumbnail_image_url)
         if cover==True:
