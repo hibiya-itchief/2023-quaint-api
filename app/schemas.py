@@ -52,7 +52,7 @@ class GroupCreate(GroupBase):
 class Group(GroupBase):
     thumbnail_image:Union[str,None] #Base64
     cover_image:Union[str,None]#Base64
-    like_num:int
+    like_num:Union[str,None]
     class Config:
         orm_mode=True
 
