@@ -438,17 +438,19 @@ def get_tags_of_group(group_id:str,db:Session=Depends(dep.get_db)):
     "/groups/{group_id}/tags/{tag_id}",
     summary="指定されたGroupに紐づいている指定されたTagを削除",
     tags=["groups"],
-    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n",
+    description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい\n",
     responses={"404":{"description":"- 指定されたGroupが見つかりません\n- 指定されたTagが見つかりません"}})
-def delete_grouptag(group_id:str,tag_id:str,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+def delete_grouptag(group_id:str,tag_id:str,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
     group = crud.get_group(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
+    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
     tag = crud.get_tag(db,tag_id)
     if not tag:
         raise HTTPException(404,"指定されたTagが見つかりません")
     tag=crud.get_tag(db,tag_id)
-    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/groups/"+group_id+"/tags [DELETE]",operation='グループのタグを削除(tag_id: '+tag.tagname+')',result=True))
+    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=user.username,object="/groups/"+group_id+"/tags [DELETE]",operation='グループのタグを削除(tag_id: '+tag.tagname+')',result=True))
     return crud.delete_grouptag(db,group,tag)
 @app.delete(
     "/groups/{group_id}",
