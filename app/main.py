@@ -488,16 +488,14 @@ def search_groups(q:str,db:Session=Depends(dep.get_db)):
     response_model=List[schemas.Event],
     summary="新規Eventを作成",
     tags=["events"],
-    description="### 必要な権限\nAdmin,当該GroupのOwner\n### ログインが必要か\nはい\n### 説明\n- 複数Eventを一括作成できます",
+    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n### 説明\n- 複数Eventを一括作成できます",
     responses={"400":{"description":"パラメーターが不適切です"},
-        "403":{"description":"Adminまたは当該GroupのOwnerの権限が必要です"},
+        "403":{"description":"Adminの権限が必要です"},
         "404":{"description":"指定されたGroupが見つかりません"}})
-def create_event(group_id:str,events:List[schemas.EventCreate],user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+def create_event(group_id:str,events:List[schemas.EventCreate],user:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
     group = crud.get_group(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
-    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
-        raise HTTPException(403,"Adminまたは当該GroupのOwnerの権限が必要です")
     result=[]
     for event in events:
         if crud.check_same_event(db,group.id,event.timetable_id):
@@ -532,17 +530,15 @@ def get_event(group_id:str,event_id:str,db:Session=Depends(dep.get_db)):
     "/groups/{group_id}/events/{event_id}",
     summary="指定されたGroupの指定されたEventを削除",
     tags=["events"],
-    description="### 必要な権限\nAdmin,当該GroupのOwner\n### ログインが必要か\nはい\n### 説明\n指定するEventに紐づけられたTicketを全て削除しないと削除できません",
+    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n### 説明\n指定するEventに紐づけられたTicketを全て削除しないと削除できません",
     responses={"404":{"description":"指定されたGroupまたはEventがありません"},
-        "403":{"description":"Adminまたは当該GroupのOwnerの権限が必要です"},
+        "403":{"description":"Adminの権限が必要です"},
         "400":{"description":"指定されたEventに紐づけられたTicketを全て削除しないと削除できません"}})
-def delete_events(group_id:str,event_id:str,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+def delete_events(group_id:str,event_id:str,user:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
     event = crud.get_event(db,group_id,event_id)
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventがありません")
     group = crud.get_group(db,event.group_id)
-    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
-        raise HTTPException(403,"Adminまたは当該GroupのOwnerの権限が必要です")
     try:
         crud.delete_events(db,event)
         crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=user.username,object="/groups/"+group_id+"/events/"+event_id+" [DELETE]",operation='グループの公演を削除',result=True,detail=str(event)))
