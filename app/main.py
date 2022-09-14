@@ -79,7 +79,7 @@ def read_root():
     tags=["users"],
     description="### 必要な権限\nなし\n### ログインが必要か\n--",
     response_description="ログインに成功",
-    responses={"401":{"description":"- ユーザー名かパスワードが間違っています\n- パスワードが失効しています。新しいパスワードを設定してください。"}})
+    responses={"400":{"description":"パスワードが失効しています。新しいパスワードを設定してください。"},"401":{"description":"ユーザー名かパスワードが間違っています"}})
 async def login_for_access_token(db:Session = Depends(dep.get_db),form_data: OAuth2PasswordRequestForm = Depends()):
     return dep.login_for_access_token(form_data.username,form_data.password,db)
 

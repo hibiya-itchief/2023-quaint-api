@@ -64,7 +64,7 @@ def login_for_access_token(username:str,password:str,db:Session):
         )
     if user.password_expired:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="パスワードが失効しています。新しいパスワードを設定してください。",
             headers={"WWW-Authenticate": "Bearer"},
         )
