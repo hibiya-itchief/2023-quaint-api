@@ -71,6 +71,7 @@ def login_for_access_token(username:str,password:str,db:Session):
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=ACCESS_TOKEN_EXPIRE
     )
+    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=username,object="/users/me/login [POST]",operation='ユーザーのログイン',result=True))
     return {"access_token": access_token, "token_type": "bearer"}
 
 
