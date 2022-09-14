@@ -408,14 +408,19 @@ def upload_cover_image(group_id:str,file:Union[bytes,None] = File(default=None),
     "/groups/{group_id}/tags",
     summary="指定されたGroupにタグを紐づける",
     tags=["groups"],
-    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい",
+    description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい",
     responses={"404":{"description":"指定されたGroupまたはTagが見つかりません"}})
-def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,permission:schemas.User=Depends(dep.admin),db:Session=Depends(dep.get_db)):
+def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,user:schemas.User=Depends(dep.get_current_user),db:Session=Depends(dep.get_db)):
+    group = crud.get_group(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
     grouptag = crud.add_tag(db,group_id,tag_id)
     if not grouptag:
-        raise HTTPException(404,"指定されたGroupまたはTagが見つかりません")
+        raise HTTPException(404,"Tagが見つかりません")
     tag=crud.get_tag(db,tag_id.tag_id)
-    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/groups/"+group_id+"/tags [PUT]",operation='グループにタグを追加(tagname: '+tag.tagname+')',result=True))
+    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=user.username,object="/groups/"+group_id+"/tags [PUT]",operation='グループにタグを追加(tagname: '+tag.tagname+')',result=True))
     return "Add Tag Successfully"
 @app.get(
     "/groups/{group_id}/tags",
