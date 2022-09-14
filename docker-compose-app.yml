@@ -8,8 +8,7 @@ services:
       dockerfile: Dockerfile-app
     volumes:
       - ./app:/app/app
-    restart:
-      - always
+    restart: always
     ports:
       - "8000:8000"
     environment:
