@@ -74,6 +74,7 @@ def create_group(db:Session,group:schemas.GroupCreate):
 def get_all_groups(db:Session,thumbnail:Union[bool,None]=Query(default=False),cover:Union[bool,None]=Query(default=False)):
     db_groups = db.query(models.Group).all()
     for db_group in db_groups:
+        db_group.like_num=get_number_of_like(db,db_group.id)
         if thumbnail==True:
             db_group.thumbnail_image=storage.download_file_as_base64(db_group.thumbnail_image_url)
         if cover==True:
@@ -89,6 +90,24 @@ def get_group(db:Session,id:str,thumbnail:Union[bool,None]=Query(default=False),
         return group
     else:
         return None
+def get_number_of_like(db:Session,group_id:str) ->int:
+    num = db.query(models.Like).filter(models.Like.group_id==group_id).count()
+    return num
+def check_liked(db:Session,group:str,user:schemas.User) ->bool:
+    db_like = db.query(models.Like).filter(models.Like.group_id==group.id,models.Like.user_id==user.id).first()
+    if db_like:
+        return True
+    return False
+def create_like(db:Session,group:schemas.Group,user:schemas.User):
+    db_like=models.Like(group_id=group.id,user_id=user.id)
+    db.add(db_like)
+    db.commit()
+    return db_like
+def delete_like(db:Session,group:schemas.Group,user:schemas.User):
+    db_like = db.query(models.Like).filter(models.Like.group_id==group.id,models.Like.user_id==user.id).delete()
+    db.commit()
+    return 0
+
 def update_title(db:Session,group:schemas.Group,title:Union[str,None]):
     db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
     db_group.title=title

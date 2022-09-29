@@ -52,11 +52,15 @@ class GroupCreate(GroupBase):
 class Group(GroupBase):
     thumbnail_image:Union[str,None] #Base64
     cover_image:Union[str,None]#Base64
+    like_num:Union[str,None]
     class Config:
         orm_mode=True
 
 class GroupTagCreate(BaseModel):
     tag_id:str#ULID
+
+class GroupMeLiked(BaseModel):
+    me_liked:bool
 
 class TagBase(BaseModel):
     tagname:str=Query(max_length=200)
