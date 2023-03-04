@@ -3,31 +3,20 @@ from typing import Dict, Union
 
 import jwt
 import requests
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, HTTPException
 from fastapi.openapi.models import HTTPBearer
 from fastapi.security.base import SecurityBase
 from jwt import PyJWKClient
-from sqlalchemy.orm.session import Session
 from starlette.requests import Request
 from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 
 from app import schemas
 from app.config import settings
 
-from .database import SessionLocal,engine
-from . import crud
-
 B2C_CONFIG=requests.get(settings.azure_b2c_openidconfiguration).json()
 AD_CONFIG=requests.get(settings.azure_ad_openidconfiguration).json()
 b2c_jwks_client = PyJWKClient(B2C_CONFIG['jwks_uri'])
 ad_jwks_client = PyJWKClient(AD_CONFIG['jwks_uri'])
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 class BearerAuth(SecurityBase):
     def __init__(
