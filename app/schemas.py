@@ -98,6 +98,17 @@ class Token(BaseModel):
 class TokenData(BaseModel):#JWTに含まれるデータ
     username: Union[str,None] = None
 
+class JWTUser(BaseModel):
+    aud:str
+    iss:str
+    iat:int
+    nbf:int
+    exp:int
+    sub:str
+    name:str
+    jobTitle:Union[str,None]
+    groups:Union[List[str],None]
+
 class UserBase(BaseModel):
     username: str = Query(regex="^[a-zA-Z0-9_\-.]{3,15}$",min_length=4,max_length=25)
 class UserCreate(UserBase):

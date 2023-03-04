@@ -1,5 +1,4 @@
-from datetime import date, datetime,timedelta
-from typing import Optional,List,Union
+from typing import Dict, List, Optional, Union
 from xml.dom.minidom import Entity
 
 from fastapi import FastAPI,Depends,HTTPException,status,File,UploadFile,Query,Body
@@ -731,6 +730,21 @@ def delete_tag(tag_id:str,permission:schemas.User=Depends(dep.admin),db:Session 
     return "Successfully Deleted"
     
 
+
+@app.post(
+    "/admin/access_token",
+    summary="管理者によるアクセストークンの生成",
+    tags=["admin"],
+    description="### 必要な権限\nAdmin\n###ログインが必要か\nはい\n###説明\n 管理者権限を持ったアクセストークンを生成します。GitHub Actionsでフロントエンドをビルドするときに使う。")
+def create_access_token(additional_data:Union[Dict,None]=None,expire_delta:Union[timedelta,None]=None,user:schemas.JWTUser=Depends(auth.admin)):
+    data=additional_data.copy() # additional_dataにgroupsやissやらが含まれてるとまずい気がするから、先にコピー。update()で上書きされる
+    data.update({
+    "groups":[settings.azure_ad_groups_quaint_admin],
+    "iss":"https://api.seiryofes.com/admin/access_token",
+    "sub":"access_token_"+user.name,
+    "iat":time.time()})
+    #TODO DB使って発行したトークンの失効とか出来るようにする？できればした方が良い
+    return dep.generate_jwt(data,expire_delta)
 
 @app.post(
     "/admin/users",

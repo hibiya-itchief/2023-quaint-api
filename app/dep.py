@@ -1,12 +1,15 @@
 from datetime import datetime, timedelta
 from typing import Union
 
-from fastapi import Depends, FastAPI, HTTPException, status,Header
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from yarg import get
+import jwt
+import requests
+from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi.openapi.models import HTTPBearer
+from fastapi.security.base import SecurityBase
+from jwt import PyJWKClient
 from sqlalchemy.orm.session import Session
+from starlette.requests import Request
+from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 
 from app import schemas
 from app.config import settings
@@ -14,9 +17,10 @@ from app.config import settings
 from .database import SessionLocal,engine
 from . import crud
 
-LOGIN_JWT_SECRET = settings.login_jwt_secret#HMAC 共有シークレットで署名。署名者だけが検証できれば良いなら128bit以上のSHA-256 Hashでいいぽい
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE = settings.access_token_expire
+B2C_CONFIG=requests.get(settings.azure_b2c_openidconfiguration).json()
+AD_CONFIG=requests.get(settings.azure_ad_openidconfiguration).json()
+b2c_jwks_client = PyJWKClient(B2C_CONFIG['jwks_uri'])
+ad_jwks_client = PyJWKClient(AD_CONFIG['jwks_uri'])
 
 def get_db():
     db = SessionLocal()
@@ -25,144 +29,92 @@ def get_db():
     finally:
         db.close()
 
+class BearerAuth(SecurityBase):
+    def __init__(
+        self
+    ):
+        self.model = HTTPBearer(description="")
+        self.scheme_name = "Azure AD・B2C"
+        self.auto_error=True
 
-pwd_context= CryptContext(schemes=["bcrypt"],deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/me/login")
+    async def __call__(self, request: Request) -> str:
+        authorization: str = request.headers.get("Authorization")
+        authorization=authorization.split(' ')[-1] # Authorization header sometimes includes space like 'Bearer token..'
+        if not authorization:
+            raise HTTPException(
+                status_code=HTTP_401_UNAUTHORIZED, detail="ログインが必要です"
+            )
+        return authorization
+auth_scheme=BearerAuth()
 
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def authenticate_user(db:Session, username: str, password: str):
-    user= crud.get_user_by_name(db, username)
-    if not user:
-        return False
-    if not verify_password(password, user.hashed_password):
-        return False
-    return user
-
-def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
+def generate_jwt(data:Dict,expires_delta: Union[timedelta, None] = None):
     to_encode = data.copy()
+    if data.get("aud") is None:
+        to_encode.update({"aud": "quaint"})
+    if data.get("iss") is None:
+        to_encode.update({"iss": "https://api.seiryofes.com"})
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(days=7)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, LOGIN_JWT_SECRET, algorithm=ALGORITHM)
+        to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode,settings.jwt_privatekey,algorithm="RS256")
     return encoded_jwt
 
-def login_for_access_token(username:str,password:str,db:Session):
-    user = authenticate_user(db, username, password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="ユーザー名かパスワードが間違っています",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    if user.password_expired:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="パスワードが失効しています。新しいパスワードを設定してください。",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=ACCESS_TOKEN_EXPIRE
-    )
-    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=username,object="/users/me/login [POST]",operation='ユーザーのログイン',result=True))
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
-async def get_current_user(db:Session = Depends(get_db),token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="ログイン情報の有効性を確認できませんでした",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+def verify_jwt(token:str=Depends(auth_scheme))->schemas.JWTUser:
     try:
-        payload = jwt.decode(token, LOGIN_JWT_SECRET, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-        token_data = schemas.TokenData(username=username)
-    except JWTError:
-        raise credentials_exception
-    user:schemas.User = crud.get_user_by_name(db, username=token_data.username)
-    if user is None:
-        raise credentials_exception
-    if user.password_expired:
-        raise HTTPException(401,detail="パスワードが失効しています。新しいパスワードを設定してください")
+        header=jwt.get_unverified_header(token)
+        payload=jwt.decode(token,options={"verify_signature": False})
+        if payload.get("iss")==B2C_CONFIG['issuer']:
+            signing_key = b2c_jwks_client.get_signing_key_from_jwt(token)
+            decoded_jwt = jwt.decode(token, signing_key.key, algorithms=header['alg'],audience=settings.azure_b2c_audience)
+            return decoded_jwt
+        elif payload.get("iss")==AD_CONFIG['issuer']:
+            signing_key = ad_jwks_client.get_signing_key_from_jwt(token)
+            decoded_jwt = jwt.decode(token, signing_key.key, algorithms=header['alg'],audience=settings.azure_ad_audience)
+            return decoded_jwt
+        elif payload.get("iss")=="https://api.seiryofes.com/admin/access_token":
+            decoded_jwt = jwt.decode(token,settings.jwt_publickey,algorithms=['RS256'],audience="quaint")
+            return decoded_jwt
+        else:
+            raise HTTPException(status_code=HTTP_401_UNAUTHORIZED,detail="不正なトークンです")
+    except Exception as e:
+        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED,detail=f"不正なトークンです( {e} )")
+
+def get_current_user(user:schemas.JWTUser = Depends(verify_jwt)):
     return user
+
 
 #例外を発生させないことで、ログインしてるならユーザー情報が取れるし、してないならNoneを返すようにする(顔出し画像が入る可能性があるカバー画像をレスポンスするか決める)
-def get_current_user_not_exception(db:Session=Depends(get_db),Authorization:Union[str, None] = Header(default=None)):
-    if Authorization is not None:
-        token=Authorization.replace("Bearer ","")
-    else:
-        return None
+def get_current_user_not_exception():
     try:
-        payload = jwt.decode(token, LOGIN_JWT_SECRET, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            return None
-        token_data = schemas.TokenData(username=username)
-    except JWTError:
+        user=verify_jwt()
+        return user
+    except:
         return None
-    user:schemas.User = crud.get_user_by_name(db, username=token_data.username)
-    if user is None:
-        return None
-    if user.password_expired:
-        return None
-    return user
 
+def student(user:schemas.JWTUser=Depends(get_current_user)):
+    if user.iss==AD_CONFIG['issuer']:
+        return 
 
-def admin(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
-    if not crud.check_admin(db,user):
-        raise HTTPException(403,detail="Adminの権限がありません")
-    return user
-
-def entry(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
-    if not crud.check_entry(db,user):
-        raise HTTPException(403,detail="Entryの権限がありません")
-    return user
-
-def owner_of(group_id:str,db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
-    group=crud.get_group(db,group_id)###
-    if not group:
-        raise HTTPException(400,detail='Groupが見つかりません')
-    if crud.check_admin(db,user):
+def visited(user:schemas.JWTUser=Depends(get_current_user)):
+    if user.iss==AD_CONFIG['issuer'] or (user.jobTitle and ('Visited' in user.jobTitle or 'visited' in user.jobTitle)):
         return user
-    if not crud.check_owner_of(db,group,user):
-        raise HTTPException(403,detail="Ownerの権限がありません")
-    return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="入校処理がされていません")
 
-def owner(db:Session = Depends(get_db),user:schemas.User = Depends(get_current_user)):
-    if crud.check_admin(db,user):
+def admin(user:schemas.JWTUser = Depends(get_current_user)):
+    if user.groups and settings.azure_ad_groups_quaint_admin in user.groups:
         return user
-    if not crud.check_owner(db,user):
-        raise HTTPException(403,detail="Ownerの権限がありません")
-    return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="admin(quaintの管理者)の権限がありません")
 
-def authorizer_of(group_id:str,db:Session = Depends(get_db),user:schemas.User=Depends(get_current_user)):
-    group=crud.get_group(db,group_id)###
-    if not group:
-        raise HTTPException(400,detail='Groupが見つかりません')
-    if crud.check_admin(db,user):
+def entry(user:schemas.JWTUser = Depends(get_current_user)):
+    if user.groups and (settings.azure_ad_groups_quaint_entry in user.groups or settings.azure_ad_groups_quaint_admin in user.groups): # entry or admin
         return user
-    if crud.check_owner_of(db,group,user):
-        return user
-    if not crud.check_authorizer_of(db,group,user):
-        raise HTTPException(403,detail="Authorizerの権限がありません")
-    return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="entry(入校処理担当者)の権限がありません")
 
-def authorizer(db:Session = Depends(get_db),user:schemas.User=Depends(get_current_user)):
-    if crud.check_admin(db,user):
+def owner(user:schemas.JWTUser = Depends(get_current_user)):
+    if user.groups and (settings.azure_ad_groups_quaint_owner in user.groups or settings.azure_ad_groups_quaint_admin in user.groups):
         return user
-    if crud.check_owner(db,user):
-        return user
-    if not crud.check_authorizer(db,user):
-        raise HTTPException(403,detail="Authorizerの権限がありません")
-    return user
-
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="Owner(団体代表者)の権限がありません")
