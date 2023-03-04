@@ -107,7 +107,7 @@ def admin(user:schemas.JWTUser = Depends(get_current_user)):
     if user.groups and settings.azure_ad_groups_quaint_admin in user.groups:
         return user
     else:
-        raise HTTPException(HTTP_403_FORBIDDEN,detail="admin(quaintの管理者)の権限がありません")
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="admin(管理者)の権限がありません")
 
 def entry(user:schemas.JWTUser = Depends(get_current_user)):
     if user.groups and (settings.azure_ad_groups_quaint_entry in user.groups or settings.azure_ad_groups_quaint_admin in user.groups): # entry or admin
@@ -119,4 +119,4 @@ def owner(user:schemas.JWTUser = Depends(get_current_user)):
     if user.groups and (settings.azure_ad_groups_quaint_owner in user.groups or settings.azure_ad_groups_quaint_admin in user.groups):
         return user
     else:
-        raise HTTPException(HTTP_403_FORBIDDEN,detail="Owner(団体代表者)の権限がありません")
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="Owner(クラ代・団体代表者)の権限がありません")
