@@ -91,7 +91,9 @@ def get_current_user_not_exception():
     except:
         return None
 
-def student(user:schemas.JWTUser=Depends(get_current_user)):
+### Role
+
+def school(user:schemas.JWTUser=Depends(get_current_user)):
     if user.iss==AD_CONFIG['issuer']:
         return 
 
