@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Union
+from typing import Dict, Union
 
 import jwt
 import requests
@@ -95,7 +95,9 @@ def get_current_user_not_exception():
 
 def school(user:schemas.JWTUser=Depends(get_current_user)):
     if user.iss==AD_CONFIG['issuer']:
-        return 
+        return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="本校生徒・学校関係者である必要があります")
 
 def visited(user:schemas.JWTUser=Depends(get_current_user)):
     if user.iss==AD_CONFIG['issuer'] or (user.jobTitle and ('Visited' in user.jobTitle or 'visited' in user.jobTitle)):
@@ -116,7 +118,7 @@ def entry(user:schemas.JWTUser = Depends(get_current_user)):
         raise HTTPException(HTTP_403_FORBIDDEN,detail="entry(入校処理担当者)の権限がありません")
 
 def owner(user:schemas.JWTUser = Depends(get_current_user)):
-    if user.groups and (settings.azure_ad_groups_quaint_owner in user.groups or settings.azure_ad_groups_quaint_admin in user.groups):
+    if user.groups and (settings.azure_ad_groups_quaint_owner in user.groups or settings.azure_ad_groups_quaint_admin in user.groups): # owner or admin
         return user
     else:
         raise HTTPException(HTTP_403_FORBIDDEN,detail="Owner(クラ代・団体代表者)の権限がありません")
