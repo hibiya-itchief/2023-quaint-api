@@ -71,80 +71,6 @@ def read_root():
         "description":"日比谷高校オンライン整理券システム「QUAINT」のAPI"
     }
 
-@app.post(
-    "/users/me/login",
-    response_model=schemas.Token,
-    summary="ログインしてアクセストークンを取得する",
-    tags=["users"],
-    description="### 必要な権限\nなし\n### ログインが必要か\n--",
-    response_description="ログインに成功",
-    responses={"400":{"description":"パスワードが失効しています。新しいパスワードを設定してください。"},"401":{"description":"ユーザー名かパスワードが間違っています"}})
-async def login_for_access_token(db:Session = Depends(db.get_db),form_data: OAuth2PasswordRequestForm = Depends()):
-    return auth.login_for_access_token(form_data.username,form_data.password,db)
-
-@app.post(
-    "/users",
-    response_model=schemas.Token,
-    summary="新規ユーザー作成",
-    tags=["users"],
-    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n### 説明\n誰でも新規ユーザーを作成できる。ただし、この時点では何の権限も与えられないので何もできない\nフラグや権限も設定してユーザーを作成したい場合は/admin/users [POST]",
-    response_description="ユーザーが作成されました",
-    responses={"400":{"description":"ユーザー名は既に使用されています"}})
-def create_user(user:schemas.UserCreate,db:Session=Depends(db.get_db)):
-    db_user = crud.get_user_by_name(db,username=user.username)
-    if db_user:
-        raise HTTPException(status_code=400,detail="ユーザー名は既に使用されています")
-    crud.create_user(db=db,user=user)
-    crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=user.username,object="/users [POST]",operation='新規ユーザーを作成(username:'+user.username+')',result=True))
-    return auth.login_for_access_token(user.username,user.password,db)
-@app.get(
-    "/users",
-    response_model=List[schemas.User],
-    summary="全ユーザーの情報を取得",
-    tags=["users"],
-    description="### 必要な権限\n**Admin\n### ログインが必要か\nはい",)
-def read_all_users(permission:schemas.User = Depends(auth.admin),db:Session=Depends(db.get_db)):
-    users = crud.get_all_users(db)
-    return users
-
-@app.get(
-    "/users/me",
-    response_model=schemas.User,
-    summary="ログイン中のユーザーの情報を取得",
-    tags=["users"],
-    description="### 必要な権限\nなし\n### ログインが必要か\nはい")
-def get_me(user:schemas.User = Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    return user
-@app.get(
-    "/users/me/authority",
-    response_model=schemas.UserAuthority,
-    summary="ログイン中のユーザーの権限を取得",
-    tags=["users"],
-    description="### 必要な権限\nなし\n### ログインが必要か\nはい")
-def read_my_authority(user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    return schemas.UserAuthority(
-        user_id=user.id,
-        is_admin=crud.check_admin(db,user),
-        is_entry=crud.check_entry(db,user),
-        owner_of=crud.get_owner_list(db,user),
-        authorizer_of=crud.get_authorizer_list(db,user))
-@app.put(
-    "/users/me/password",
-    tags=["users"],
-    summary="ログイン中のユーザーのパスワードを変更",
-    description="### 必要な権限\nなし\n### ログインが必要か\n--",
-    response_description="パスワードが正しく変更されました",
-    responses={"400":{"description":"新しいパスワードには現在のものとは違うパスワードを設定してください"},
-        "401":{"description":"ユーザー名またはパスワードが間違っています"}})
-def change_password(user:schemas.PasswordChange,db:Session=Depends(db.get_db)):
-    if not auth.authenticate_user(db,user.username,user.password):
-        raise HTTPException(401,"ユーザー名またはパスワードが間違っています")
-    if user.password==user.new_password:
-        raise HTTPException(400,"新しいパスワードには現在のものとは違うパスワードを設定してください")
-    crud.change_password(db,user)
-    return HTTPException(200,"パスワードが正しく変更されました")
-
-
 @app.get(
     "/users/me/tickets",
     response_model=List[schemas.Ticket],
@@ -745,23 +671,6 @@ def create_access_token(additional_data:Union[Dict,None]=None,expire_delta:Union
     "iat":time.time()})
     #TODO DB使って発行したトークンの失効とか出来るようにする？できればした方が良い
     return auth.generate_jwt(data,expire_delta)
-
-@app.post(
-    "/admin/users",
-    response_model=List[schemas.User],
-    summary="管理者によるユーザーの作成",
-    tags=["admin"],
-    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n### 説明\n フラグや権限を指定して一括作成できます。",
-    responses={"400":{"description":"ユーザー名が既に使われています"}})
-def create_user_by_admin(users:List[schemas.UserCreateByAdmin],permission:schemas.User = Depends(auth.admin),db:Session=Depends(db.get_db)):
-    result=[]
-    for user in users:
-        db_user = crud.get_user_by_name(db,username=user.username)
-        if db_user:
-            raise HTTPException(status_code=400,detail="ユーザー名が既に使われています")
-        result.append(crud.create_user_by_admin(db=db,user=user))
-        crud.log(db,schemas.LogCreate(timestamp=datetime.now(),user=permission.username,object="/admin/users [POST]",operation='管理者権限で新規ユーザーを作成(username:'+str(user.username)+')',result=True,detail=str(user)))
-    return result
 
 @app.get(
     "/admin/logs",

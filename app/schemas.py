@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import List, Union
-from fastapi import Query
 from enum import Enum
+from typing import List, Union
 
-from pydantic import BaseModel,Field
+from fastapi import Query
+from pydantic import BaseModel, Field
+
 
 class AuthorityRole(str,Enum):
     Authorizer = "Authorizer"
@@ -109,37 +110,6 @@ class JWTUser(BaseModel):
     jobTitle:Union[str,None]
     groups:Union[List[str],None]
 
-class UserBase(BaseModel):
-    username: str = Query(regex="^[a-zA-Z0-9_\-.]{3,15}$",min_length=4,max_length=25)
-class UserCreate(UserBase):
-    password: str=Query(min_length=8,regex="^[0-9a-zA-Z]*$",max_length=255)
-class UserCreateByAdmin(UserCreate):
-    is_student:bool=False
-    is_family:bool=False
-    is_active:bool=False
-    password_expired: bool=True
-class User(UserBase):
-    id : str#ULID
-    
-    is_student:bool=False
-    is_family:bool=False
-    is_active:bool=False
-    password_expired: bool=True
-
-    class Config:
-        orm_mode=True
-
-class UserAuthority(BaseModel):
-    user_id : str#ULID
-
-    is_admin:bool
-    is_entry:bool
-    owner_of:List[str]
-    authorizer_of:List[str]
-
-class PasswordChange(UserCreate):
-    new_password:str=Query(min_length=6,regex="^[0-9a-zA-Z]*$",max_length=255)
-
 
 class VoteBase(BaseModel):
     group_id:str#userdefined id
@@ -167,5 +137,4 @@ Event.update_forward_refs()
 Group.update_forward_refs()
 Tag.update_forward_refs()
 Ticket.update_forward_refs()
-User.update_forward_refs()
 

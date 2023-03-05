@@ -108,18 +108,6 @@ class Ticket(Base):
     is_used = Column(Boolean,default=False)
 
 
-class User(Base):
-    __tablename__ = "users"
-    id = Column(VARCHAR(255), primary_key=True, index=True,unique=True)#ULID
-
-    username = Column(VARCHAR(25), unique=True, index=True)
-    hashed_password = Column(VARCHAR(255))
-
-    is_student = Column(Boolean,default=False)#生徒かどうか
-    is_family = Column(Boolean,default=False)#家族アカウントかどうか
-    is_active = Column(Boolean, default=False)#学校にいるか
-    password_expired=Column(Boolean,default=False)#Password変更を要求
-
 class Like(Base):
     __tablename__ = "like"
     group_id=Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)

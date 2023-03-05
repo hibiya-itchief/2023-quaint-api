@@ -1,65 +1,18 @@
 from typing import List, Union
-from sqlalchemy.orm import Session
-from sqlalchemy import or_
-from fastapi import HTTPException, Query
-from app import models,dep
-from app.config import settings
 
 #from hashids import Hashids
 import ulid
+from fastapi import HTTPException, Query
+from sqlalchemy import or_
+from sqlalchemy.orm import Session
 
-from app import schemas , storage
+from app import auth, models, schemas, storage
+from app.config import settings
 
-
-
-def get_user(db:Session,user_id:str):
-    user = db.query(models.User).filter(models.User.id==user_id).first()
-    if user:
-        return user
-    else:
-        return None
-    
-
-def get_user_by_name(db:Session,username:str):
-    user:schemas.User = db.query(models.User).filter(models.User.username==username).first()
-    if user:
-        return user
-    else:
-        return None
-
-def get_all_users(db:Session):
-    users = db.query(models.User).all()
-    return users
-
-def create_user(db:Session,user:schemas.UserCreate):
-    hashed_password = dep.get_password_hash(user.password)
-    db_user = models.User(id=ulid.new().str,username=user.username, is_family=False,is_active=False,password_expired=False,hashed_password=hashed_password)
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
-
-def create_user_by_admin(db:Session,user:schemas.UserCreateByAdmin):
-    hashed_password = dep.get_password_hash(user.password)
-    db_user = models.User(id=ulid.new().str,username=user.username,is_student=user.is_student, is_family=user.is_family,is_active=user.is_active,password_expired=user.password_expired,hashed_password=hashed_password)
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
 
 def activate_user(db:Session,user:schemas.User):
-    db_user = db.query(models.User).filter(models.User.id==user.id).first()
-    db_user.is_active=True
-    db.commit()
-    return db_user
-
-def change_password(db:Session,user:schemas.PasswordChange):
-    db_user=db.query(models.User).filter(models.User.username==user.username).first()
-    hashed_new_password = dep.get_password_hash(user.new_password)
-    db_user.hashed_password=hashed_new_password
-    db_user.password_expired=False
-    db.commit()
-    return db_user
+    #TODO activate user by using Microsoft Graph API
+    return True
 
 def get_list_of_your_tickets(db:Session,user:schemas.User):
     db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==user.id).all()
