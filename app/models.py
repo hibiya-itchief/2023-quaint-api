@@ -1,12 +1,13 @@
 #from numpy import integer
 #from pandas import notnull
-from sqlalchemy import TEXT, VARCHAR, Boolean, Column, ForeignKey, Integer, String, DateTime,UniqueConstraint
+from sqlalchemy import (TEXT, VARCHAR, Boolean, Column, DateTime, ForeignKey,
+                        Integer, String, UniqueConstraint)
 from sqlalchemy.dialects.sqlite import TIMESTAMP as Timestamp
+from sqlalchemy.orm import relationship
 # from sqlalchemy.dialects.mysql import TIMESTAMP as Timestamp
 from sqlalchemy.sql.functions import current_timestamp
-from sqlalchemy.orm import relationship
 
-from .database import Base
+from app.db import Base
 
 
 class Timetable(Base):
