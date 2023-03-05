@@ -50,7 +50,7 @@ class Tag(Base):
 class Vote(Base):
     __tablename__ = "votes"
     group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False)#userdefined id
-    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)#ULID
+    user_id = Column(VARCHAR(255),nullable=False,primary_key=True)# sub in jwt (UUID)
 
 
 class Group(Base):
@@ -82,7 +82,7 @@ class Ticket(Base):
 
     group_id = Column(VARCHAR(255), ForeignKey("groups.id"))
     event_id = Column(VARCHAR(255), ForeignKey("events.id"))
-    owner_id = Column(VARCHAR(255), ForeignKey("users.id"))
+    owner_id = Column(VARCHAR(255))# sub in jwt (UUID)
 
     person = Column(Integer,default=1)#何人分のチケットか
 

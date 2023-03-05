@@ -69,7 +69,7 @@ class Tag(TagBase):
 class TicketBase(BaseModel):
     group_id:str
     event_id:str#hashids
-    owner_id:str#hashids
+    owner_id:str# sub in jwt (UUID)
     is_family_ticket:bool = False
     person:int = Query(default=1)#一緒に入場する人数(１人１チケットになったらこれを削除すればdbのdefaultが効く)
 class TicketCreate(TicketBase):
@@ -107,7 +107,7 @@ class JWTUser(BaseModel):
 
 class VoteBase(BaseModel):
     group_id:str#userdefined id
-    user_id:str#ULID
+    user_id:str# sub in jwt (UUID)
 class Vote(VoteBase):
     class Config:
         orm_mode=True
