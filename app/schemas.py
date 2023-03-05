@@ -32,30 +32,8 @@ class Event(EventBase):
     class Config:
         orm_mode=True
 
-class GroupBase(BaseModel):#userdefined idをURLにする。groupnameは表示名
-    id:str=Query(regex="^[a-zA-Z0-9_\-.]{3,16}$",min_length=3,max_length=16)
-    groupname:str = Query(max_length=200)
-    title:Union[str,None] = Query(default=None,max_length=200)
-    description:Union[str,None] = Query(default=None,max_length=200)
-    page_content:Union[str,None] = Query(default=None,max_length=16000)
-    enable_vote:bool = True
-    twitter_url:Union[str,None]=Query(default=None,regex="https?://twitter\.com/[0-9a-zA-Z_]{1,15}/?")
-    instagram_url:Union[str,None]=Query(default=None,regex="https?://instagram\.com/[0-9a-zA-Z_.]{1,30}/?")
-    stream_url:Union[str,None]=Query(default=None,regex="https?://web\.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?")
-class GroupCreate(GroupBase):
-    pass
-class Group(GroupBase):
-    thumbnail_image:Union[str,None] #Base64
-    cover_image:Union[str,None]#Base64
-    like_num:Union[str,None]
-    class Config:
-        orm_mode=True
-
 class GroupTagCreate(BaseModel):
     tag_id:str#ULID
-
-class GroupMeLiked(BaseModel):
-    me_liked:bool
 
 class TagBase(BaseModel):
     tagname:str=Query(max_length=200)
@@ -65,6 +43,28 @@ class Tag(TagBase):
     id:str#ULID
     class Config:
         orm_mode=True
+
+class GroupUpdate(BaseModel):
+    groupname:Union[str,None] = Query(default=None,max_length=200)
+    title:Union[str,None] = Query(default=None,max_length=200)
+    description:Union[str,None] = Query(default=None,max_length=200)
+    twitter_url:Union[str,None]=Query(default=None,regex="https?://twitter\.com/[0-9a-zA-Z_]{1,15}/?")
+    instagram_url:Union[str,None]=Query(default=None,regex="https?://instagram\.com/[0-9a-zA-Z_.]{1,30}/?")
+    stream_url:Union[str,None]=Query(default=None,regex="https?://web\.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?")
+    public_thumbnail_image_url:Union[str,None]=Query(default=None,max_length=20)
+    public_page_content_url:Union[str,None] = Query(default=None,max_length=200)
+    private_page_content_url:Union[str,None] = Query(default=None,max_length=200)
+class GroupBase(GroupUpdate):#userdefined idをURLにする。groupnameは表示名
+    id:str=Query(regex="^[a-zA-Z0-9_\-.]{3,16}$",min_length=3,max_length=16)
+    enable_vote:bool = True
+    
+class GroupCreate(GroupBase):
+    class Config:
+        orm_mode=True
+class Group(GroupBase):
+    tags:Union[List[Tag],None]
+    class Config:
+        orm_mode=True 
 
 class TicketBase(BaseModel):
     group_id:str

@@ -49,80 +49,41 @@ def check_owner_of(db:Session,user:schemas.JWTUser,group_id:str):
     return db_tickets
 
 def create_group(db:Session,group:schemas.GroupCreate):
-    db_group = models.Group(id=group.id,groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
+    db_group = models.Group(**group.dict())
     db.add(db_group)
     db.commit()
     db.refresh(db_group)
     return db_group
-def get_all_groups(db:Session,thumbnail:Union[bool,None]=Query(default=False),cover:Union[bool,None]=Query(default=False)):
-    db_groups = db.query(models.Group).all()
+def get_all_groups_public(db:Session)->List[schemas.Group]:
+    db_groups:List[schemas.Group] = db.query(models.Group).all()
     for db_group in db_groups:
-        db_group.like_num=get_number_of_like(db,db_group.id)
-        if thumbnail==True:
-            db_group.thumbnail_image=storage.download_file_as_base64(db_group.thumbnail_image_url)
-        if cover==True:
-            db_group.cover_image=storage.download_file_as_base64(db_group.cover_image_url)
+        db_grouptags = db.query(models.GroupTag).filter(models.GroupTag.group_id==db_group.id).all()
+        tags:List[schemas.Tag]=[]
+        for db_grouptag in db_grouptags:
+            tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
+        db_group.tags=tags
     return db_groups
-def get_group(db:Session,id:str,thumbnail:Union[bool,None]=Query(default=False),cover:Union[bool,None]=Query(default=False)):
-    group = db.query(models.Group).filter(models.Group.id==id).first()
+def get_group_public(db:Session,id:str)->schemas.Group:
+    group:schemas.Group = db.query(models.Group).filter(models.Group.id==id).first()
     if group:
-        if thumbnail==True:
-            group.thumbnail_image=storage.download_file_as_base64(group.thumbnail_image_url)
-        if cover==True:
-            group.cover_image=storage.download_file_as_base64(group.cover_image_url)
+        db_grouptags = db.query(models.GroupTag).filter(models.GroupTag.group_id==group.id).all()
+        tags:List[schemas.Tag]=[]
+        for db_grouptag in db_grouptags:
+            tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
+        group.tags=tags
         return group
     else:
         return None
-def get_number_of_like(db:Session,group_id:str) ->int:
-    num = db.query(models.Like).filter(models.Like.group_id==group_id).count()
-    return num
-def check_liked(db:Session,group:str,user:schemas.User) ->bool:
-    db_like = db.query(models.Like).filter(models.Like.group_id==group.id,models.Like.user_id==user.id).first()
-    if db_like:
-        return True
-    return False
-def create_like(db:Session,group:schemas.Group,user:schemas.User):
-    db_like=models.Like(group_id=group.id,user_id=user.id)
-    db.add(db_like)
-    db.commit()
-    return db_like
-def delete_like(db:Session,group:schemas.Group,user:schemas.User):
-    db_like = db.query(models.Like).filter(models.Like.group_id==group.id,models.Like.user_id==user.id).delete()
-    db.commit()
-    return 0
 
-def update_title(db:Session,group:schemas.Group,title:Union[str,None]):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.title=title
+def update_group(db:Session,group:schemas.Group,updated_group:schemas.GroupUpdate):
+    db_group:models.Group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.update_dict(updated_group.dict())
     db.commit()
     db.refresh(db_group)
     return db_group
-def update_description(db:Session,group:schemas.Group,description:Union[str,None]):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.description=description
-    db.commit()
-    db.refresh(db_group)
-    return db_group
-def update_twitter_url(db:Session,group:schemas.Group,twitter_url:Union[str,None]):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.twitter_url=twitter_url
-    db.commit()
-    db.refresh(db_group)
-    return db_group
-def update_instagram_url(db:Session,group:schemas.Group,instagram_url:Union[str,None]):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.instagram_url=instagram_url
-    db.commit()
-    db.refresh(db_group)
-    return db_group
-def update_stream_url(db:Session,group:schemas.Group,stream_url:Union[str,None]):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.stream_url=stream_url
-    db.commit()
-    db.refresh(db_group)
-    return db_group
+
 def add_tag(db:Session,group_id:str,tag_id:schemas.GroupTagCreate):
-    group = get_group(db,group_id)
+    group = get_group_public(db,group_id)
     tag = get_tag(db,tag_id.tag_id)
     if not group:
         return None
@@ -137,7 +98,7 @@ def add_tag(db:Session,group_id:str,tag_id:schemas.GroupTagCreate):
         raise HTTPException(200,"Already Registed")
     return db_grouptag
 def get_tags_of_group(db:Session,group:schemas.Group):
-    group = get_group(db,group.id)
+    group = get_group_public(db,group.id)
     if not group:
         return None
     db_grouptags = db.query(models.GroupTag).filter(models.GroupTag.group_id==group.id).all()
@@ -145,17 +106,6 @@ def get_tags_of_group(db:Session,group:schemas.Group):
     for db_grouptag in db_grouptags:
         tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
     return tags
-
-def update_thumbnail_image_url(db:Session,group:schemas.Group,image_url:str):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.thumbnail_image_url = image_url
-    db.commit()
-    return db_group
-def update_cover_image_url(db:Session,group:schemas.Group,image_url:str):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.cover_image_url = image_url
-    db.commit()
-    return db_group
 
 def delete_grouptag(db:Session,group:schemas.Group,tag:schemas.Tag):
     db.query(models.GroupTag).filter(models.GroupTag.group_id==group.id,models.GroupTag.tag_id==tag.id).delete()
@@ -166,8 +116,6 @@ def delete_group(db:Session,group:schemas.Group):
     db.commit()
 
 
-def search_groups(db:Session,q:str):
-    return db.query(models.Group).filter(or_(models.Group.groupname.contains(q),models.Group.title.contains(q),models.Group.description.contains(q))).all()
 
 
 # Timetable

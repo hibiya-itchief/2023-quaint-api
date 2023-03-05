@@ -156,11 +156,8 @@ def create_group(groups:List[schemas.GroupCreate],permission:schemas.JWTUser=Dep
     summary="全Groupの情報を取得",
     tags=["groups"],
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ")
-def get_all_groups(db:Session=Depends(db.get_db),user:Union[schemas.User,None]=Depends(auth.get_current_user_not_exception)):
-    if user is not None:
-        if crud.check_admin(db,user) or user.is_student or user.is_family:
-            return crud.get_all_groups(db,thumbnail=True,cover=True)
-    return crud.get_all_groups(db,thumbnail=True)
+def get_all_groups(db:Session=Depends(db.get_db)):
+    return crud.get_all_groups_public(db)
 @app.get(
     "/groups/{group_id}",
     response_model=schemas.Group,
@@ -168,162 +165,26 @@ def get_all_groups(db:Session=Depends(db.get_db),user:Union[schemas.User,None]=D
     tags=["groups"],
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ",
     responses={"404":{"description":"指定されたGroupが見つかりません"}})
-def get_group(group_id:str,db:Session=Depends(db.get_db),user:Union[schemas.User,None]=Depends(auth.get_current_user_not_exception)):
-    group_result = crud.get_group(db,group_id,thumbnail=True)
+def get_group(group_id:str,db:Session=Depends(db.get_db)):
+    group_result = crud.get_group_public(db,group_id)
     if not group_result:
         raise HTTPException(404,"指定されたGroupが見つかりません")
-    if user is not None:
-        if crud.check_admin(db,user) or crud.check_owner_of(db,group_result,user) or user.is_student or user.is_family:
-            group_result = crud.get_group(db,group_id,thumbnail=True,cover=True)
-    group_result.like_num=crud.get_number_of_like(db,group_id)
     return group_result
 
-@app.get("/groups/{group_id}/me_liked",tags=["groups"],response_model=schemas.GroupMeLiked)
-def check_me_liked(group_id:str,user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
-    if not group:
-        raise HTTPException(404,"指定されたGroupが見つかりません")
-    if crud.check_liked(db,group,user):
-        return {"me_liked":True}
-    else:
-        return {"me_liked":False}
-
-@app.post("/groups/{group_id}/like",tags=["groups"])
-def create_like(group_id:str,user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
-    if not group:
-        raise HTTPException(404,"指定されたGroupが見つかりません")
-    if crud.check_liked(db,group,user):
-        return {"OK":True}
-    crud.create_like(db,group,user)
-    return {"OK":True}
-
-@app.delete("/groups/{group_id}/like",tags=["groups"])
-def delete_like(group_id:str,user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
-    if not group:
-        raise HTTPException(404,"指定されたGroupが見つかりません")
-    crud.delete_like(db,group,user)
-    return {"OK":True}
+@app.get("/groups/{group_id}/private")
+def get_group_private():
+    pass
 
 @app.put(
-    "/groups/{group_id}/title",
-    response_model=schemas.Group,
-    summary="指定されたGroupの演目名を変更",
-    tags=["groups"],
-    description="### 必要な権限\nAdmin,当該GroupのOwner\n### ログインが必要か\nはい",
-    responses={"404":{"description":"指定されたGroupが見つかりません"},
-        "401":{"description":"Adminまたは当該GroupのOwnerの権限が必要です"}})
-def update_title(group_id:str,title:Union[str,None]=Query(default=None,max_length=50),user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
-    if not group:
-        raise HTTPException(404,"指定されたGroupが見つかりません")
-    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
-        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
-    return crud.update_title(db,group,title)
-@app.put(
-    "/groups/{group_id}/description",
-    response_model=schemas.Group,
-    summary="指定されたGroupの説明文を変更",
-    tags=["groups"],
-    description="### 必要な権限\nAdmin,当該GroupのOwner\n### ログインが必要か\nはい",
-    responses={"404":{"description":"指定されたGroupが見つかりません"},
-        "401":{"description":"Adminまたは当該GroupのOwnerの権限が必要です"}})
-def update_description(group_id:str,description:Union[str,None]=Query(default=None,max_length=200),user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
-    if not group:
-        raise HTTPException(404,"指定されたGroupが見つかりません")
-    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
-        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
-    return crud.update_description(db,group,description)
-@app.put(
-    "/groups/{group_id}/twitter_url",
-    response_model=schemas.Group,
-    summary="指定されたGroupのtwitter_urlを変更",
-    tags=["groups"],
-    description="### 必要な権限\nAdmin,当該GroupのOwner\n### ログインが必要か\nはい",
-    responses={"404":{"description":"指定されたGroupが見つかりません"},
-        "401":{"description":"Adminまたは当該GroupのOwnerの権限が必要です"}})
-def update_twitter_url(group_id:str,twitter_url:Union[str,None]=Query(default=None,regex="https?://twitter\.com/[0-9a-zA-Z_]{1,15}/?"),user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
-    if not group:
-        raise HTTPException(404,"指定されたGroupが見つかりません")
-    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
-        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
-    return crud.update_twitter_url(db,group,twitter_url)
-@app.put(
-    "/groups/{group_id}/instagram_url",
-    response_model=schemas.Group,
-    summary="指定されたGroupのinstagram_urlを変更",
-    tags=["groups"],
-    description="### 必要な権限\nAdmin,当該GroupのOwner\n### ログインが必要か\nはい",
-    responses={"404":{"description":"指定されたGroupが見つかりません"},
-        "401":{"description":"Adminまたは当該GroupのOwnerの権限が必要です"}})
-def update_instagram_url(group_id:str,instagram_url:Union[str,None]=Query(default=None,regex="https?://instagram\.com/[0-9a-zA-Z_.]{1,30}/?"),user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
-    if not group:
-        raise HTTPException(404,"指定されたGroupが見つかりません")
-    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
-        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
-    return crud.update_instagram_url(db,group,instagram_url)
-@app.put(
-    "/groups/{group_id}/stream_url",
-    response_model=schemas.Group,
-    summary="指定されたGroupのstream_urlを変更",
-    tags=["groups"],
-    description="### 必要な権限\nAdminr\n### ログインが必要か\nはい",
-    responses={"404":{"description":"指定されたGroupが見つかりません"},
-        "401":{"description":"Adminの権限が必要です"}})
-def update_stream_url(group_id:str,stream_url:Union[str,None]=Query(default=None,regex="https?://web\.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?"),user:schemas.User=Depends(auth.admin),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
-    if not group:
-        raise HTTPException(404,"指定されたGroupが見つかりません")
-    if not crud.check_admin(db,user):
-        raise HTTPException(401,"Adminの権限が必要です")
-    return crud.update_stream_url(db,group,stream_url)
-
-@app.put(
-    "/groups/{group_id}/thumbnail_image",
-    response_model=schemas.Group,
-    summary="指定されたGroupのサムネイル画像を変更",
-    tags=["groups"],
-    description="### 必要な権限\nAdmin,当該GroupのOwner\n### ログインが必要か\nはい",
-    responses={"404":{"description":"指定されたGroupが見つかりません"},
-        "401":{"description":"Adminまたは当該GroupのOwnerの権限が必要です"}})
-def upload_thumbnail_image(group_id:str,file:Union[bytes,None] = File(default=None),user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
-    if not group:
-        raise HTTPException(404,"指定されたGroupが見つかりません")
-    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
-        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
-    if group.thumbnail_image_url:
-            storage.delete_image(group.thumbnail_image_url)
-    if file:
-        image_url = storage.upload_to_oos(file)
-        return crud.update_thumbnail_image_url(db,group,image_url)
-    else:
-        return crud.update_thumbnail_image_url(db,group,None)
-@app.put(
-    "/groups/{group_id}/cover_image",
-    response_model=schemas.Group,
-    summary="指定されたGroupのカバー画像を変更",
-    tags=["groups"],
-    description="### 必要な権限\nAdmin,当該GroupのOwner\n### ログインが必要か\nはい",
-    responses={"404":{"description":"指定されたGroupが見つかりません"},
-        "401":{"description":"Adminまたは当該GroupのOwnerの権限が必要です"}})
-def upload_cover_image(group_id:str,file:Union[bytes,None] = File(default=None),user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
-    if not group:
-        raise HTTPException(404,"指定されたGroupが見つかりません")
-    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
-        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
-    if group.cover_image_url:
-            storage.delete_image(group.cover_image_url)
-    if file:
-        image_url = storage.upload_to_oos(file)
-        return crud.update_cover_image_url(db,group,image_url)
-    else:
-        return crud.update_cover_image_url(db,group,None)
+    "/groups/{group_id}",
+    summary="Groupを更新",
+    tags=['groups'],
+    description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい",
+    responses={"404":{"description":"指定されたGroupまたはTagが見つかりません"}})
+def update_group(group_id:str,updated_group:schemas.GroupUpdate,db:Session=Depends(db.get_db)):
+    group=crud.get_group_public(db,group_id)
+    u=crud.update_group(db,group,updated_group)
+    return u
 
 @app.put(
     "/groups/{group_id}/tags",

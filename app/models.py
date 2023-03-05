@@ -69,9 +69,13 @@ class Group(Base):
     instagram_url = Column(VARCHAR(255))
     stream_url = Column(VARCHAR(255))
 
-    thumbnail_image_url=Column(VARCHAR(255))
-    cover_image_url=Column(VARCHAR(255))
-
+    public_thumbnail_image_url=Column(VARCHAR(255))#オブジェクトストレージ上の公開団体サムネイル画像へのURL
+    public_page_content_url = Column(VARCHAR(255))#オブジェクトストレージ上の団体個別公開ページのMarkdownへのURL
+    private_page_content_url = Column(VARCHAR(255))#オブジェクトストレージ上の団体個別非公開ページのMarkdownへのURL
+    def update_dict(self,dict):
+        for name, value in dict.items():
+            if name in self.__dict__ and value is not None:
+                setattr(self, name, value)
     
 class GroupOwner(Base):
     __tablename__ = "groupowners"
