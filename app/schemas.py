@@ -87,22 +87,17 @@ class TicketsNumberData(BaseModel):
     left_tickets:int
     stock:int
 
-class Token(BaseModel):
-    access_token:str
-    token_type:str
-class TokenData(BaseModel):#JWTに含まれるデータ
-    username: Union[str,None] = None
-
 class JWTUser(BaseModel):
-    aud:str
-    iss:str
-    iat:int
-    nbf:int
-    exp:int
-    sub:str
-    name:str
+    aud:Union[str,None]
+    iss:Union[str,None]
+    iat:Union[int,None]
+    nbf:Union[int,None]
+    exp:Union[int,None]
+    sub:Union[str,None]
+    name:Union[str,None]
     jobTitle:Union[str,None]
     groups:Union[List[str],None]
+    
 
 
 class VoteBase(BaseModel):
