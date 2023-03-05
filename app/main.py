@@ -378,17 +378,6 @@ def delete_group(group_id:str,permission:schemas.User=Depends(auth.admin),db:Ses
         raise HTTPException(400,"指定されたGroupに紐づけられているEvent,Ticket,Tagをすべて削除しないと削除できません")
 
 
-@app.get(
-    "/search",
-    response_model=List[schemas.Group],
-    summary="Groupを検索",
-    tags=["groups"],
-    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n### 説明\n団体名・演目名・説明文に、qに与えられた文字列を含んでいるGroupのListが返されます")
-def search_groups(q:str,db:Session=Depends(db.get_db)):
-    return crud.search_groups(db,q)
-
-
-
 ### Event Crud
 @app.post(
     "/groups/{group_id}/events",
