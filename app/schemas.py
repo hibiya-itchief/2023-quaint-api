@@ -6,12 +6,6 @@ from fastapi import Query
 from pydantic import BaseModel, Field
 
 
-class AuthorityRole(str,Enum):
-    Authorizer = "Authorizer"
-    Owner = "Owner"
-    Admin = "Admin"
-    Entry = "Entry"
-
 class TimetableBase(BaseModel):
     timetablename:str=Query(max_length=200)
 

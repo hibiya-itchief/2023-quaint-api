@@ -35,24 +35,6 @@ class Event(Base):
     # 複数カラムのunique constraint
     __table_args__ = (UniqueConstraint("timetable_id", "group_id", name="unique_timetablex_groupid"),)
 
-class Admin(Base):
-    __tablename__ = "admin"
-    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True,unique=True)#ULID
-
-class Entry(Base):
-    __tablename__ = "entry"
-    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True,unique=True)#ULID
-
-class Authority(Base):
-    #UserとGroupを結びつける中間テーブル権限管理
-    __tablename__ = "authority"
-    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)
-    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
-
-    role = Column(VARCHAR(255),primary_key=True)
-    # 複数カラムのunique constraint
-    __table_args__ = (UniqueConstraint("user_id", "group_id","role", name="unique_idx_groupid_tagid"),)
-
 class GroupTag(Base):
     __tablename__="grouptag"
     group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
