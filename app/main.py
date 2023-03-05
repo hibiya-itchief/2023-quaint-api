@@ -77,7 +77,7 @@ def read_root():
     summary="ログイン中のユーザーが所有している整理券のリストを取得",
     tags=["users"],
     description="### 必要な権限\nなし\n### ログインが必要か\nはい")
-def get_list_of_your_tickets(user:schemas.User = Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+def get_list_of_your_tickets(user:schemas.JWTUser = Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     return crud.get_list_of_your_tickets(db,user)
 
 @app.put(
@@ -192,37 +192,25 @@ def update_group(group_id:str,updated_group:schemas.GroupUpdate,db:Session=Depen
     tags=["groups"],
     description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい",
     responses={"404":{"description":"指定されたGroupまたはTagが見つかりません"}})
-def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
+def add_tag(group_id:str,tag_id:schemas.GroupTagCreate,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    group = crud.get_group_public(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
-    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
         raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
     grouptag = crud.add_tag(db,group_id,tag_id)
     if not grouptag:
         raise HTTPException(404,"Tagが見つかりません")
     tag=crud.get_tag(db,tag_id.tag_id)
     return "Add Tag Successfully"
-@app.get(
-    "/groups/{group_id}/tags",
-    response_model=List[schemas.Tag],
-    summary="指定されたGroupに紐づけられているTagを取得",
-    tags=["groups"],
-    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n",
-    responses={"404":{"description":"指定されたGroupが見つかりません"}})
-def get_tags_of_group(group_id:str,db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
-    if not group:
-        raise HTTPException(404,"指定されたGroupが見つかりません")
-    return crud.get_tags_of_group(db,group)
 @app.delete(
     "/groups/{group_id}/tags/{tag_id}",
     summary="指定されたGroupに紐づいている指定されたTagを削除",
     tags=["groups"],
     description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい\n",
     responses={"404":{"description":"- 指定されたGroupが見つかりません\n- 指定されたTagが見つかりません"}})
-def delete_grouptag(group_id:str,tag_id:str,user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
+def delete_grouptag(group_id:str,tag_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    group = crud.get_group_public(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
     if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
@@ -239,8 +227,8 @@ def delete_grouptag(group_id:str,tag_id:str,user:schemas.User=Depends(auth.get_c
     description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n### 説明\n指定するGroupに紐づけられているEvent,Ticket,Tagをすべて削除しないと削除できません",
     responses={"404":{"description":"指定されたGroupが見つかりません"},
         "400":{"description":"指定されたGroupに紐づけられているEvent,Ticket,Tagをすべて削除しないと削除できません"}})
-def delete_group(group_id:str,permission:schemas.User=Depends(auth.admin),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
+def delete_group(group_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    group = crud.get_group_public(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
     try:
@@ -260,8 +248,8 @@ def delete_group(group_id:str,permission:schemas.User=Depends(auth.admin),db:Ses
     responses={"400":{"description":"パラメーターが不適切です"},
         "403":{"description":"Adminの権限が必要です"},
         "404":{"description":"指定されたGroupが見つかりません"}})
-def create_event(group_id:str,events:List[schemas.EventCreate],user:schemas.User=Depends(auth.admin),db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
+def create_event(group_id:str,events:List[schemas.EventCreate],user:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    group = crud.get_group_public(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
     result=[]
@@ -301,11 +289,11 @@ def get_event(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
     responses={"404":{"description":"指定されたGroupまたはEventがありません"},
         "403":{"description":"Adminの権限が必要です"},
         "400":{"description":"指定されたEventに紐づけられたTicketを全て削除しないと削除できません"}})
-def delete_events(group_id:str,event_id:str,user:schemas.User=Depends(auth.admin),db:Session=Depends(db.get_db)):
+def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
     event = crud.get_event(db,group_id,event_id)
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventがありません")
-    group = crud.get_group(db,event.group_id)
+    group = crud.get_group_public(db,event.group_id)
     try:
         crud.delete_events(db,event)
         return {"OK":True}
@@ -353,7 +341,7 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.User=Depends
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n",
     responses={"404":{"description":"- 指定されたGroupが見つかりません\n- 指定されたEventが見つかりません"}})
 def count_tickets(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
-    group = crud.get_group(db,group_id)
+    group = crud.get_group_public(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
     event = crud.get_event(db,group.id,event_id)
@@ -370,7 +358,7 @@ def count_tickets(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
     tags=["tickets"],
     description="### 必要な権限\n指定された整理券のオーナー\n### ログインが必要か\nはい\n",
     responses={"403":{"description":"指定された整理券の所有者である必要があります"}})
-def delete_ticket(group_id:str,event_id:str,ticket_id:str,user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+def delete_ticket(group_id:str,event_id:str,ticket_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     ticket=crud.get_ticket(db,ticket_id)
     if not ticket.owner_id==user.id:
         raise HTTPException(403,"指定された整理券の所有者である必要があります")
@@ -387,11 +375,11 @@ def delete_ticket(group_id:str,event_id:str,ticket_id:str,user:schemas.User=Depe
     tags=["tickets"],
     description="### 必要な権限\nAdmin,当該GroupのOwnerまたはAuthorizer\n### ログインが必要か\nはい\n### 説明\n総当たり攻撃を防ぐため、指定された整理券は存在するが権限が無い場合も404を返す",
     responses={"404":{"description":"- 指定された整理券が見つかりません"}})
-def get_ticket(ticket_id:str,user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+def get_ticket(ticket_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     ticket = crud.get_ticket(db,ticket_id)
     if not ticket:
         raise HTTPException(404,"指定された整理券が見つかりません")
-    group = crud.get_group(db,ticket.group_id)
+    group = crud.get_group_public(db,ticket.group_id)
     if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user) or crud.check_authorizer_of(db,group,user)):
         raise HTTPException(404,"指定された整理券が見つかりません")
     return ticket
@@ -441,7 +429,7 @@ def get_timetable(timetable_id:str,db:Session=Depends(db.get_db)):
     summary="新規Tagの作成",
     tags=["tags"],
     description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n")
-def create_tag(tags:List[schemas.TagCreate],permission:schemas.User = Depends(auth.admin),db:Session=Depends(db.get_db)):
+def create_tag(tags:List[schemas.TagCreate],permission:schemas.JWTUser = Depends(auth.admin),db:Session=Depends(db.get_db)):
     result=[]
     for tag in tags:
         result.append(crud.create_tag(db,tag))
@@ -473,7 +461,7 @@ def get_tag(tag_id:str,db:Session = Depends(db.get_db)):
     tags=["tags"],
     description="### 必要な権限\nAdmin\n### ログインが必要か\nはい",
     responses={"404":{"description":"指定されたTagが見つかりません"}})
-def change_tag_name(tag_id:str,tag:schemas.TagCreate,permission:schemas.User=Depends(auth.admin),db:Session = Depends(db.get_db)):
+def change_tag_name(tag_id:str,tag:schemas.TagCreate,permission:schemas.JWTUser=Depends(auth.admin),db:Session = Depends(db.get_db)):
     tag_result = crud.put_tag(db,tag_id,tag)
     if not tag_result:
         raise HTTPException(404,"指定されたTagが見つかりません")
@@ -484,7 +472,7 @@ def change_tag_name(tag_id:str,tag:schemas.TagCreate,permission:schemas.User=Dep
     tags=["tags"],
     description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n",
     responses={"404":{"description":"指定されたTagが見つかりません"}})
-def delete_tag(tag_id:str,permission:schemas.User=Depends(auth.admin),db:Session = Depends(db.get_db)):
+def delete_tag(tag_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Session = Depends(db.get_db)):
     result = crud.delete_tag(db,tag_id)
     if result==None:
         raise HTTPException(404,"指定されたTagが見つかりません")
