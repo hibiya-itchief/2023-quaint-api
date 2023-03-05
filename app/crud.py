@@ -332,12 +332,3 @@ def get_authorizer_list(db:Session,user:schemas.User):
         authorizer_list.append(row.group_id)
     return authorizer_list
 
-def log(db:Session,log:schemas.Log):
-    db_log = models.Log(timestamp=log.timestamp,user=log.user,object=log.object,operation=log.operation,result=log.result,detail=log.detail)
-    db.add(db_log)
-    db.commit()
-    return db_log
-
-def read_all_logs(db:Session):
-    db_logs = db.query(models.Log).all()
-    return db_logs

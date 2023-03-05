@@ -126,13 +126,3 @@ class Balloon(Base):
     user_id=Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)
     endpoint=Column(VARCHAR(255),nullable=False,primary_key=True)
 
-
-class Log(Base):
-    __tablename__ = "log"
-    id = Column(Integer,autoincrement=True,primary_key=True,index=True,unique=True)
-    timestamp = Column(DateTime,server_default=current_timestamp())
-    user = Column(VARCHAR(255))
-    object = Column(VARCHAR(255))
-    operation = Column(VARCHAR(255))
-    result =Column(Boolean)
-    detail = Column(TEXT(60000))
