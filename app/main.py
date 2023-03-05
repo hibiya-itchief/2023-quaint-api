@@ -92,40 +92,51 @@ def activate_user(user_id:str,permission:schemas.User=Depends(auth.admin),db:Ses
         raise HTTPException(404,"ユーザーが見つかりません")
     return crud.activate_user(db,user)
 
-@app.put(
-    "/users/{user_id}/authority",
-    summary="ユーザーに権限を与える",
+@app.get(
+    "/users/me/owner_of",
+    response_model=List[str],
+    summary="ownerが自分が権限のある団体を確認する",
     tags=["users"],
-    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい",
-    responses={"404":{"description":"- 指定されたユーザーが見つかりません\n- 指定されたGroupが見つかりません"},"400":{"description":"Owner,Authorizeの権限を付与するにはgroup_idの指定が必要です。"}})
-def grant_authority(user_id:str,role:schemas.AuthorityRole=Body(),group_id:Union[str,None]=Body(default=None),permission:schemas.User=Depends(auth.admin),db:Session=Depends(db.get_db)):
-    user=crud.get_user(db,user_id)
-    if not user:
-        raise HTTPException(404,"指定されたユーザーが見つかりません")
-
-    if role ==schemas.AuthorityRole.Admin:
-        if crud.check_admin(db,user):
-            raise HTTPException(200)
-        return crud.grant_admin(db,user)
-    elif role == schemas.AuthorityRole.Entry:
-        if crud.check_entry(db,user):
-            raise HTTPException(200)
-        return crud.grant_entry(db,user)
-    else:
-        if not group_id:
-            raise HTTPException(400,"Owner,Authorizeの権限を付与するにはgroup_idの指定が必要です。")
-        group = crud.get_group(db,group_id)
-        if not group:
-            raise HTTPException(404,"指定されたGroupが見つかりません")
-        if role == schemas.AuthorityRole.Owner:
-            if crud.check_owner_of(db,group,user):
-                raise HTTPException(200)
-            return crud.grant_owner_of(db,group,user)
-        elif role == schemas.AuthorityRole.Authorizer:
-            if crud.check_authorizer_of(db,group,user):
-                raise HTTPException(200)
-            return crud.grant_authorizer_of(db,group,user)
-
+    description="### 必要な権限\nowner\n### ログインが必要か\nはい\n")
+def check_ownership_of_user(user:schemas.JWTUser=Depends(auth.owner),db:Session=Depends(db.get_db)):
+    return crud.get_ownership_of_user(db,user.sub)
+@app.get(
+    "/users/{user_sub}/owner_of",
+    response_model=List[str],
+    summary="ユーザーの権限のある団体を確認する",
+    tags=["users"],
+    description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
+def check_ownership_of_user(user_sub:str,permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    return crud.get_ownership_of_user(db,user_sub)
+@app.get(
+    "/users/owner_of",
+    response_model=List[str],
+    summary="団体代表者のユーザーと団体の紐づけを全て確認する",
+    tags=["users"],
+    description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
+def check_all_ownership(user_sub:str,permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    return crud.get_all_ownership(db)
+@app.put(
+    "/users/{user_sub}/owner_of",
+    response_model=schemas.GroupOwner,
+    summary="団体代表者のユーザーとGroupを紐づける",
+    tags=["users"],
+    description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
+def grant_ownership(user_sub:str,group_id:str,permission=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    group=crud.get_group_public(db,group_id)
+    if not group:
+        raise HTTPException(404,"グループが見つかりません")
+    return crud.grant_ownership(db,group,user_sub)
+@app.delete(
+    "/users/{user_sub}/owner_of",
+    summary="団体代表者のユーザーとGroupの紐づけを削除",
+    tags=["users"],
+    description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
+def delete_ownership(user_sub:str,group_id:str,permission=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    result=crud.delete_ownership(db,group_id,user_sub)
+    if not result:
+        raise HTTPException(404,"グループまたはユーザーが見つかりません")
+    return {"OK":True}
 
 
 @app.post(

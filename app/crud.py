@@ -14,7 +14,37 @@ def activate_user(db:Session,user:schemas.User):
     #TODO activate user by using Microsoft Graph API
     return True
 
-def get_list_of_your_tickets(db:Session,user:schemas.User):
+def grant_ownership(db:Session,group:schemas.Group,user_sub:str)->schemas.GroupOwner:
+    db_groupowner=models.GroupOwner(group_id=group.id,user_id=user_sub)
+    db.add(db_groupowner)
+    db.commit()
+    db.refresh(db_groupowner)
+    return db_groupowner
+
+def delete_ownership(db:Session,group_id:str,user_sub:str)->schemas.GroupOwner:
+    try:
+        db.query(models.GroupOwner).filter(models.GroupOwner.group_id==group_id, models.GroupOwner.user_id==user_sub).delete()
+        db.commit()
+        return 0
+    except:
+        return None
+def get_all_ownership(db:Session)->List[schemas.GroupOwner]:
+    db_gos=db.query(models.GroupOwner).all()
+    return db_gos
+def get_ownership_of_user(db:Session,user_sub:str)->List[str]:
+    db_gos:List[schemas.GroupOwner]=db.query(models.GroupOwner).filter(models.GroupOwner.user_id==user_sub).all()
+    result:List[str]=[]
+    for row in db_gos:
+        result.append(row.group_id)
+    return result
+def check_owner_of(db:Session,user:schemas.JWTUser,group_id:str):
+    try:
+        if group_id in get_ownership_of_user(db,user.sub):
+            return True
+        else:
+            return False
+    except:
+        return False
     db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==user.id).all()
     return db_tickets
 
