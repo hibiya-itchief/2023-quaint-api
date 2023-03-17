@@ -10,30 +10,30 @@ from sqlalchemy.sql.functions import current_timestamp
 from app.db import Base
 
 
-class Timetable(Base):
-    __tablename__ = "timetable"
-
-    id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
-    timetablename = Column(VARCHAR(255))
-
-    sell_at = Column(DateTime,nullable=False)
-    sell_ends = Column(DateTime,nullable=False)
-    starts_at = Column(DateTime,nullable=False)
-    ends_at = Column(DateTime,nullable=False)
-
 class Event(Base):
     __tablename__ = "events"
 
     id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
-
-    timetable_id = Column(VARCHAR(255),ForeignKey("timetable.id"),nullable=False)
-
-    ticket_stock = Column(Integer,nullable=False)#0でチケット機能を使わない
-    lottery = Column(Boolean)
     group_id = Column(VARCHAR(255), ForeignKey("groups.id"),nullable=False)
+    eventname = Column(VARCHAR(255))
 
-    # 複数カラムのunique constraint
-    __table_args__ = (UniqueConstraint("timetable_id", "group_id", name="unique_timetablex_groupid"),)
+    starts_at = Column(DateTime,nullable=False)
+    ends_at = Column(DateTime,nullable=False)
+
+    target = Column(VARCHAR(255),nullable=False)
+    ticket_stock = Column(Integer,nullable=False)#0でチケット機能を使わない
+    
+class Distribution(Base):
+    __tablename__ = "sellmethods"
+    id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
+    event_id=Column(VARCHAR(255), ForeignKey("events.id"),nullable=False)
+
+    sell_starts = Column(DateTime,nullable=False)
+    sell_ends = Column(DateTime,nullable=False)
+
+    ticket_stock = Column(Integer,nullable=False)#0にすると、Eventのticket_stock - 取得済み整理券の枚数 になる
+
+    lottery = Column(Boolean)
 
 class GroupTag(Base):
     __tablename__="grouptag"
@@ -61,8 +61,6 @@ class Group(Base):
 
     title = Column(VARCHAR(255))#演目名
     description = Column(VARCHAR(255))#説明(一覧になったときに出る・イベントのデフォルトに使われる)
-
-    page_content = Column(TEXT(16383))#宣伝ページのHTML
 
     enable_vote = Column(Boolean,default=True)#投票機能を使うか
     twitter_url = Column(VARCHAR(255))

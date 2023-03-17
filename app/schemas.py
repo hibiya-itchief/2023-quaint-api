@@ -6,24 +6,19 @@ from fastapi import Query
 from pydantic import BaseModel, Field
 
 
-class TimetableBase(BaseModel):
-    timetablename:str=Query(max_length=200)
-
-    sell_at:datetime
-    sell_ends:datetime
-    starts_at:datetime
-    ends_at:datetime
-class TimetableCreate(TimetableBase):
-    pass
-class Timetable(TimetableBase):
-    id:str
-    class Config:
-        orm_mode=True
+class EventTarget(str,Enum):
+    guest = "guest"
+    visited = "visited"
+    school = "school"
 
 class EventBase(BaseModel):
-    timetable_id:str
+    eventname:str
+
+    starts_at:datetime
+    ends_at:datetime
+
+    target:str
     ticket_stock:int
-    lottery:bool=False
 class EventCreate(EventBase):
     pass
 class Event(EventBase):
@@ -31,6 +26,17 @@ class Event(EventBase):
     group_id:str#ULID
     class Config:
         orm_mode=True
+
+class DistributionBase(BaseModel):
+    sell_starts:datetime
+    sell_ends:datetime
+    ticket_stock:int
+    lottery:bool
+class DistributionCreate(DistributionBase):
+    pass
+class Distribution(DistributionBase):
+    id:str
+    event_id:str
 
 class GroupTagCreate(BaseModel):
     tag_id:str#ULID
