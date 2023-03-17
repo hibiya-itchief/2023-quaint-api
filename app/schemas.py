@@ -6,6 +6,19 @@ from fastapi import Query
 from pydantic import BaseModel, Field
 
 
+class DistributionBase(BaseModel):
+    sell_starts:datetime
+    sell_ends:datetime
+    ticket_stock:int
+    lottery:bool
+class DistributionCreate(DistributionBase):
+    pass
+class Distribution(DistributionBase):
+    id:str
+    event_id:str
+    class Config:
+        orm_mode=True
+
 class EventTarget(str,Enum):
     guest = "guest"
     visited = "visited"
@@ -24,19 +37,9 @@ class EventCreate(EventBase):
 class Event(EventBase):
     id:str#ULID
     group_id:str#ULID
+    distributions:Union[List[Distribution],None]
     class Config:
         orm_mode=True
-
-class DistributionBase(BaseModel):
-    sell_starts:datetime
-    sell_ends:datetime
-    ticket_stock:int
-    lottery:bool
-class DistributionCreate(DistributionBase):
-    pass
-class Distribution(DistributionBase):
-    id:str
-    event_id:str
 
 class GroupTagCreate(BaseModel):
     tag_id:str#ULID

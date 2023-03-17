@@ -24,7 +24,7 @@ class Event(Base):
     ticket_stock = Column(Integer,nullable=False)#0でチケット機能を使わない
     
 class Distribution(Base):
-    __tablename__ = "sellmethods"
+    __tablename__ = "distribution"
     id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
     event_id=Column(VARCHAR(255), ForeignKey("events.id"),nullable=False)
 

@@ -10,7 +10,7 @@ from app import auth, models, schemas, storage
 from app.config import settings
 
 
-def activate_user(db:Session,user:schemas.User):
+def activate_user(db:Session,user:schemas.JWTUser):
     #TODO activate user by using Microsoft Graph API
     return True
 
@@ -45,6 +45,8 @@ def check_owner_of(db:Session,user:schemas.JWTUser,group_id:str):
             return False
     except:
         return False
+
+def get_list_of_your_tickets(db:Session,user:schemas.JWTUser):
     db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==user.id).all()
     return db_tickets
 
@@ -117,56 +119,43 @@ def delete_group(db:Session,group:schemas.Group):
 
 
 
-
-# Timetable
-def create_timetable(db:Session,timetable:schemas.TimetableCreate):
-    if not (timetable.sell_at<timetable.sell_ends and timetable.sell_ends<=timetable.starts_at and timetable.starts_at<timetable.ends_at):
-        return None
-    db_timetable = models.Timetable(id=ulid.new().str,timetablename=timetable.timetablename,sell_at=timetable.sell_at,sell_ends=timetable.sell_ends,starts_at=timetable.starts_at,ends_at=timetable.ends_at)
-    db.add(db_timetable)
+# Distribution
+def get_all_distributions(db:Session,event_id:str):
+    db_d:List[schemas.Distribution]=db.query(models.Distribution).filter(models.Distribution.event_id==event_id).all()
+    return db_d
+def create_distribution(db:Session,event_id:str,d:schemas.DistributionCreate):
+    db_d = models.Distribution(id=ulid.new().str,event_id=event_id,**d.dict())
+    db.add(db_d)
     db.commit()
-    db.refresh(db_timetable)
-    return db_timetable
-def get_all_timetable(db:Session):
-    return db.query(models.Timetable).all()
-def get_timetable(db:Session,timetable_id:str):
-    timetable:schemas.Timetable =  db.query(models.Timetable).filter(models.Timetable.id==timetable_id).first()
-    return timetable
-    
+    db.refresh(db_d)
+    return db_d
+def delete_distribution(db:Session,distribution_id:str):
+    db.query(models.Distribution).filter(models.Distribution.id==distribution_id).delete()
+    db.commit()
 
 # Event
 def create_event(db:Session,group_id:str,event:schemas.EventCreate):
-    group = get_group(db,group_id) 
-    if not group:
-        return None
-    if not get_timetable(db,event.timetable_id):
-        return None
-    # TODO Timetableに書き換え
-    db_event = models.Event(id=ulid.new().str,timetable_id=event.timetable_id,ticket_stock=event.ticket_stock,lottery=event.lottery,group_id=group_id)
+    db_event = models.Event(id=ulid.new().str,group_id=group_id,**event.dict())
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
     return db_event
-
 def get_all_events(db:Session,group_id:str):
-    db_events = db.query(models.Event).filter(models.Event.group_id==group_id).all()
-    return db_events
+    db_events:List[schemas.Event] = db.query(models.Event).filter(models.Event.group_id==group_id).all()
+    events:List[schemas.Event]=[]
+    for db_event in db_events:
+        ds=get_all_distributions(db,db_event.id)
+        event=schemas.Event(distributions=ds,**db_event.__dict__)
+        events.append(event)
+    return events
 def get_event(db:Session,group_id:str,event_id:str):
     db_event:schemas.Event = db.query(models.Event).filter(models.Event.group_id==group_id,models.Event.id==event_id).first()
     if db_event:
-        return db_event
+        ds=get_all_distributions(db,db_event.id)
+        event=schemas.Event(distributions=ds,**db_event.__dict__)
+        return event
     else:
         return None
-def check_same_event(db:Session,group_id,timetable_id):
-    db_event = db.query(models.Event).filter(models.Event.group_id==group_id,models.Event.timetable_id==timetable_id).first()
-    if db_event:
-        return True
-    else:
-        return False
-def get_events_by_timetable(db:Session,timetable:schemas.Timetable):
-    db_events:List[schemas.Event] = db.query(models.Event).filter(models.Event.timetable_id==timetable.id).all()
-    return db_events
-
 def delete_events(db:Session,event:schemas.Event):
     db.query(models.Event).filter(models.Event.id==event.id).delete()
     db.commit()
@@ -179,7 +168,7 @@ def count_tickets_for_event(db:Session,event:schemas.Event):
         db_tickets_count += ticket.person
     return db_tickets_count
 
-def check_double_ticket(db:Session,event:schemas.Event,user:schemas.User):
+def check_double_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser):
     db_already_taken:int = 0
     ### このユーザーが同じ時間帯で他の公演のチケットを取っていないか(この公演の2枚目も含む)
     timetable = get_timetable(db,event.timetable_id)
@@ -190,7 +179,7 @@ def check_double_ticket(db:Session,event:schemas.Event,user:schemas.User):
         return False
     else:
         return True
-def create_ticket(db:Session,event:schemas.Event,user:schemas.User,person:int):
+def create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int):
     db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=user.id,person=person,is_used=False)
     db.add(db_ticket)
     db.commit()

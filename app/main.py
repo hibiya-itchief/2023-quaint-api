@@ -9,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import Field
 from sqlalchemy.orm import Session
+from starlette.status import (HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN,
+                              HTTP_404_NOT_FOUND)
 
 from app import auth, crud, db, models, schemas, storage
 from app.config import settings
@@ -39,10 +41,6 @@ tags_metadata = [
     {
         "name":"tickets",
         "description":"Ticket : 各公演に入場するための整理券"
-    },
-    {
-        "name":"timetable",
-        "description":"Timetable : 公演の時間帯情報"
     },
     {
         "name": "tags",
@@ -82,14 +80,12 @@ def get_list_of_your_tickets(user:schemas.JWTUser = Depends(auth.get_current_use
 
 @app.put(
     "/users/{user_id}/activation",
-    response_model=schemas.User,
+    response_model=schemas.JWTUser,
     summary="ユーザーのアクティベート",
     tags=["users"],
     description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n")
-def activate_user(user_id:str,permission:schemas.User=Depends(auth.admin),db:Session=Depends(db.get_db)):
-    user=crud.get_user(db,user_id)
-    if not user:
-        raise HTTPException(404,"ユーザーが見つかりません")
+def activate_user(user_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+
     return crud.activate_user(db,user)
 
 @app.get(
@@ -241,25 +237,26 @@ def delete_group(group_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:
 ### Event Crud
 @app.post(
     "/groups/{group_id}/events",
-    response_model=List[schemas.Event],
+    response_model=schemas.Event,
     summary="新規Eventを作成",
     tags=["events"],
-    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n### 説明\n- 複数Eventを一括作成できます",
+    description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n### 説明\n- 公演を作成します。",
     responses={"400":{"description":"パラメーターが不適切です"},
         "403":{"description":"Adminの権限が必要です"},
         "404":{"description":"指定されたGroupが見つかりません"}})
-def create_event(group_id:str,events:List[schemas.EventCreate],user:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+def create_event(group_id:str,event:schemas.EventCreate,user:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
     group = crud.get_group_public(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
-    result=[]
-    for event in events:
-        if crud.check_same_event(db,group.id,event.timetable_id):
+    if event.starts_at > event.ends_at:
+        raise HTTPException(400,"Eventの開始時刻は終了時刻よりも前である必要があります")
+    existed_events=crud.get_all_events(db,group.id)
+    for ee in existed_events:
+        if event.starts_at < ee.ends_at and ee.starts_at < event.ends_at:
             raise HTTPException(400,"ひとつの団体が同一時間帯で2つ以上の公演を作ることはできません")
-        event = crud.create_event(db,group_id,event)
-        if not event:
-            raise HTTPException(400,"パラメーターが不適切です")
-        result.append(event)
+    result = crud.create_event(db,group_id,event)
+    if not result:
+        raise HTTPException(400,"パラメーターが不適切です")
     return result
 @app.get(
     "/groups/{group_id}/events",
@@ -285,7 +282,7 @@ def get_event(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
     "/groups/{group_id}/events/{event_id}",
     summary="指定されたGroupの指定されたEventを削除",
     tags=["events"],
-    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n### 説明\n指定するEventに紐づけられたTicketを全て削除しないと削除できません",
+    description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n### 説明\n指定するEventに紐づけられたTicketを全て削除しないと削除できません",
     responses={"404":{"description":"指定されたGroupまたはEventがありません"},
         "403":{"description":"Adminの権限が必要です"},
         "400":{"description":"指定されたEventに紐づけられたTicketを全て削除しないと削除できません"}})
@@ -300,6 +297,32 @@ def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.ad
     except:
         raise HTTPException(400,"指定されたEventに紐づけられたTicketを全て削除しないと削除できません")
 
+### Distribution CRUD
+@app.post(
+    "/groups/{group_id}/events/{event_id}/distribution")
+def create_distribution(group_id:str,event_id:str,d:schemas.DistributionCreate,user:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    event=crud.get_event(db,group_id,event_id)
+    if not event:
+        raise HTTPException(HTTP_404_NOT_FOUND,"指定されたGroupまたはEventがありません")
+    if d.sell_starts>d.sell_ends:
+        raise HTTPException(400,"配布開始時刻は配布終了時刻よりも前である必要があります")
+    existed_ds=crud.get_all_distributions(db,event.id)
+    ticket_stock_sum=0
+    for ed in existed_ds:
+        ticket_stock_sum+=ed.ticket_stock
+        if d.sell_starts < ed.sell_ends and ed.sell_starts < d.sell_ends:
+            raise HTTPException(400,"ひとつの公演に2つ以上の配布時間帯を設定することはできません")
+    if ticket_stock_sum+d.ticket_stock>event.ticket_stock:
+        raise HTTPException(400,"ひとつのEventに紐づけられた全てのDistributionのticket_stockの和はそのEventのticket_stockを超えてはいけません")
+    result=crud.create_distribution(db,event.id,d)
+    return result
+        
+@app.delete(
+    "/group/{group_id}/events/{event_id}/distribution/{distribution_id}")
+def delete_distribution(group_id:str,event_id:str,distribution_id:str,user:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    crud.delete_distribution(db,distribution_id)
+    return {"OK":True}
+
 ### Ticket CRUD
 
 
@@ -311,7 +334,7 @@ def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.ad
     description="### 必要な権限\nアクティブ(校内に来場済み)なユーザーであること\n### ログインが必要か\nはい\n### 説明\n整理券取得できる条件\n- ユーザーが校内に来場ずみ\n- 現在時刻が取りたい整理券の配布時間内\n- 当該公演の整理券在庫が余っている\n- ユーザーは既にこの整理券を取得していない\n- ユーザーは既に当該公演と同じ時間帯の公演の整理券を取得していない\n- 同時入場人数は生徒用アカウントは1名まで、それ以外は3名まで",
     responses={"404":{"description":"- 指定されたGroupまたはEventが見つかりません\n- 既にこの公演・この公演と同じ時間帯の公演の整理券を取得している場合、新たに取得はできません\n- この公演の整理券は売り切れています\n- 現在整理券の配布時間外です"},
         "400":{"description":"- 同時入場人数は3人まで(本校生徒は1人)までです\n- 校内への来場処理をしたユーザーのみが整理券を取得できます"}})
-def create_ticket(group_id:str,event_id:str,person:int,user:schemas.User=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     if user.is_active:#学校に来場しているか
         event = crud.get_event(db,group_id,event_id)
         if not event:
@@ -384,43 +407,6 @@ def get_ticket(ticket_id:str,user:schemas.JWTUser=Depends(auth.get_current_user)
         raise HTTPException(404,"指定された整理券が見つかりません")
     return ticket
 
-
-# Timetable
-@app.post(
-    "/timetable",
-    response_model=List[schemas.Timetable],
-    summary="新規Timetableの作成",
-    tags=["timetable"],
-    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n### 説明\nEventは直接時間の情報を持たず、このTimetableのidで紐づける",
-    responses={"400":{"description":"パラメーターが不適切です"}})
-def create_timetable(timetables:List[schemas.TimetableCreate],permission:schemas.User = Depends(auth.admin),db:Session=Depends(db.get_db)):
-    results=[]
-    for timetable in timetables:
-        result = crud.create_timetable(db,timetable=timetable)
-        if not result:
-            raise HTTPException(400,"パラメーターが不適切です")
-        results.append(result)
-    return results
-@app.get(
-    "/timetable",
-    response_model=List[schemas.Timetable],
-    summary="全Timetableを取得",
-    tags=["timetable"],
-    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ")
-def get_all_timetable(db:Session=Depends(db.get_db)):
-    return crud.get_all_timetable(db)
-@app.get(
-    "/timetable/{timetable_id}",
-    response_model=schemas.Timetable,
-    summary="指定されたTimetableの情報を取得",
-    tags=["timetable"],
-    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n",
-    responses={"404":{"description":"指定されたTimetableが見つかりません"}})
-def get_timetable(timetable_id:str,db:Session=Depends(db.get_db)):
-    timetable = crud.get_timetable(db,timetable_id)
-    if not timetable:
-        raise HTTPException(404,"指定されたTimetableが見つかりません")
-    return timetable
 
 # Tag
 @app.post(
