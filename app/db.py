@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -18,8 +19,11 @@ def get_db():
     db = SessionLocal()
     try:
         yield db
-    except Exception as e:
-        print(e)
+    except HTTPException as e:
+        raise e
+    except SQLAlchemyError as e:
         raise HTTPException(503,detail='データベースが混み合っています')
+    except Exception as e:
+        raise HTTPException(500,"サーバーで不明なエラーが発生しました。:"+str(e))
     finally:
         db.close()
