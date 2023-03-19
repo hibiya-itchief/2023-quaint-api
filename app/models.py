@@ -19,21 +19,13 @@ class Event(Base):
 
     starts_at = Column(DateTime,nullable=False)
     ends_at = Column(DateTime,nullable=False)
-
-    target = Column(VARCHAR(255),nullable=False)
-    ticket_stock = Column(Integer,nullable=False)#0でチケット機能を使わない
-    
-class Distribution(Base):
-    __tablename__ = "distribution"
-    id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
-    event_id=Column(VARCHAR(255), ForeignKey("events.id"),nullable=False)
-
     sell_starts = Column(DateTime,nullable=False)
     sell_ends = Column(DateTime,nullable=False)
 
-    ticket_stock = Column(Integer,nullable=False)#0にすると、Eventのticket_stock - 取得済み整理券の枚数 になる
-
     lottery = Column(Boolean)
+
+    target = Column(VARCHAR(255),nullable=False)
+    ticket_stock = Column(Integer,nullable=False)#0でチケット機能を使わない 
 
 class GroupTag(Base):
     __tablename__="grouptag"

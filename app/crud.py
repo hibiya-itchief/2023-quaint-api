@@ -117,22 +117,6 @@ def delete_group(db:Session,group:schemas.Group):
     db.query(models.Group).filter(models.Group.id==group.id).delete()
     db.commit()
 
-
-
-# Distribution
-def get_all_distributions(db:Session,event_id:str):
-    db_d:List[schemas.Distribution]=db.query(models.Distribution).filter(models.Distribution.event_id==event_id).all()
-    return db_d
-def create_distribution(db:Session,event_id:str,d:schemas.DistributionCreate):
-    db_d = models.Distribution(id=ulid.new().str,event_id=event_id,**d.dict())
-    db.add(db_d)
-    db.commit()
-    db.refresh(db_d)
-    return db_d
-def delete_distribution(db:Session,distribution_id:str):
-    db.query(models.Distribution).filter(models.Distribution.id==distribution_id).delete()
-    db.commit()
-
 # Event
 def create_event(db:Session,group_id:str,event:schemas.EventCreate):
     db_event = models.Event(id=ulid.new().str,group_id=group_id,**event.dict())
@@ -142,18 +126,11 @@ def create_event(db:Session,group_id:str,event:schemas.EventCreate):
     return db_event
 def get_all_events(db:Session,group_id:str):
     db_events:List[schemas.Event] = db.query(models.Event).filter(models.Event.group_id==group_id).all()
-    events:List[schemas.Event]=[]
-    for db_event in db_events:
-        ds=get_all_distributions(db,db_event.id)
-        event=schemas.Event(distributions=ds,**db_event.__dict__)
-        events.append(event)
-    return events
+    return db_events
 def get_event(db:Session,group_id:str,event_id:str):
-    db_event:schemas.Event = db.query(models.Event).filter(models.Event.group_id==group_id,models.Event.id==event_id).first()
+    db_event:schemas.Event = db.query(models.Event).filter(models.Event.id==event_id).first()
     if db_event:
-        ds=get_all_distributions(db,db_event.id)
-        event=schemas.Event(distributions=ds,**db_event.__dict__)
-        return event
+        return db_event
     else:
         return None
 def delete_events(db:Session,event:schemas.Event):

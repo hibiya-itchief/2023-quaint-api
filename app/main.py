@@ -297,32 +297,6 @@ def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.ad
     except:
         raise HTTPException(400,"指定されたEventに紐づけられたTicketを全て削除しないと削除できません")
 
-### Distribution CRUD
-@app.post(
-    "/groups/{group_id}/events/{event_id}/distribution")
-def create_distribution(group_id:str,event_id:str,d:schemas.DistributionCreate,user:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
-    event=crud.get_event(db,group_id,event_id)
-    if not event:
-        raise HTTPException(HTTP_404_NOT_FOUND,"指定されたGroupまたはEventがありません")
-    if d.sell_starts>d.sell_ends:
-        raise HTTPException(400,"配布開始時刻は配布終了時刻よりも前である必要があります")
-    existed_ds=crud.get_all_distributions(db,event.id)
-    ticket_stock_sum=0
-    for ed in existed_ds:
-        ticket_stock_sum+=ed.ticket_stock
-        if d.sell_starts < ed.sell_ends and ed.sell_starts < d.sell_ends:
-            raise HTTPException(400,"ひとつの公演に2つ以上の配布時間帯を設定することはできません")
-    if ticket_stock_sum+d.ticket_stock>event.ticket_stock:
-        raise HTTPException(400,"ひとつのEventに紐づけられた全てのDistributionのticket_stockの和はそのEventのticket_stockを超えてはいけません")
-    result=crud.create_distribution(db,event.id,d)
-    return result
-        
-@app.delete(
-    "/group/{group_id}/events/{event_id}/distribution/{distribution_id}")
-def delete_distribution(group_id:str,event_id:str,distribution_id:str,user:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
-    crud.delete_distribution(db,distribution_id)
-    return {"OK":True}
-
 ### Ticket CRUD
 
 
