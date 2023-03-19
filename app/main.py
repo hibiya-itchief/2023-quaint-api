@@ -110,7 +110,7 @@ def check_ownership_of_user(user_sub:str,permission:schemas.JWTUser=Depends(auth
     summary="団体代表者のユーザーと団体の紐づけを全て確認する",
     tags=["users"],
     description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
-def check_all_ownership(user_sub:str,permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+def check_all_ownership(permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
     return crud.get_all_ownership(db)
 @app.put(
     "/users/{user_sub}/owner_of",
