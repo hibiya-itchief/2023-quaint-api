@@ -14,6 +14,7 @@ from starlette.status import (HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN,
 
 from app import auth, crud, db, models, schemas, storage
 from app.config import settings
+from app.msgraph import MsGraph
 
 #models.Base.metadata.create_all(bind=engine)
 
@@ -61,6 +62,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+msgraph=MsGraph()
 
 @app.get("/")
 def read_root():
@@ -79,14 +81,15 @@ def get_list_of_your_tickets(user:schemas.JWTUser = Depends(auth.get_current_use
     return crud.get_list_of_your_tickets(db,user)
 
 @app.put(
-    "/users/{user_id}/activation",
-    response_model=schemas.JWTUser,
-    summary="ユーザーのアクティベート",
+    "/users/{user_sub}/visit",
+    summary="ユーザーの入校処理",
     tags=["users"],
-    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n")
-def activate_user(user_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
-
-    return crud.activate_user(db,user)
+    description="### 必要な権限\nEntry\n### ログインが必要か\nはい\n")
+def activate_user(user_sub:str,permission:schemas.JWTUser=Depends(auth.entry),db:Session=Depends(db.get_db)):
+    result=msgraph.change_jobTitle(user_sub,jobTitle="Visited")
+    if result.status_code==204:
+        return {"OK":True}
+    raise HTTPException(result.status_code,result.text)
 
 @app.get(
     "/users/me/owner_of",

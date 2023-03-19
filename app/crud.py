@@ -18,10 +18,6 @@ def time_overlap(start1:datetime,end1:datetime,start2:datetime,end2:datetime)->b
     else:
         return False
 
-def activate_user(db:Session,user:schemas.JWTUser):
-    #TODO activate user by using Microsoft Graph API
-    return True
-
 def grant_ownership(db:Session,group:schemas.Group,user_sub:str)->schemas.GroupOwner:
     db_groupowner=models.GroupOwner(group_id=group.id,user_id=user_sub)
     db.add(db_groupowner)
