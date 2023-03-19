@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Union
 from xml.dom.minidom import Entity
 
@@ -249,7 +249,9 @@ def create_event(group_id:str,event:schemas.EventCreate,user:schemas.JWTUser=Dep
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
     if event.starts_at > event.ends_at:
-        raise HTTPException(400,"Eventの開始時刻は終了時刻よりも前である必要があります")
+        raise HTTPException(400,"公演の開始時刻は終了時刻よりも前である必要があります")
+    if event.sell_starts > event.sell_ends:
+        raise HTTPException(400,"配布開始時刻は配布終了時刻よりも前である必要があります")
     existed_events=crud.get_all_events(db,group.id)
     for ee in existed_events:
         if event.starts_at < ee.ends_at and ee.starts_at < event.ends_at:
@@ -274,7 +276,7 @@ def get_all_events(group_id:str,db:Session=Depends(db.get_db)):
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n",
     responses={"404":{"description":"指定されたGroupまたはEventが見つかりません"}})
 def get_event(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
-    event = crud.get_event(db,group_id,event_id)
+    event = crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
     return event
@@ -287,7 +289,7 @@ def get_event(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
         "403":{"description":"Adminの権限が必要です"},
         "400":{"description":"指定されたEventに紐づけられたTicketを全て削除しないと削除できません"}})
 def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
-    event = crud.get_event(db,group_id,event_id)
+    event = crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventがありません")
     group = crud.get_group_public(db,event.group_id)
@@ -309,27 +311,26 @@ def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.ad
     responses={"404":{"description":"- 指定されたGroupまたはEventが見つかりません\n- 既にこの公演・この公演と同じ時間帯の公演の整理券を取得している場合、新たに取得はできません\n- この公演の整理券は売り切れています\n- 現在整理券の配布時間外です"},
         "400":{"description":"- 同時入場人数は3人まで(本校生徒は1人)までです\n- 校内への来場処理をしたユーザーのみが整理券を取得できます"}})
 def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    if user.is_active:#学校に来場しているか
-        event = crud.get_event(db,group_id,event_id)
-        if not event:
-            raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
-        timetable = crud.get_timetable(db,event.timetable_id)
-        if timetable.sell_at <= datetime.now() and datetime.now() <= timetable.sell_ends:
-            if crud.count_tickets_for_event(db,event)+person<=event.ticket_stock and crud.check_double_ticket(db,event,user):##まだチケットが余っていて、同時間帯の公演の整理券取得ではない
-                if user.is_student==False and 0<person<4:#一般アカウント(家族アカウント含む)は1アカウントにつき3人まで入れる
-                    return crud.create_ticket(db,event,user,person)
-                elif user.is_student and person==1:
-                    return crud.create_ticket(db,event,user,person)
-                else:
-                    raise HTTPException(400,"同時入場人数は3人まで(本校生徒は1人)までです")
-            elif not crud.check_double_ticket(db,event,user):
-                raise HTTPException(404,"既にこの公演・この公演と同じ時間帯の公演の整理券を取得している場合、新たに取得はできません")
+    event = crud.get_event(db,event_id)
+    if not event:
+        raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
+    if not (event.target==schemas.EventTarget.guest or (event.target==schemas.EventTarget.visited and auth.check_visited(user)) or (event.target==schemas.EventTarget.school and auth.check_school(user))):
+        raise HTTPException(HTTP_403_FORBIDDEN,str(event.target)+"ユーザーのみが整理券を取得できます。校内への入場処理が済んでいるか確認してください。")
+    if event.sell_starts<datetime.now(timezone(timedelta(hours=+9))) and datetime.now(timezone(timedelta(hours=+9)))<event.sell_ends:
+        if crud.count_tickets_for_event(db,event)+person<=event.ticket_stock and crud.check_qualified_for_ticket(db,event,user):##まだチケットが余っていて、同時間帯の公演の整理券取得ではない
+            if auth.check_school(user)==False and 0<person<4:#一般アカウント(家族アカウント含む)は1アカウントにつき3人まで入れる
+                return crud.create_ticket(db,event,user,person)
+            elif auth.check_school(user) and person==1:
+                return crud.create_ticket(db,event,user,person)
             else:
-                raise HTTPException(404,"この公演の整理券は売り切れています")
+                raise HTTPException(400,"同時入場人数は3人まで(本校生徒は1人)までです")
+        elif not crud.check_qualified_for_ticket(db,event,user):
+            raise HTTPException(404,"既にこの公演・この公演と重複する時間帯の公演の整理券を取得している場合、新たに取得はできません。または取得できる整理券の枚数の上限を超えています")
         else:
-            raise HTTPException(404,"現在整理券の配布時間外です")
+            raise HTTPException(404,"この公演の整理券は売り切れています")
     else:
-        raise HTTPException(400,"校内への来場処理をしたユーザーのみが整理券を取得できます")
+        raise HTTPException(404,"現在整理券の配布時間外です")
+
 @app.get(
     "/groups/{group_id}/events/{event_id}/tickets",
     response_model=schemas.TicketsNumberData,
@@ -338,10 +339,7 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depe
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n",
     responses={"404":{"description":"- 指定されたGroupが見つかりません\n- 指定されたEventが見つかりません"}})
 def count_tickets(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
-    group = crud.get_group_public(db,group_id)
-    if not group:
-        raise HTTPException(404,"指定されたGroupが見つかりません")
-    event = crud.get_event(db,group.id,event_id)
+    event = crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたEventが見つかりません")
     taken_tickets:int=crud.count_tickets_for_event(db,event)

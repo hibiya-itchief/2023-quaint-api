@@ -2,6 +2,11 @@ from pydantic import BaseSettings
 import os
 import datetime
 
+class Parameters(BaseSettings):
+    person_per_user:int=3 # 1つのユーザーで同時入場できる人数
+    max_tickets:int=6 # 全日程を通して取得できる整理券の上限(0で制限無し)
+    max_tickets_per_day:int=6 # 1日あたりの取得できる整理券の上限(0で上限無し)各公演の開始時刻で判定されます
+
 class Settings(BaseSettings):
     mysql_user:str=os.getenv('MYSQL_USER')
     mysql_password:str=os.getenv('MYSQL_PASSWORD')
@@ -38,4 +43,5 @@ class Settings(BaseSettings):
         env_file = '../.env'
         secrets_dir='/run/secrets'
 
+params=Parameters()
 settings= Settings()

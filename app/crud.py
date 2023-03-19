@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Union
 
 #from hashids import Hashids
@@ -7,8 +8,15 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app import auth, models, schemas, storage
-from app.config import settings
+from app.config import params, settings
 
+
+def time_overlap(start1:datetime,end1:datetime,start2:datetime,end2:datetime)->bool:
+    #境界は含まない
+    if(start2<end1 and start1<end2): # 重なってる
+        return True
+    else:
+        return False
 
 def activate_user(db:Session,user:schemas.JWTUser):
     #TODO activate user by using Microsoft Graph API
@@ -145,19 +153,26 @@ def count_tickets_for_event(db:Session,event:schemas.Event):
         db_tickets_count += ticket.person
     return db_tickets_count
 
-def check_double_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser):
-    db_already_taken:int = 0
+def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser):
     ### このユーザーが同じ時間帯で他の公演のチケットを取っていないか(この公演の2枚目も含む)
-    timetable = get_timetable(db,event.timetable_id)
-    same_timetable_events = get_events_by_timetable(db,timetable)
-    for same_timetable_event in same_timetable_events:
-        db_already_taken += db.query(models.Ticket).filter(models.Ticket.event_id==same_timetable_event.id,models.Ticket.owner_id==user.id).count()
-    if db_already_taken>0:
+    ### 整理券の上限に達していないか(各公演の開始時刻で判定されます)
+    taken_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==user.id).all()
+    tickets_num_per_day:int=0
+    for taken_ticket in taken_tickets:
+        te=get_event(db,taken_ticket.event_id)
+        if(time_overlap(te.starts_at,te.ends_at,event.starts_at,event.ends_at)):
+            return False
+        if(params.max_tickets_per_day!=0 and event.starts_at.date()==te.starts_at.date()):
+            tickets_num_per_day+=1
+    
+    if(params.max_tickets!=0 and len(taken_tickets)>params.max_tickets):
         return False
-    else:
-        return True
+    if(params.max_tickets_per_day!=0 and tickets_num_per_day+1>params.max_tickets_per_day):
+        return False
+    
+    return True
 def create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int):
-    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=user.id,person=person,is_used=False)
+    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=user.sub,person=person,is_used=False)
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
