@@ -14,23 +14,30 @@ class EventTarget(str,Enum):
 class EventBase(BaseModel):
     eventname:str
 
-    starts_at:datetime
-    ends_at:datetime
-    sell_starts:datetime
-    sell_ends:datetime
-
-    lottery:bool
+    lottery:bool=False
 
     target:EventTarget
     ticket_stock:int
 class EventCreate(EventBase):
-    pass
-class Event(EventBase):
+    starts_at:datetime
+    ends_at:datetime
+    sell_starts:datetime
+    sell_ends:datetime
+class EventDBInput(EventBase):
+    starts_at:str
+    ends_at:str
+    sell_starts:str
+    sell_ends:str
+class Event(EventCreate):
     id:str#ULID
     group_id:str#ULID
     class Config:
         orm_mode=True
-
+class EventDBOutput(EventDBInput):
+    id:str#ULID
+    group_id:str#ULID
+    class Config:
+        orm_mode=True
 class GroupTagCreate(BaseModel):
     tag_id:str#ULID
 
@@ -44,7 +51,6 @@ class Tag(TagBase):
         orm_mode=True
 
 class GroupUpdate(BaseModel):
-    groupname:Union[str,None] = Query(default=None,max_length=200)
     title:Union[str,None] = Query(default=None,max_length=200)
     description:Union[str,None] = Query(default=None,max_length=200)
     twitter_url:Union[str,None]=Query(default=None,regex="https?://twitter\.com/[0-9a-zA-Z_]{1,15}/?")
@@ -93,7 +99,8 @@ class JWTUser(BaseModel):
     iat:Union[int,None]
     nbf:Union[int,None]
     exp:Union[int,None]
-    sub:Union[str,None]
+    sub:str
+    oid:Union[str,None]
     name:Union[str,None]
     jobTitle:Union[str,None]
     groups:Union[List[str],None]

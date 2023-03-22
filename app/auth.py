@@ -41,18 +41,6 @@ class BearerAuth(SecurityBase):
             )
 auth_scheme=BearerAuth()
 
-def generate_jwt(data:Dict,expires_delta: Union[timedelta, None] = None):
-    to_encode = data.copy()
-    if data.get("aud") is None:
-        to_encode.update({"aud": "quaint"})
-    if data.get("iss") is None:
-        to_encode.update({"iss": "https://api.seiryofes.com"})
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-        to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode,settings.jwt_privatekey,algorithm="RS256")
-    return encoded_jwt
-
 def verify_jwt(token:str=Depends(auth_scheme))->Dict[str,Any]:
     try:
         header=jwt.get_unverified_header(token)
@@ -65,9 +53,6 @@ def verify_jwt(token:str=Depends(auth_scheme))->Dict[str,Any]:
             signing_key = ad_jwks_client.get_signing_key_from_jwt(token)
             decoded_jwt = jwt.decode(token, signing_key.key, algorithms=header['alg'],audience=settings.azure_ad_audience)
             return decoded_jwt
-        elif payload.get("iss")=="https://api.seiryofes.com/admin/access_token":
-            decoded_jwt = jwt.decode(token,settings.jwt_publickey,algorithms=['RS256'],audience="quaint")
-            return decoded_jwt
         else:
             raise HTTPException(status_code=HTTP_401_UNAUTHORIZED,detail="不正なトークンです")
     except Exception as e:
@@ -77,6 +62,13 @@ def get_current_user(decoded_jwt:Dict = Depends(verify_jwt))->schemas.JWTUser:
     user = schemas.JWTUser(**decoded_jwt)
     return user
 
+def user_object_id(user:schemas.JWTUser):
+    if user.iss == B2C_CONFIG['issuer']:
+        return user.sub
+    elif user.iss == AD_CONFIG['issuer']:
+        if user.oid is not None:
+            return user.oid
+    raise Exception("User Object IDがありません")
 
 #例外を発生させないことで、ログインしてるならユーザー情報が取れるし、してないならNoneを返すようにする(顔出し画像が入る可能性があるカバー画像をレスポンスするか決める)
 def get_current_user_not_exception():

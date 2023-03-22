@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import List, Union
 
 #from hashids import Hashids
 import ulid
 from fastapi import HTTPException, Query
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import auth, models, schemas, storage
@@ -18,16 +19,16 @@ def time_overlap(start1:datetime,end1:datetime,start2:datetime,end2:datetime)->b
     else:
         return False
 
-def grant_ownership(db:Session,group:schemas.Group,user_sub:str)->schemas.GroupOwner:
-    db_groupowner=models.GroupOwner(group_id=group.id,user_id=user_sub)
+def grant_ownership(db:Session,group:schemas.Group,user_oid:str)->schemas.GroupOwner:
+    db_groupowner=models.GroupOwner(group_id=group.id,user_id=user_oid)
     db.add(db_groupowner)
     db.commit()
     db.refresh(db_groupowner)
     return db_groupowner
 
-def delete_ownership(db:Session,group_id:str,user_sub:str)->schemas.GroupOwner:
+def delete_ownership(db:Session,group_id:str,user_oid:str)->schemas.GroupOwner:
     try:
-        db.query(models.GroupOwner).filter(models.GroupOwner.group_id==group_id, models.GroupOwner.user_id==user_sub).delete()
+        db.query(models.GroupOwner).filter(models.GroupOwner.group_id==group_id, models.GroupOwner.user_id==user_oid).delete()
         db.commit()
         return 0
     except:
@@ -35,8 +36,8 @@ def delete_ownership(db:Session,group_id:str,user_sub:str)->schemas.GroupOwner:
 def get_all_ownership(db:Session)->List[schemas.GroupOwner]:
     db_gos=db.query(models.GroupOwner).all()
     return db_gos
-def get_ownership_of_user(db:Session,user_sub:str)->List[str]:
-    db_gos:List[schemas.GroupOwner]=db.query(models.GroupOwner).filter(models.GroupOwner.user_id==user_sub).all()
+def get_ownership_of_user(db:Session,user_oid:str)->List[str]:
+    db_gos:List[schemas.GroupOwner]=db.query(models.GroupOwner).filter(models.GroupOwner.user_id==user_oid).all()
     result:List[str]=[]
     for row in db_gos:
         result.append(row.group_id)
@@ -51,7 +52,7 @@ def check_owner_of(db:Session,user:schemas.JWTUser,group_id:str):
         return False
 
 def get_list_of_your_tickets(db:Session,user:schemas.JWTUser):
-    db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==user.id).all()
+    db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==auth.user_object_id(user)).all()
     return db_tickets
 
 def create_group(db:Session,group:schemas.GroupCreate):
@@ -123,18 +124,50 @@ def delete_group(db:Session,group:schemas.Group):
 
 # Event
 def create_event(db:Session,group_id:str,event:schemas.EventCreate):
-    db_event = models.Event(id=ulid.new().str,group_id=group_id,**event.dict())
+    add_event:schemas.EventDBInput=event
+    add_event.starts_at=event.starts_at.isoformat()
+    add_event.ends_at=event.ends_at.isoformat()
+    add_event.sell_starts=event.sell_starts.isoformat()
+    add_event.sell_ends=event.sell_ends.isoformat()
+    db_event = models.Event(id=ulid.new().str,group_id=group_id,**add_event.dict())
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
     return db_event
 def get_all_events(db:Session,group_id:str):
-    db_events:List[schemas.Event] = db.query(models.Event).filter(models.Event.group_id==group_id).all()
-    return db_events
-def get_event(db:Session,group_id:str,event_id:str):
-    db_event:schemas.Event = db.query(models.Event).filter(models.Event.id==event_id).first()
-    if db_event:
-        return db_event
+    db_events:List[schemas.EventDBOutput] = db.query(models.Event).filter(models.Event.group_id==group_id).all()
+    events:List[schemas.Event]=[]
+    for e in db_events:
+        event=schemas.Event(
+            id=e.id,
+            group_id=e.group_id,
+            eventname=e.eventname,
+            lottery=e.lottery,
+            target=e.target,
+            ticket_stock=e.ticket_stock,
+            starts_at=datetime.fromisoformat(e.starts_at),
+            ends_at=datetime.fromisoformat(e.ends_at),
+            sell_starts=datetime.fromisoformat(e.sell_starts),
+            sell_ends=datetime.fromisoformat(e.sell_ends),
+        )
+        events.append(event)
+    return events
+def get_event(db:Session,event_id:str):
+    e:schemas.EventDBOutput = db.query(models.Event).filter(models.Event.id==event_id).first()
+    if e:
+        event=schemas.Event(
+            id=e.id,
+            group_id=e.group_id,
+            eventname=e.eventname,
+            lottery=e.lottery,
+            target=e.target,
+            ticket_stock=e.ticket_stock,
+            starts_at=datetime.fromisoformat(e.starts_at),
+            ends_at=datetime.fromisoformat(e.ends_at),
+            sell_starts=datetime.fromisoformat(e.sell_starts),
+            sell_ends=datetime.fromisoformat(e.sell_ends),
+        )
+        return event
     else:
         return None
 def delete_events(db:Session,event:schemas.Event):
@@ -152,7 +185,7 @@ def count_tickets_for_event(db:Session,event:schemas.Event):
 def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser):
     ### このユーザーが同じ時間帯で他の公演のチケットを取っていないか(この公演の2枚目も含む)
     ### 整理券の上限に達していないか(各公演の開始時刻で判定されます)
-    taken_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==user.id).all()
+    taken_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==auth.user_object_id(user)).all()
     tickets_num_per_day:int=0
     for taken_ticket in taken_tickets:
         te=get_event(db,taken_ticket.event_id)
@@ -168,7 +201,7 @@ def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUs
     
     return True
 def create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int):
-    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=user.sub,person=person,is_used=False)
+    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=auth.user_object_id(user),person=person,is_used=False,created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
@@ -209,6 +242,25 @@ def delete_tag(db:Session,id:str):
     db.delete(db_tag)
     db.commit()
     return 0
+
+
+# Vote
+def create_vote(db:Session,group_id:str,user:schemas.JWTUser):
+    try:
+        db_vote=models.Vote(group_id=group_id,user_id=auth.user_object_id(user))
+        db.add(db_vote)
+        db.commit()
+        db.refresh(db_vote)
+        return db_vote
+    except IntegrityError as e:
+        raise HTTPException(400,"投票は1人1回までです")
+
+def get_user_vote(db:Session,user:schemas.JWTUser):
+    db_vote:schemas.Vote=db.query(models.Vote).filter(models.Vote.user_id==auth.user_object_id(user)).first()
+    return db_vote
+def get_group_votes(db:Session,group:schemas.Group):
+    db_votes:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id==group.id).all()
+    return db_votes
 
 
 

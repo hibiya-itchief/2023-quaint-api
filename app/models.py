@@ -1,8 +1,7 @@
 #from numpy import integer
 #from pandas import notnull
-from sqlalchemy import (TEXT, VARCHAR, Boolean, Column, DateTime, ForeignKey,
-                        Integer, String, UniqueConstraint)
-from sqlalchemy.dialects.sqlite import TIMESTAMP as Timestamp
+from sqlalchemy import (TEXT, TIMESTAMP, VARCHAR, Boolean, Column, DateTime,
+                        ForeignKey, Integer, String, UniqueConstraint)
 from sqlalchemy.orm import relationship
 # from sqlalchemy.dialects.mysql import TIMESTAMP as Timestamp
 from sqlalchemy.sql.functions import current_timestamp
@@ -17,10 +16,11 @@ class Event(Base):
     group_id = Column(VARCHAR(255), ForeignKey("groups.id"),nullable=False)
     eventname = Column(VARCHAR(255))
 
-    starts_at = Column(DateTime,nullable=False)
-    ends_at = Column(DateTime,nullable=False)
-    sell_starts = Column(DateTime,nullable=False)
-    sell_ends = Column(DateTime,nullable=False)
+    # 日時はISO 8601形式で文字列として保存 MySQLによって勝手にタイムゾーンをいじられたり保存されなかったりしたくない
+    starts_at = Column(VARCHAR(255),nullable=False)
+    ends_at = Column(VARCHAR(255),nullable=False)
+    sell_starts = Column(VARCHAR(255),nullable=False)
+    sell_ends = Column(VARCHAR(255),nullable=False)
 
     lottery = Column(Boolean)
 
@@ -63,8 +63,9 @@ class Group(Base):
     public_page_content_url = Column(VARCHAR(255))#オブジェクトストレージ上の団体個別公開ページのMarkdownへのURL
     private_page_content_url = Column(VARCHAR(255))#オブジェクトストレージ上の団体個別非公開ページのMarkdownへのURL
     def update_dict(self,dict):
+        print(dict)
         for name, value in dict.items():
-            if name in self.__dict__ and value is not None:
+            if name in self.__dict__ :
                 setattr(self, name, value)
     
 class GroupOwner(Base):
@@ -77,7 +78,7 @@ class Ticket(Base):
     __tablename__ = "tickets"
 
     id=Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
-    created_at = Column(DateTime,server_default=current_timestamp())
+    created_at = Column(VARCHAR(255))
 
     group_id = Column(VARCHAR(255), ForeignKey("groups.id"))
     event_id = Column(VARCHAR(255), ForeignKey("events.id"))

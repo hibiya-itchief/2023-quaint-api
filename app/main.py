@@ -100,13 +100,13 @@ def activate_user(user_sub:str,permission:schemas.JWTUser=Depends(auth.entry),db
 def check_ownership_of_user(user:schemas.JWTUser=Depends(auth.owner),db:Session=Depends(db.get_db)):
     return crud.get_ownership_of_user(db,user.sub)
 @app.get(
-    "/users/{user_sub}/owner_of",
+    "/users/{user_oid}/owner_of",
     response_model=List[str],
     summary="ユーザーの権限のある団体を確認する",
     tags=["users"],
     description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
-def check_ownership_of_user(user_sub:str,permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
-    return crud.get_ownership_of_user(db,user_sub)
+def check_ownership_of_user(user_oid:str,permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    return crud.get_ownership_of_user(db,user_oid)
 @app.get(
     "/users/owner_of",
     response_model=List[str],
@@ -116,23 +116,23 @@ def check_ownership_of_user(user_sub:str,permission:schemas.JWTUser=Depends(auth
 def check_all_ownership(permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
     return crud.get_all_ownership(db)
 @app.put(
-    "/users/{user_sub}/owner_of",
+    "/users/{user_oid}/owner_of",
     response_model=schemas.GroupOwner,
     summary="団体代表者のユーザーとGroupを紐づける",
     tags=["users"],
     description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
-def grant_ownership(user_sub:str,group_id:str,permission=Depends(auth.admin),db:Session=Depends(db.get_db)):
+def grant_ownership(user_oid:str,group_id:str,permission=Depends(auth.admin),db:Session=Depends(db.get_db)):
     group=crud.get_group_public(db,group_id)
     if not group:
         raise HTTPException(404,"グループが見つかりません")
-    return crud.grant_ownership(db,group,user_sub)
+    return crud.grant_ownership(db,group,user_oid)
 @app.delete(
-    "/users/{user_sub}/owner_of",
+    "/users/{user_oid}/owner_of",
     summary="団体代表者のユーザーとGroupの紐づけを削除",
     tags=["users"],
     description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
-def delete_ownership(user_sub:str,group_id:str,permission=Depends(auth.admin),db:Session=Depends(db.get_db)):
-    result=crud.delete_ownership(db,group_id,user_sub)
+def delete_ownership(user_oid:str,group_id:str,permission=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    result=crud.delete_ownership(db,group_id,user_oid)
     if not result:
         raise HTTPException(404,"グループまたはユーザーが見つかりません")
     return {"OK":True}
@@ -176,12 +176,16 @@ def get_group_private():
 
 @app.put(
     "/groups/{group_id}",
+    response_model=schemas.Group,
     summary="Groupを更新",
     tags=['groups'],
     description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい",
     responses={"404":{"description":"指定されたGroupまたはTagが見つかりません"}})
-def update_group(group_id:str,updated_group:schemas.GroupUpdate,db:Session=Depends(db.get_db)):
+def update_group(group_id:str,updated_group:schemas.GroupUpdate,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    print(updated_group)
     group=crud.get_group_public(db,group_id)
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
     u=crud.update_group(db,group,updated_group)
     return u
 
@@ -212,7 +216,7 @@ def delete_grouptag(group_id:str,tag_id:str,user:schemas.JWTUser=Depends(auth.ge
     group = crud.get_group_public(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
-    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user)):
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
         raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
     tag = crud.get_tag(db,tag_id)
     if not tag:
@@ -236,6 +240,32 @@ def delete_group(group_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:
     except:
         raise HTTPException(400,"指定されたGroupに紐づけられているEvent,Ticket,Tagをすべて削除しないと削除できません")
 
+@app.post("/groups/{group_id}/vote",
+    response_model=schemas.Vote,
+    summary="Groupへの投票",
+    tags=["groups"],
+    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n',)
+def create_vote(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    # Groupが存在するかの判定も下で兼ねられる
+    tickets=get_list_of_your_tickets(db,user)
+    Flag=False
+    for ticket in tickets:
+        if ticket.group_id==group_id:
+            Flag=True
+            break
+    if not Flag:
+        raise HTTPException(400,"整理券を取得して観劇した団体にのみ投票できます。")
+    vote=crud.create_vote(db,group_id)
+    return vote
+
+@app.get("/groups/{group_id}/vote",
+    response_model=schemas.Vote,
+    summary="Groupへの投票数を確認",
+    tags=["groups"],
+    description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nいいえ\n',)
+
+
+            
 
 ### Event Crud
 @app.post(
@@ -248,6 +278,7 @@ def delete_group(group_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:
         "403":{"description":"Adminの権限が必要です"},
         "404":{"description":"指定されたGroupが見つかりません"}})
 def create_event(group_id:str,event:schemas.EventCreate,user:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    print(event.starts_at.tzinfo)
     group = crud.get_group_public(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
@@ -290,7 +321,7 @@ def get_event(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
     description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n### 説明\n指定するEventに紐づけられたTicketを全て削除しないと削除できません",
     responses={"404":{"description":"指定されたGroupまたはEventがありません"},
         "403":{"description":"Adminの権限が必要です"},
-        "400":{"description":"指定されたEventに紐づけられたTicketを全て削除しないと削除できません"}})
+        "400":{"description":"既に整理券が取得されている公演は削除できません"}})
 def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
     event = crud.get_event(db,event_id)
     if not event:
@@ -300,7 +331,7 @@ def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.ad
         crud.delete_events(db,event)
         return {"OK":True}
     except:
-        raise HTTPException(400,"指定されたEventに紐づけられたTicketを全て削除しないと削除できません")
+        raise HTTPException(400,"既に整理券が取得されている公演は削除できません")
 
 ### Ticket CRUD
 
@@ -319,6 +350,7 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depe
         raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
     if not (event.target==schemas.EventTarget.guest or (event.target==schemas.EventTarget.visited and auth.check_visited(user)) or (event.target==schemas.EventTarget.school and auth.check_school(user))):
         raise HTTPException(HTTP_403_FORBIDDEN,str(event.target)+"ユーザーのみが整理券を取得できます。校内への入場処理が済んでいるか確認してください。")
+    
     if event.sell_starts<datetime.now(timezone(timedelta(hours=+9))) and datetime.now(timezone(timedelta(hours=+9)))<event.sell_ends:
         if crud.count_tickets_for_event(db,event)+person<=event.ticket_stock and crud.check_qualified_for_ticket(db,event,user):##まだチケットが余っていて、同時間帯の公演の整理券取得ではない
             if auth.check_school(user)==False and 0<person<4:#一般アカウント(家族アカウント含む)は1アカウントにつき3人まで入れる
@@ -358,7 +390,7 @@ def count_tickets(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
     responses={"403":{"description":"指定された整理券の所有者である必要があります"}})
 def delete_ticket(group_id:str,event_id:str,ticket_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     ticket=crud.get_ticket(db,ticket_id)
-    if not ticket.owner_id==user.id:
+    if not ticket.owner_id==auth.user_object_id(user):
         raise HTTPException(403,"指定された整理券の所有者である必要があります")
     try:
         crud.delete_ticket(db,ticket)
@@ -439,22 +471,6 @@ def delete_tag(tag_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Sess
         raise HTTPException(404,"指定されたTagが見つかりません")
     return "Successfully Deleted"
     
-
-
-@app.post(
-    "/admin/access_token",
-    summary="管理者によるアクセストークンの生成",
-    tags=["admin"],
-    description="### 必要な権限\nAdmin\n###ログインが必要か\nはい\n###説明\n 管理者権限を持ったアクセストークンを生成します。GitHub Actionsでフロントエンドをビルドするときに使う。")
-def create_access_token(additional_data:Union[Dict,None]=None,expire_delta:Union[timedelta,None]=None,user:schemas.JWTUser=Depends(auth.admin)):
-    data=additional_data.copy() # additional_dataにgroupsやissやらが含まれてるとまずい気がするから、先にコピー。update()で上書きされる
-    data.update({
-    "groups":[settings.azure_ad_groups_quaint_admin],
-    "iss":"https://api.seiryofes.com/admin/access_token",
-    "sub":"access_token_"+user.name,
-    "iat":time.time()})
-    #TODO DB使って発行したトークンの失効とか出来るようにする？できればした方が良い
-    return auth.generate_jwt(data,expire_delta)
 
 
 #@app.put("/admin/user")
