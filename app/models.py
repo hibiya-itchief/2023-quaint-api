@@ -1,8 +1,7 @@
 #from numpy import integer
 #from pandas import notnull
-from sqlalchemy import (TEXT, VARCHAR, Boolean, Column, DateTime, ForeignKey,
-                        Integer, String, UniqueConstraint)
-from sqlalchemy.dialects.sqlite import TIMESTAMP as Timestamp
+from sqlalchemy import (TEXT, TIMESTAMP, VARCHAR, Boolean, Column, DateTime,
+                        ForeignKey, Integer, String, UniqueConstraint)
 from sqlalchemy.orm import relationship
 # from sqlalchemy.dialects.mysql import TIMESTAMP as Timestamp
 from sqlalchemy.sql.functions import current_timestamp
@@ -10,48 +9,23 @@ from sqlalchemy.sql.functions import current_timestamp
 from app.db import Base
 
 
-class Timetable(Base):
-    __tablename__ = "timetable"
-
-    id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
-    timetablename = Column(VARCHAR(255))
-
-    sell_at = Column(DateTime,nullable=False)
-    sell_ends = Column(DateTime,nullable=False)
-    starts_at = Column(DateTime,nullable=False)
-    ends_at = Column(DateTime,nullable=False)
-
 class Event(Base):
     __tablename__ = "events"
 
     id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
-
-    timetable_id = Column(VARCHAR(255),ForeignKey("timetable.id"),nullable=False)
-
-    ticket_stock = Column(Integer,nullable=False)#0でチケット機能を使わない
-    lottery = Column(Boolean)
     group_id = Column(VARCHAR(255), ForeignKey("groups.id"),nullable=False)
+    eventname = Column(VARCHAR(255))
 
-    # 複数カラムのunique constraint
-    __table_args__ = (UniqueConstraint("timetable_id", "group_id", name="unique_timetablex_groupid"),)
+    # 日時はISO 8601形式で文字列として保存 MySQLによって勝手にタイムゾーンをいじられたり保存されなかったりしたくない
+    starts_at = Column(VARCHAR(255),nullable=False)
+    ends_at = Column(VARCHAR(255),nullable=False)
+    sell_starts = Column(VARCHAR(255),nullable=False)
+    sell_ends = Column(VARCHAR(255),nullable=False)
 
-class Admin(Base):
-    __tablename__ = "admin"
-    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True,unique=True)#ULID
+    lottery = Column(Boolean)
 
-class Entry(Base):
-    __tablename__ = "entry"
-    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True,unique=True)#ULID
-
-class Authority(Base):
-    #UserとGroupを結びつける中間テーブル権限管理
-    __tablename__ = "authority"
-    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)
-    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
-
-    role = Column(VARCHAR(255),primary_key=True)
-    # 複数カラムのunique constraint
-    __table_args__ = (UniqueConstraint("user_id", "group_id","role", name="unique_idx_groupid_tagid"),)
+    target = Column(VARCHAR(255),nullable=False)
+    ticket_stock = Column(Integer,nullable=False)#0でチケット機能を使わない 
 
 class GroupTag(Base):
     __tablename__="grouptag"
@@ -68,7 +42,7 @@ class Tag(Base):
 class Vote(Base):
     __tablename__ = "votes"
     group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False)#userdefined id
-    user_id = Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)#ULID
+    user_id = Column(VARCHAR(255),nullable=False,primary_key=True)# sub in jwt (UUID)
 
 
 class Group(Base):
@@ -80,27 +54,35 @@ class Group(Base):
     title = Column(VARCHAR(255))#演目名
     description = Column(VARCHAR(255))#説明(一覧になったときに出る・イベントのデフォルトに使われる)
 
-    page_content = Column(TEXT(16383))#宣伝ページのHTML
-
     enable_vote = Column(Boolean,default=True)#投票機能を使うか
     twitter_url = Column(VARCHAR(255))
     instagram_url = Column(VARCHAR(255))
     stream_url = Column(VARCHAR(255))
 
-    thumbnail_image_url=Column(VARCHAR(255))
-    cover_image_url=Column(VARCHAR(255))
-
+    public_thumbnail_image_url=Column(VARCHAR(255))#オブジェクトストレージ上の公開団体サムネイル画像へのURL
+    public_page_content_url = Column(VARCHAR(255))#オブジェクトストレージ上の団体個別公開ページのMarkdownへのURL
+    private_page_content_url = Column(VARCHAR(255))#オブジェクトストレージ上の団体個別非公開ページのMarkdownへのURL
+    def update_dict(self,dict):
+        print(dict)
+        for name, value in dict.items():
+            if name in self.__dict__ :
+                setattr(self, name, value)
     
+class GroupOwner(Base):
+    __tablename__ = "groupowners"
+    group_id=Column(VARCHAR(255), ForeignKey("groups.id"),primary_key=True)
+    user_id=Column(VARCHAR(255),primary_key=True) # sub in jwt (UUID)
+    UniqueConstraint('group_id', 'user_id', name="unique_idx_groupid_userid")
 
 class Ticket(Base):
     __tablename__ = "tickets"
 
     id=Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
-    created_at = Column(DateTime,server_default=current_timestamp())
+    created_at = Column(VARCHAR(255))
 
     group_id = Column(VARCHAR(255), ForeignKey("groups.id"))
     event_id = Column(VARCHAR(255), ForeignKey("events.id"))
-    owner_id = Column(VARCHAR(255), ForeignKey("users.id"))
+    owner_id = Column(VARCHAR(255))# sub in jwt (UUID)
 
     person = Column(Integer,default=1)#何人分のチケットか
 
@@ -108,43 +90,4 @@ class Ticket(Base):
     is_used = Column(Boolean,default=False)
 
 
-class User(Base):
-    __tablename__ = "users"
-    id = Column(VARCHAR(255), primary_key=True, index=True,unique=True)#ULID
 
-    username = Column(VARCHAR(25), unique=True, index=True)
-    hashed_password = Column(VARCHAR(255))
-
-    is_student = Column(Boolean,default=False)#生徒かどうか
-    is_family = Column(Boolean,default=False)#家族アカウントかどうか
-    is_active = Column(Boolean, default=False)#学校にいるか
-    password_expired=Column(Boolean,default=False)#Password変更を要求
-
-class Like(Base):
-    __tablename__ = "like"
-    group_id=Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
-    user_id=Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)
-    # 複数カラムのunique constraint
-    __table_args__ = (UniqueConstraint("group_id","user_id", name="unique_useridx_groupid"),)
-class Comment(Base):
-    __tablename__="comment"
-    user_id=Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)
-    group_id=Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
-    content=Column(VARCHAR(255),nullable=False)
-    timestamp=Column(DateTime,nullable=False)
-    visibility=Column(Integer,nullable=False)
-class Balloon(Base):
-    __tablename__="balloon"
-    user_id=Column(VARCHAR(255),ForeignKey("users.id"),nullable=False,primary_key=True)
-    endpoint=Column(VARCHAR(255),nullable=False,primary_key=True)
-
-
-class Log(Base):
-    __tablename__ = "log"
-    id = Column(Integer,autoincrement=True,primary_key=True,index=True,unique=True)
-    timestamp = Column(DateTime,server_default=current_timestamp())
-    user = Column(VARCHAR(255))
-    object = Column(VARCHAR(255))
-    operation = Column(VARCHAR(255))
-    result =Column(Boolean)
-    detail = Column(TEXT(60000))

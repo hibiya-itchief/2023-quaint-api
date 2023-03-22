@@ -2,6 +2,11 @@ from pydantic import BaseSettings
 import os
 import datetime
 
+class Parameters(BaseSettings):
+    person_per_user:int=3 # 1つのユーザーで同時入場できる人数
+    max_tickets:int=6 # 全日程を通して取得できる整理券の上限(0で制限無し)
+    max_tickets_per_day:int=6 # 1日あたりの取得できる整理券の上限(0で上限無し)各公演の開始時刻で判定されます
+
 class Settings(BaseSettings):
     mysql_user:str=os.getenv('MYSQL_USER')
     mysql_password:str=os.getenv('MYSQL_PASSWORD')
@@ -24,6 +29,10 @@ class Settings(BaseSettings):
     azure_ad_openidconfiguration='https://login.microsoftonline.com/158e6d17-f3d5-4365-8428-26dfc74a9d27/v2.0/.well-known/openid-configuration'
     azure_ad_audience='0f2252c5-62ef-4aab-af65-99a753f1c77c'
 
+    b2c_msgraph_tenant:str='450b2222-dcb5-471d-9657-bb4ee50acd97'
+    b2c_msgraph_client:str='06b8cb1b-b866-43bf-9bc6-2898c6a149f3'
+    b2c_msgraph_secret:str=os.getenv('QUAINT_MSGRAPH_SECRET')
+
     ## Azure AD groups UUID
     azure_ad_groups_quaint_admin='5c091517-25de-44bc-9e42-ffcb8539435c'
     azure_ad_groups_quaint_entry='63a40184-8dab-43b4-8367-54e84ace6e2a'
@@ -38,4 +47,5 @@ class Settings(BaseSettings):
         env_file = '../.env'
         secrets_dir='/run/secrets'
 
+params=Parameters()
 settings= Settings()

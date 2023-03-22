@@ -1,145 +1,96 @@
+from datetime import datetime, timedelta, timezone
 from typing import List, Union
-from sqlalchemy.orm import Session
-from sqlalchemy import or_
-from fastapi import HTTPException, Query
-from app import models,dep
-from app.config import settings
 
 #from hashids import Hashids
 import ulid
+from fastapi import HTTPException, Query
+from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
-from app import schemas , storage
+from app import auth, models, schemas, storage
+from app.config import params, settings
 
 
-
-def get_user(db:Session,user_id:str):
-    user = db.query(models.User).filter(models.User.id==user_id).first()
-    if user:
-        return user
+def time_overlap(start1:datetime,end1:datetime,start2:datetime,end2:datetime)->bool:
+    #境界は含まない
+    if(start2<end1 and start1<end2): # 重なってる
+        return True
     else:
+        return False
+
+def grant_ownership(db:Session,group:schemas.Group,user_oid:str)->schemas.GroupOwner:
+    db_groupowner=models.GroupOwner(group_id=group.id,user_id=user_oid)
+    db.add(db_groupowner)
+    db.commit()
+    db.refresh(db_groupowner)
+    return db_groupowner
+
+def delete_ownership(db:Session,group_id:str,user_oid:str)->schemas.GroupOwner:
+    try:
+        db.query(models.GroupOwner).filter(models.GroupOwner.group_id==group_id, models.GroupOwner.user_id==user_oid).delete()
+        db.commit()
+        return 0
+    except:
         return None
-    
+def get_all_ownership(db:Session)->List[schemas.GroupOwner]:
+    db_gos=db.query(models.GroupOwner).all()
+    return db_gos
+def get_ownership_of_user(db:Session,user_oid:str)->List[str]:
+    db_gos:List[schemas.GroupOwner]=db.query(models.GroupOwner).filter(models.GroupOwner.user_id==user_oid).all()
+    result:List[str]=[]
+    for row in db_gos:
+        result.append(row.group_id)
+    return result
+def check_owner_of(db:Session,user:schemas.JWTUser,group_id:str):
+    try:
+        if group_id in get_ownership_of_user(db,user.sub):
+            return True
+        else:
+            return False
+    except:
+        return False
 
-def get_user_by_name(db:Session,username:str):
-    user:schemas.User = db.query(models.User).filter(models.User.username==username).first()
-    if user:
-        return user
-    else:
-        return None
-
-def get_all_users(db:Session):
-    users = db.query(models.User).all()
-    return users
-
-def create_user(db:Session,user:schemas.UserCreate):
-    hashed_password = dep.get_password_hash(user.password)
-    db_user = models.User(id=ulid.new().str,username=user.username, is_family=False,is_active=False,password_expired=False,hashed_password=hashed_password)
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
-
-def create_user_by_admin(db:Session,user:schemas.UserCreateByAdmin):
-    hashed_password = dep.get_password_hash(user.password)
-    db_user = models.User(id=ulid.new().str,username=user.username,is_student=user.is_student, is_family=user.is_family,is_active=user.is_active,password_expired=user.password_expired,hashed_password=hashed_password)
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
-
-def activate_user(db:Session,user:schemas.User):
-    db_user = db.query(models.User).filter(models.User.id==user.id).first()
-    db_user.is_active=True
-    db.commit()
-    return db_user
-
-def change_password(db:Session,user:schemas.PasswordChange):
-    db_user=db.query(models.User).filter(models.User.username==user.username).first()
-    hashed_new_password = dep.get_password_hash(user.new_password)
-    db_user.hashed_password=hashed_new_password
-    db_user.password_expired=False
-    db.commit()
-    return db_user
-
-def get_list_of_your_tickets(db:Session,user:schemas.User):
-    db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==user.id).all()
+def get_list_of_your_tickets(db:Session,user:schemas.JWTUser):
+    db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==auth.user_object_id(user)).all()
     return db_tickets
 
 def create_group(db:Session,group:schemas.GroupCreate):
-    db_group = models.Group(id=group.id,groupname=group.groupname,title=group.title,description=group.description,page_content=group.page_content,enable_vote=group.enable_vote,twitter_url=group.twitter_url,instagram_url=group.instagram_url,stream_url=group.stream_url)
+    db_group = models.Group(**group.dict())
     db.add(db_group)
     db.commit()
     db.refresh(db_group)
     return db_group
-def get_all_groups(db:Session,thumbnail:Union[bool,None]=Query(default=False),cover:Union[bool,None]=Query(default=False)):
-    db_groups = db.query(models.Group).all()
+def get_all_groups_public(db:Session)->List[schemas.Group]:
+    db_groups:List[schemas.Group] = db.query(models.Group).all()
     for db_group in db_groups:
-        db_group.like_num=get_number_of_like(db,db_group.id)
-        if thumbnail==True:
-            db_group.thumbnail_image=storage.download_file_as_base64(db_group.thumbnail_image_url)
-        if cover==True:
-            db_group.cover_image=storage.download_file_as_base64(db_group.cover_image_url)
+        db_grouptags = db.query(models.GroupTag).filter(models.GroupTag.group_id==db_group.id).all()
+        tags:List[schemas.Tag]=[]
+        for db_grouptag in db_grouptags:
+            tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
+        db_group.tags=tags
     return db_groups
-def get_group(db:Session,id:str,thumbnail:Union[bool,None]=Query(default=False),cover:Union[bool,None]=Query(default=False)):
-    group = db.query(models.Group).filter(models.Group.id==id).first()
+def get_group_public(db:Session,id:str)->schemas.Group:
+    group:schemas.Group = db.query(models.Group).filter(models.Group.id==id).first()
     if group:
-        if thumbnail==True:
-            group.thumbnail_image=storage.download_file_as_base64(group.thumbnail_image_url)
-        if cover==True:
-            group.cover_image=storage.download_file_as_base64(group.cover_image_url)
+        db_grouptags = db.query(models.GroupTag).filter(models.GroupTag.group_id==group.id).all()
+        tags:List[schemas.Tag]=[]
+        for db_grouptag in db_grouptags:
+            tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
+        group.tags=tags
         return group
     else:
         return None
-def get_number_of_like(db:Session,group_id:str) ->int:
-    num = db.query(models.Like).filter(models.Like.group_id==group_id).count()
-    return num
-def check_liked(db:Session,group:str,user:schemas.User) ->bool:
-    db_like = db.query(models.Like).filter(models.Like.group_id==group.id,models.Like.user_id==user.id).first()
-    if db_like:
-        return True
-    return False
-def create_like(db:Session,group:schemas.Group,user:schemas.User):
-    db_like=models.Like(group_id=group.id,user_id=user.id)
-    db.add(db_like)
-    db.commit()
-    return db_like
-def delete_like(db:Session,group:schemas.Group,user:schemas.User):
-    db_like = db.query(models.Like).filter(models.Like.group_id==group.id,models.Like.user_id==user.id).delete()
-    db.commit()
-    return 0
 
-def update_title(db:Session,group:schemas.Group,title:Union[str,None]):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.title=title
+def update_group(db:Session,group:schemas.Group,updated_group:schemas.GroupUpdate):
+    db_group:models.Group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.update_dict(updated_group.dict())
     db.commit()
     db.refresh(db_group)
     return db_group
-def update_description(db:Session,group:schemas.Group,description:Union[str,None]):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.description=description
-    db.commit()
-    db.refresh(db_group)
-    return db_group
-def update_twitter_url(db:Session,group:schemas.Group,twitter_url:Union[str,None]):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.twitter_url=twitter_url
-    db.commit()
-    db.refresh(db_group)
-    return db_group
-def update_instagram_url(db:Session,group:schemas.Group,instagram_url:Union[str,None]):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.instagram_url=instagram_url
-    db.commit()
-    db.refresh(db_group)
-    return db_group
-def update_stream_url(db:Session,group:schemas.Group,stream_url:Union[str,None]):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.stream_url=stream_url
-    db.commit()
-    db.refresh(db_group)
-    return db_group
+
 def add_tag(db:Session,group_id:str,tag_id:schemas.GroupTagCreate):
-    group = get_group(db,group_id)
+    group = get_group_public(db,group_id)
     tag = get_tag(db,tag_id.tag_id)
     if not group:
         return None
@@ -154,7 +105,7 @@ def add_tag(db:Session,group_id:str,tag_id:schemas.GroupTagCreate):
         raise HTTPException(200,"Already Registed")
     return db_grouptag
 def get_tags_of_group(db:Session,group:schemas.Group):
-    group = get_group(db,group.id)
+    group = get_group_public(db,group.id)
     if not group:
         return None
     db_grouptags = db.query(models.GroupTag).filter(models.GroupTag.group_id==group.id).all()
@@ -162,17 +113,6 @@ def get_tags_of_group(db:Session,group:schemas.Group):
     for db_grouptag in db_grouptags:
         tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
     return tags
-
-def update_thumbnail_image_url(db:Session,group:schemas.Group,image_url:str):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.thumbnail_image_url = image_url
-    db.commit()
-    return db_group
-def update_cover_image_url(db:Session,group:schemas.Group,image_url:str):
-    db_group = db.query(models.Group).filter(models.Group.id==group.id).first()
-    db_group.cover_image_url = image_url
-    db.commit()
-    return db_group
 
 def delete_grouptag(db:Session,group:schemas.Group,tag:schemas.Tag):
     db.query(models.GroupTag).filter(models.GroupTag.group_id==group.id,models.GroupTag.tag_id==tag.id).delete()
@@ -182,60 +122,54 @@ def delete_group(db:Session,group:schemas.Group):
     db.query(models.Group).filter(models.Group.id==group.id).delete()
     db.commit()
 
-
-def search_groups(db:Session,q:str):
-    return db.query(models.Group).filter(or_(models.Group.groupname.contains(q),models.Group.title.contains(q),models.Group.description.contains(q))).all()
-
-
-# Timetable
-def create_timetable(db:Session,timetable:schemas.TimetableCreate):
-    if not (timetable.sell_at<timetable.sell_ends and timetable.sell_ends<=timetable.starts_at and timetable.starts_at<timetable.ends_at):
-        return None
-    db_timetable = models.Timetable(id=ulid.new().str,timetablename=timetable.timetablename,sell_at=timetable.sell_at,sell_ends=timetable.sell_ends,starts_at=timetable.starts_at,ends_at=timetable.ends_at)
-    db.add(db_timetable)
-    db.commit()
-    db.refresh(db_timetable)
-    return db_timetable
-def get_all_timetable(db:Session):
-    return db.query(models.Timetable).all()
-def get_timetable(db:Session,timetable_id:str):
-    timetable:schemas.Timetable =  db.query(models.Timetable).filter(models.Timetable.id==timetable_id).first()
-    return timetable
-    
-
 # Event
 def create_event(db:Session,group_id:str,event:schemas.EventCreate):
-    group = get_group(db,group_id) 
-    if not group:
-        return None
-    if not get_timetable(db,event.timetable_id):
-        return None
-    # TODO Timetableに書き換え
-    db_event = models.Event(id=ulid.new().str,timetable_id=event.timetable_id,ticket_stock=event.ticket_stock,lottery=event.lottery,group_id=group_id)
+    add_event:schemas.EventDBInput=event
+    add_event.starts_at=event.starts_at.isoformat()
+    add_event.ends_at=event.ends_at.isoformat()
+    add_event.sell_starts=event.sell_starts.isoformat()
+    add_event.sell_ends=event.sell_ends.isoformat()
+    db_event = models.Event(id=ulid.new().str,group_id=group_id,**add_event.dict())
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
     return db_event
-
 def get_all_events(db:Session,group_id:str):
-    db_events = db.query(models.Event).filter(models.Event.group_id==group_id).all()
-    return db_events
-def get_event(db:Session,group_id:str,event_id:str):
-    db_event:schemas.Event = db.query(models.Event).filter(models.Event.group_id==group_id,models.Event.id==event_id).first()
-    if db_event:
-        return db_event
+    db_events:List[schemas.EventDBOutput] = db.query(models.Event).filter(models.Event.group_id==group_id).all()
+    events:List[schemas.Event]=[]
+    for e in db_events:
+        event=schemas.Event(
+            id=e.id,
+            group_id=e.group_id,
+            eventname=e.eventname,
+            lottery=e.lottery,
+            target=e.target,
+            ticket_stock=e.ticket_stock,
+            starts_at=datetime.fromisoformat(e.starts_at),
+            ends_at=datetime.fromisoformat(e.ends_at),
+            sell_starts=datetime.fromisoformat(e.sell_starts),
+            sell_ends=datetime.fromisoformat(e.sell_ends),
+        )
+        events.append(event)
+    return events
+def get_event(db:Session,event_id:str):
+    e:schemas.EventDBOutput = db.query(models.Event).filter(models.Event.id==event_id).first()
+    if e:
+        event=schemas.Event(
+            id=e.id,
+            group_id=e.group_id,
+            eventname=e.eventname,
+            lottery=e.lottery,
+            target=e.target,
+            ticket_stock=e.ticket_stock,
+            starts_at=datetime.fromisoformat(e.starts_at),
+            ends_at=datetime.fromisoformat(e.ends_at),
+            sell_starts=datetime.fromisoformat(e.sell_starts),
+            sell_ends=datetime.fromisoformat(e.sell_ends),
+        )
+        return event
     else:
         return None
-def check_same_event(db:Session,group_id,timetable_id):
-    db_event = db.query(models.Event).filter(models.Event.group_id==group_id,models.Event.timetable_id==timetable_id).first()
-    if db_event:
-        return True
-    else:
-        return False
-def get_events_by_timetable(db:Session,timetable:schemas.Timetable):
-    db_events:List[schemas.Event] = db.query(models.Event).filter(models.Event.timetable_id==timetable.id).all()
-    return db_events
-
 def delete_events(db:Session,event:schemas.Event):
     db.query(models.Event).filter(models.Event.id==event.id).delete()
     db.commit()
@@ -248,19 +182,26 @@ def count_tickets_for_event(db:Session,event:schemas.Event):
         db_tickets_count += ticket.person
     return db_tickets_count
 
-def check_double_ticket(db:Session,event:schemas.Event,user:schemas.User):
-    db_already_taken:int = 0
+def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser):
     ### このユーザーが同じ時間帯で他の公演のチケットを取っていないか(この公演の2枚目も含む)
-    timetable = get_timetable(db,event.timetable_id)
-    same_timetable_events = get_events_by_timetable(db,timetable)
-    for same_timetable_event in same_timetable_events:
-        db_already_taken += db.query(models.Ticket).filter(models.Ticket.event_id==same_timetable_event.id,models.Ticket.owner_id==user.id).count()
-    if db_already_taken>0:
+    ### 整理券の上限に達していないか(各公演の開始時刻で判定されます)
+    taken_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==auth.user_object_id(user)).all()
+    tickets_num_per_day:int=0
+    for taken_ticket in taken_tickets:
+        te=get_event(db,taken_ticket.event_id)
+        if(time_overlap(te.starts_at,te.ends_at,event.starts_at,event.ends_at)):
+            return False
+        if(params.max_tickets_per_day!=0 and event.starts_at.date()==te.starts_at.date()):
+            tickets_num_per_day+=1
+    
+    if(params.max_tickets!=0 and len(taken_tickets)>params.max_tickets):
         return False
-    else:
-        return True
-def create_ticket(db:Session,event:schemas.Event,user:schemas.User,person:int):
-    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=user.id,person=person,is_used=False)
+    if(params.max_tickets_per_day!=0 and tickets_num_per_day+1>params.max_tickets_per_day):
+        return False
+    
+    return True
+def create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int):
+    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=auth.user_object_id(user),person=person,is_used=False,created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
@@ -303,88 +244,24 @@ def delete_tag(db:Session,id:str):
     return 0
 
 
+# Vote
+def create_vote(db:Session,group_id:str,user:schemas.JWTUser):
+    try:
+        db_vote=models.Vote(group_id=group_id,user_id=auth.user_object_id(user))
+        db.add(db_vote)
+        db.commit()
+        db.refresh(db_vote)
+        return db_vote
+    except IntegrityError as e:
+        raise HTTPException(400,"投票は1人1回までです")
+
+def get_user_vote(db:Session,user:schemas.JWTUser):
+    db_vote:schemas.Vote=db.query(models.Vote).filter(models.Vote.user_id==auth.user_object_id(user)).first()
+    return db_vote
+def get_group_votes(db:Session,group:schemas.Group):
+    db_votes:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id==group.id).all()
+    return db_votes
 
 
-### 権限関係(Admin以外は要調整)
 
-def grant_admin(db:Session,user:schemas.User):
-    db_admin = models.Admin(user_id=user.id)
-    db.add(db_admin)
-    db.commit()
-    db.refresh(db_admin)
-    return "Grant Admin Successfully"
 
-def grant_entry(db:Session,user:schemas.User):
-    db_entry = models.Entry(user_id=user.id)
-    db.add(db_entry)
-    db.commit()
-    db.refresh(db_entry)
-    return "Grant Entry Successfully"
-
-def grant_owner_of(db:Session,group:schemas.Group,user:schemas.User):
-    db_owner = models.Authority(user_id=user.id,group_id=group.id,role=schemas.AuthorityRole.Owner)
-    db.add(db_owner)
-    db.commit()
-    db.refresh(db_owner)
-    return "Grant Owner Successfully"
-
-def grant_authorizer_of(db:Session,group:schemas.Group,user:schemas.User):
-    db_authorizer = models.Authority(user_id=user.id,group_id=group.id,role=schemas.AuthorityRole.Authorizer)
-    db.add(db_authorizer)
-    db.commit()
-    db.refresh(db_authorizer)
-    return "Grant Authorizer Successfully"
-
-def check_admin(db:Session,user:schemas.User):
-    if not db.query(models.Admin).filter(models.Admin.user_id==user.id).first():
-        return False
-    return True
-
-def check_entry(db:Session,user:schemas.User):
-    if not db.query(models.Entry).filter(models.Entry.user_id==user.id).first():
-        return False
-    return True
-
-def check_owner_of(db:Session,group:schemas.Group,user:schemas.User):
-    if not db.query(models.Authority).filter(models.Authority.user_id==user.id,models.Authority.group_id==group.id,models.Authority.role==schemas.AuthorityRole.Owner).first():
-        return False
-    return True
-
-def check_owner(db:Session,user:schemas.User):
-    if not db.query(models.Authority).filter(models.Authority.user_id==user.id,models.Authority.role==schemas.AuthorityRole.Owner).first():
-        return False
-    return True
-
-def get_owner_list(db:Session,user:schemas.User):
-    db_result = db.query(models.Authority).filter(models.Authority.user_id==user.id,models.Authority.role==schemas.AuthorityRole.Owner)
-    owner_list = []
-    for row in db_result:
-        owner_list.append(row.group_id)
-    return owner_list
-
-def check_authorizer_of(db:Session,group:schemas.Group,user:schemas.User):
-    if not db.query(models.Authority).filter(models.Authority.user_id==user.id,models.Authority.group_id==group.id,models.Authority.role==schemas.AuthorityRole.Authorizer).first():
-        return False
-    return True
-
-def check_authorizer(db:Session,user:schemas.User):
-    if not db.query(models.Authority).filter(models.Authority.user_id==user.id,models.Authority.role==schemas.AuthorityRole.Authorizer).first():
-        return False
-    return True
-
-def get_authorizer_list(db:Session,user:schemas.User):
-    db_result = db.query(models.Authority).filter(models.Authority.user_id==user.id,models.Authority.role==schemas.AuthorityRole.Authorizer)
-    authorizer_list = []
-    for row in db_result:
-        authorizer_list.append(row.group_id)
-    return authorizer_list
-
-def log(db:Session,log:schemas.Log):
-    db_log = models.Log(timestamp=log.timestamp,user=log.user,object=log.object,operation=log.operation,result=log.result,detail=log.detail)
-    db.add(db_log)
-    db.commit()
-    return db_log
-
-def read_all_logs(db:Session):
-    db_logs = db.query(models.Log).all()
-    return db_logs
