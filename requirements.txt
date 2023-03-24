@@ -21,4 +21,4 @@ python-multipart
 boto3
 pillow
 bcrypt
-PyJWT
+PyJWT[crypt]
