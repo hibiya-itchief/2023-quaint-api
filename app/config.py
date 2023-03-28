@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     mysql_password:str=os.getenv('MYSQL_PASSWORD')
     db_host:str=os.getenv('DB_HOST')
 
-    jwt_privatekey:str=os.getenv('QUAINT_JWT_PRIVATEKEY')
+    jwt_privatekey:str=os.getenv('JWT_PRIVATEKEY')
     jwt_publickey:str="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0i+BMxUUgG6slPW/9oHP\nUrYpoLX08NNTsFpEwAkpBHxzbauFc2SmFaFnmkkco8lfCQs66sj6fwtTtSc4RH+Z\nncFRaxV5M+AS7utyGhS9iNAg6u5DaGAxbMm1NAqUkuNLGS+pVx+p75b681inCBBu\nVxpPF0eCNMsUfMPDBKKKS6ABuIpl4Ep3BDXLCSfciBFixDA6poIDy7tryfcpglyw\nuq84ROrOBLU3kTaTM4zl8x2VRkGGdU88+7WhpVgB7s7uSJmzmWtojvDGp+1tylqp\nB4geNVB8rjqkZQjr9Y0oI2sJuIAYzDaBWwQsVUMmp2JO64kR8P1P7i99graUaGOd\nJwIDAQAB\n-----END PUBLIC KEY-----"
 
     #Oracle Object Storage
@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
     b2c_msgraph_tenant:str='450b2222-dcb5-471d-9657-bb4ee50acd97'
     b2c_msgraph_client:str='06b8cb1b-b866-43bf-9bc6-2898c6a149f3'
-    b2c_msgraph_secret:str=os.getenv('QUAINT_MSGRAPH_SECRET')
+    b2c_msgraph_secret:str=os.getenv('B2C_MSGRAPH_SECRET')
 
     ## Azure AD groups UUID
     azure_ad_groups_quaint_admin='5c091517-25de-44bc-9e42-ffcb8539435c'
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     production_flag:int=os.getenv("PRODUCTION_FLAG",0)
 
     class Config:
-        env_file = '../.env'
+        env_file = 'app/.env', 'app/.env.docker'
         secrets_dir='/run/secrets'
 
 params=Parameters()

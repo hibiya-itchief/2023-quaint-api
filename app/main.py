@@ -62,8 +62,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-msgraph=MsGraph()
-
 @app.get("/")
 def read_root():
     return {
@@ -86,6 +84,7 @@ def get_list_of_your_tickets(user:schemas.JWTUser = Depends(auth.get_current_use
     tags=["users"],
     description="### 必要な権限\nEntry\n### ログインが必要か\nはい\n")
 def activate_user(user_sub:str,permission:schemas.JWTUser=Depends(auth.entry),db:Session=Depends(db.get_db)):
+    msgraph=MsGraph()
     result=msgraph.change_jobTitle(user_sub,jobTitle="Visited")
     if result.status_code==204:
         return {"OK":True}
