@@ -1,16 +1,13 @@
 from typing import Generator
+
 import pytest
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session,sessionmaker
-from sqlalchemy_utils import database_exists, create_database
-
-
 from app.config import settings
-from app.database import Base
+from app.db import Base
 from app.main import app
-
-from app.test.utils.overrides import TestingSessionLocal,engine
+from app.test.utils.overrides import TestingSessionLocal, engine
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy_utils import create_database, database_exists
 
 DATABASE_URI = "mysql://"+ settings.mysql_user +":"+ settings.mysql_password +"@"+ settings.db_host +"/quaint-app"
 

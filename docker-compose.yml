@@ -1,40 +1,26 @@
-version: '3'
+version: "3"
 
 services:
   db:
     image: mysql:8
-    container_name: mysql
+    container_name: quaint-api-mysql
     restart: always
     env_file:
-      - .env.docker
+      - ./app/.env.docker
     volumes:
-        - db-data:/var/lib/mysql
-        - ./db/conf:/etc/mysql/conf.d
-        - ./db/initdb:/docker-entrypoint-initdb.d # test用dbが必要な場合
-
-  migration:
-    dns: 8.8.8.8
-    build:
-      context: .
-      dockerfile: Dockerfile-migration
-    depends_on:
-      - db
-    command: bash /migration/wait-for-it.sh db:3306 -t 60 -- alembic upgrade head
+      - quaint-api-db:/var/lib/mysql
+      - ./db/conf:/etc/mysql/conf.d
+      - ./db/initdb:/docker-entrypoint-initdb.d # test用dbが必要な場合
 
   app:
-    dns: 8.8.8.8
-    build:
-      context: .
-      dockerfile: Dockerfile-app
+    image: python:3.8
+    depends_on:
+      - db
     volumes:
-      - ./app:/app/app
+      # Update this to wherever you want VS Code to mount the folder of your project
+      - .:/workspace:cached
     ports:
       - "8000:8000"
-    depends_on:
-      - migration
-    environment:
-    - CHOKIDAR_USEPOLLING=true
-    command: bash /app/wait-for-it.sh db:3306 -t 60 -- uvicorn app.main:app --host 0.0.0.0 --reload
-
+    command: /bin/bash /workspace/docker_startup.sh
 volumes:
-  db-data:
+  quaint-api-db:

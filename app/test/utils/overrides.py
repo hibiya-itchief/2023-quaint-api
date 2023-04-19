@@ -1,11 +1,10 @@
 import os
 
+from app.config import settings
+from app.db import get_db
+from app.main import app
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from app.config import settings
-from app.main import app
-from app.dep import get_db
 
 TEST_DATABASE_URI = "mysql://"+ settings.mysql_user +":"+ settings.mysql_password +"@"+ settings.db_host +"/quaint-app-test"
 
