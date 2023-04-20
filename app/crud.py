@@ -207,7 +207,7 @@ def create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int
     db.refresh(db_ticket)
     return db_ticket
 def spectest_ticket(db:Session,user:schemas.JWTUser):
-    db_ticket = models.Ticket(id=ulid.new().str,group_id="spectest0426",event_id="fakeevent",owner_id=auth.user_object_id(user),person=1,is_used=False,created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
+    db_ticket = models.Ticket(id=ulid.new().str,group_id="spectest0426",event_id="01GYEW7B98AXT2HMQNA9STK657",owner_id=auth.user_object_id(user),person=1,is_used=False,created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
