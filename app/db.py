@@ -9,7 +9,7 @@ from app.config import settings
 #SQLALCHEMY_DATABASE_URL = "sqlite:///../db/quaint-api-app.db"
 #SQLALCHEMY_DATABASE_URL = "mysql://quaint:password@localhost/quaint-app"
 
-DATABASE_URI = "mysql://"+ settings.mysql_user +":"+ settings.mysql_password +"@"+ settings.db_host +"/quaint-app?charset=utf8mb4"
+DATABASE_URI = "mysql://"+ settings.mysql_user +":"+ settings.mysql_password +"@"+ settings.db_host +"/"+settings.mysql_database+"?charset=utf8mb4"
 engine = create_engine(DATABASE_URI,pool_size=3000,max_overflow=100,pool_timeout=3)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -22,8 +22,9 @@ def get_db():
     except HTTPException as e:
         raise e
     except SQLAlchemyError as e:
+        print(e)
         raise HTTPException(503,detail='データベースが混み合っています')
     except Exception as e:
-        raise HTTPException(500,"サーバーで不明なエラーが発生しました。:"+str(e))
+        raise e
     finally:
         db.close()

@@ -1,6 +1,8 @@
-from pydantic import BaseSettings
-import os
 import datetime
+import os
+
+from pydantic import BaseSettings
+
 
 class Parameters(BaseSettings):
     person_per_user:int=3 # 1つのユーザーで同時入場できる人数
@@ -11,6 +13,7 @@ class Settings(BaseSettings):
     mysql_user:str=os.getenv('MYSQL_USER')
     mysql_password:str=os.getenv('MYSQL_PASSWORD')
     db_host:str=os.getenv('DB_HOST')
+    mysql_database:str=os.getenv('MYSQL_DATABASE')
 
     jwt_privatekey:str=os.getenv('JWT_PRIVATEKEY')
     jwt_publickey:str="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0i+BMxUUgG6slPW/9oHP\nUrYpoLX08NNTsFpEwAkpBHxzbauFc2SmFaFnmkkco8lfCQs66sj6fwtTtSc4RH+Z\nncFRaxV5M+AS7utyGhS9iNAg6u5DaGAxbMm1NAqUkuNLGS+pVx+p75b681inCBBu\nVxpPF0eCNMsUfMPDBKKKS6ABuIpl4Ep3BDXLCSfciBFixDA6poIDy7tryfcpglyw\nuq84ROrOBLU3kTaTM4zl8x2VRkGGdU88+7WhpVgB7s7uSJmzmWtojvDGp+1tylqp\nB4geNVB8rjqkZQjr9Y0oI2sJuIAYzDaBWwQsVUMmp2JO64kR8P1P7i99graUaGOd\nJwIDAQAB\n-----END PUBLIC KEY-----"
@@ -44,7 +47,7 @@ class Settings(BaseSettings):
     production_flag:int=os.getenv("PRODUCTION_FLAG",0)
 
     class Config:
-        env_file = 'app/.env', 'app/.env.docker'
+        env_file = 'app/.env'
         secrets_dir='/run/secrets'
 
 params=Parameters()
