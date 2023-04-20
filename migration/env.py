@@ -15,6 +15,7 @@ config = context.config
 config.set_section_option("alembic", "DB_USER", settings.mysql_user)
 config.set_section_option("alembic", "DB_PASSWORD", settings.mysql_password)
 config.set_section_option("alembic", "DB_HOST", settings.db_host)
+config.set_section_option("alembic", "DB_NAME", settings.mysql_database)
 
 connectable = engine_from_config(
     config.get_section(config.config_ini_section),
