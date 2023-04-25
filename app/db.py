@@ -23,7 +23,7 @@ def get_db():
         raise e
     except SQLAlchemyError as e:
         print(e)
-        raise HTTPException(503,detail='データベースが混み合っています')
+        raise HTTPException(503,detail='データベースが混み合っています：  '+e)
     except Exception as e:
         raise e
     finally:
