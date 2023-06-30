@@ -6,7 +6,7 @@ services:
     container_name: quaint-api-mysql
     restart: always
     env_file:
-      - ./app/.env.docker
+      - ./app/.env
     volumes:
       - quaint-api-db:/var/lib/mysql
       - ./db/conf:/etc/mysql/conf.d
@@ -17,7 +17,6 @@ services:
     depends_on:
       - db
     volumes:
-      # Update this to wherever you want VS Code to mount the folder of your project
       - .:/workspace:cached
     ports:
       - "8000:8000"
