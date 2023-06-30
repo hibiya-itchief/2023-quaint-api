@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  app:
+    image: python:3.8
+    depends_on:
+      - db
+    volumes:
+      - .:/workspace:cached
+    ports:
+      - "8000:8000"
+    command: /bin/bash /workspace/docker_startup.sh
