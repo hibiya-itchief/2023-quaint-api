@@ -1,0 +1,31 @@
+name: mainブランチの内容をもとに本番環境APIをデプロイ
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  ssh:
+    runs-on: ubuntu-latest
+    environment:
+      name: "本番環境API"
+      url: https://api.seiryofes.com/docs
+    steps:
+      - name: 🔑Loading ssh private key...
+        run: |
+          mkdir -p .ssh && chmod 700 .ssh
+          echo "$SSH_KEY" > .ssh/id_rsa && chmod 600 .ssh/id_rsa
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATEKEY }}
+      - name: 🚀Deploy!!
+        run: |
+          ssh -t -t -o "StrictHostKeyChecking=no" -i .ssh/id_rsa $HOST "
+            cd /home/ekke/hibiya-itchief/quaint-api-prod
+            git checkout main
+            git pull
+            docker-compose down
+            docker-compose up -d --build
+          "
+        env:
+          HOST: ${{ secrets.SSH_HOST }}

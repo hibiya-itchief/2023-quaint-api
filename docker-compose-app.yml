@@ -5,6 +5,7 @@ services:
     image: python:3.8
     depends_on:
       - db
+    restart: always
     volumes:
       - .:/workspace:cached
     ports:

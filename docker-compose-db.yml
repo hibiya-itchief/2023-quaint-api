@@ -13,17 +13,6 @@ services:
       - quaint-api-db:/var/lib/mysql
       - ./db/conf:/etc/mysql/conf.d
       - ./db/initdb:/docker-entrypoint-initdb.d # test用dbが必要な場合
-
-  app:
-    image: python:3.8
-    depends_on:
-      - db
-    restart: always
-    volumes:
-      - .:/workspace:cached
-    ports:
-      - "8000:8000"
-    command: /bin/bash /workspace/docker_startup.sh
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
     restart: always

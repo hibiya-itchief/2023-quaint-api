@@ -7,8 +7,6 @@ services:
     restart: always
     env_file:
       - ./app/.env
-    ports:
-      - "3306:3306"
     volumes:
       - quaint-api-db:/var/lib/mysql
       - ./db/conf:/etc/mysql/conf.d
@@ -22,14 +20,15 @@ services:
     volumes:
       - .:/workspace:cached
     ports:
-      - "8000:8000"
+      - "8010:8000"
     command: /bin/bash /workspace/docker_startup.sh
+
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
     restart: always
     environment:
       PMA_HOST: "db"
     ports:
-      - "8080:80"
+      - "8090:80"
 volumes:
-  quaint-api-db:
+  quaint-api-db-dev:
