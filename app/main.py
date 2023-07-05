@@ -334,15 +334,6 @@ def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.ad
 
 ### Ticket CRUD
 @app.post(
-    "/spectest/tickets",
-    response_model=schemas.Ticket,
-    summary="整理券取得の負荷テスト",)
-def spectest_ticket(user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    if not auth.check_school(user):
-        raise HTTPException(HTTP_403_FORBIDDEN)
-    return crud.spectest_ticket(db,user)
-
-@app.post(
     "/groups/{group_id}/events/{event_id}/tickets",
     response_model=schemas.Ticket,
     summary="整理券取得",
