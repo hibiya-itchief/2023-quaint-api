@@ -14,7 +14,7 @@ services:
       - ./db/conf:/etc/mysql/conf.d
       - ./db/initdb:/docker-entrypoint-initdb.d # test用dbが必要な場合
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
+    image: phpmyadmin
     restart: always
     environment:
       PMA_HOST: "db"

@@ -25,7 +25,7 @@ services:
       - "8000:8000"
     command: /bin/bash /workspace/docker_startup.sh
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
+    image: phpmyadmin
     restart: always
     environment:
       PMA_HOST: "db"

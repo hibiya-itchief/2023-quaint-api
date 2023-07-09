@@ -3,7 +3,7 @@ version: "3"
 services:
   db:
     image: mysql:8
-    container_name: quaint-api-mysql
+    container_name: quaint-api-mysql-dev
     restart: always
     env_file:
       - ./app/.env
@@ -24,7 +24,7 @@ services:
     command: /bin/bash /workspace/docker_startup.sh
 
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
+    image: phpmyadmin
     restart: always
     environment:
       PMA_HOST: "db"
