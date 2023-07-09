@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: "検証環境API"
-      url: https://dev.api.seiryofes.com/docs
+      url: https://api-dev.seiryofes.com/docs
     steps:
       - name: 🔑Loading ssh private key...
         run: |
@@ -25,7 +25,7 @@ jobs:
             git checkout develop
             git pull
             docker-compose down
-            docker-compose up -d --build
+            docker-compose -f docker-compose-dev.yml up -d --build
           "
         env:
           HOST: ${{ secrets.SSH_HOST }}
