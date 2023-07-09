@@ -21,7 +21,7 @@ jobs:
       - name: 🚀Deploy!!
         run: |
           ssh -t -t -o "StrictHostKeyChecking=no" -i .ssh/id_rsa $HOST "
-            cd /home/ekke/hibiya-itchief/quaint-api-dev
+            cd $QUAINT_REPO_PATH
             git checkout develop
             git pull
             docker-compose down
@@ -29,3 +29,4 @@ jobs:
           "
         env:
           HOST: ${{ secrets.SSH_HOST }}
+          QUAINT_REPO_PATH: ${{ secrets.QUAINT_REPO_PATH }}
