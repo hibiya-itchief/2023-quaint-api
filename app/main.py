@@ -97,7 +97,7 @@ def activate_user(user_sub:str,permission:schemas.JWTUser=Depends(auth.entry),db
     tags=["users"],
     description="### 必要な権限\nowner\n### ログインが必要か\nはい\n")
 def check_ownership_of_user(user:schemas.JWTUser=Depends(auth.owner),db:Session=Depends(db.get_db)):
-    return crud.get_ownership_of_user(db,user.sub)
+    return crud.get_ownership_of_user(db,user.oid)
 @app.get(
     "/users/{user_oid}/owner_of",
     response_model=List[str],
@@ -108,7 +108,7 @@ def check_ownership_of_user(user_oid:str,permission:schemas.JWTUser=Depends(auth
     return crud.get_ownership_of_user(db,user_oid)
 @app.get(
     "/users/owner_of",
-    response_model=List[str],
+    response_model=List[schemas.GroupOwner],
     summary="団体代表者のユーザーと団体の紐づけを全て確認する",
     tags=["users"],
     description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
@@ -132,7 +132,7 @@ def grant_ownership(user_oid:str,group_id:str,permission=Depends(auth.admin),db:
     description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
 def delete_ownership(user_oid:str,group_id:str,permission=Depends(auth.admin),db:Session=Depends(db.get_db)):
     result=crud.delete_ownership(db,group_id,user_oid)
-    if not result:
+    if result is None:
         raise HTTPException(404,"グループまたはユーザーが見つかりません")
     return {"OK":True}
 

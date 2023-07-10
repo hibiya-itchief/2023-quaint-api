@@ -26,7 +26,7 @@ def grant_ownership(db:Session,group:schemas.Group,user_oid:str)->schemas.GroupO
     db.refresh(db_groupowner)
     return db_groupowner
 
-def delete_ownership(db:Session,group_id:str,user_oid:str)->schemas.GroupOwner:
+def delete_ownership(db:Session,group_id:str,user_oid:str)->Union(int,None):
     try:
         db.query(models.GroupOwner).filter(models.GroupOwner.group_id==group_id, models.GroupOwner.user_id==user_oid).delete()
         db.commit()

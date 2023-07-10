@@ -117,6 +117,8 @@ class Vote(VoteBase):
 class GroupOwner(BaseModel):
     group_id:str#userdefined id
     user_id:str# sub in jwt (UUID)
+    class Config:
+        orm_mode=True
 
 
 Event.update_forward_refs()
