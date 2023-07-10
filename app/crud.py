@@ -26,13 +26,10 @@ def grant_ownership(db:Session,group:schemas.Group,user_oid:str)->schemas.GroupO
     db.refresh(db_groupowner)
     return db_groupowner
 
-def delete_ownership(db:Session,group_id:str,user_oid:str)->Union(int,None):
-    try:
-        db.query(models.GroupOwner).filter(models.GroupOwner.group_id==group_id, models.GroupOwner.user_id==user_oid).delete()
-        db.commit()
-        return 0
-    except:
-        return None
+def delete_ownership(db:Session,group_id:str,user_oid:str)->int:
+    db.query(models.GroupOwner).filter(models.GroupOwner.group_id==group_id, models.GroupOwner.user_id==user_oid).delete()
+    db.commit()
+    return 0
 def get_all_ownership(db:Session)->List[schemas.GroupOwner]:
     db_gos=db.query(models.GroupOwner).all()
     return db_gos
