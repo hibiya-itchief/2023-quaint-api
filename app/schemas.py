@@ -56,7 +56,7 @@ class GroupUpdate(BaseModel):
     twitter_url:Union[str,None]=Query(default=None,regex="https?://twitter\.com/[0-9a-zA-Z_]{1,15}/?")
     instagram_url:Union[str,None]=Query(default=None,regex="https?://instagram\.com/[0-9a-zA-Z_.]{1,30}/?")
     stream_url:Union[str,None]=Query(default=None,regex="https?://web\.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?")
-    public_thumbnail_image_url:Union[str,None]=Query(default=None,max_length=20)
+    public_thumbnail_image_url:Union[str,None]=Query(default=None,max_length=200)
     public_page_content_url:Union[str,None] = Query(default=None,max_length=200)
     private_page_content_url:Union[str,None] = Query(default=None,max_length=200)
 class GroupBase(GroupUpdate):#userdefined idをURLにする。groupnameは表示名
