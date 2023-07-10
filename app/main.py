@@ -184,6 +184,8 @@ def update_group(group_id:str,updated_group:schemas.GroupUpdate,user:schemas.JWT
     group=crud.get_group_public(db,group_id)
     if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
         raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
+    if not updated_group.public_thumbnail_image_url and group.public_thumbnail_image_url: # サムネイル画像を削除する場合
+        storage.delete_image_public(group.public_thumbnail_image_url)
     u=crud.update_group(db,group,updated_group)
     return u
 
