@@ -181,12 +181,35 @@ def get_group_private():
     description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい",
     responses={"404":{"description":"指定されたGroupまたはTagが見つかりません"}})
 def update_group(group_id:str,updated_group:schemas.GroupUpdate,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    print(updated_group)
     group=crud.get_group_public(db,group_id)
     if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
         raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
     u=crud.update_group(db,group,updated_group)
     return u
+
+@app.put(
+    "/groups/{group_id}/public_thumbnail_image",
+    response_model=schemas.Group,
+    summary="指定されたGroupのサムネイル画像をアップロード",
+    tags=["groups"],
+    description="### 必要な権限\nAdmin,当該GroupのOwner\n### ログインが必要か\nはい",
+    responses={"404":{"description":"指定されたGroupが見つかりません"},
+        "401":{"description":"Adminまたは当該GroupのOwnerの権限が必要です"}})
+def upload_thumbnail_image(group_id:str,file:Union[bytes,None] = File(default=None),user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    group=crud.get_group_public(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
+    if group.public_thumbnail_image_url: #既にサムネイル画像がある場合は削除
+            storage.delete_image_public(group.public_thumbnail_image_url)
+    if file:
+        image_url = storage.upload_to_oos_public(file)
+        updated_group=schemas.GroupUpdate(thumbnail_image_url=image_url)
+        return crud.update_group(db,group,updated_group)
+    else:
+        updated_group=schemas.GroupUpdate(thumbnail_image_url=None)
+        return crud.update_group(db,group,updated_group)
 
 @app.put(
     "/groups/{group_id}/tags",

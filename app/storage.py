@@ -45,6 +45,25 @@ def upload_to_oos(binary:bytes) ->str:
     fileurl = "images/"+filename
     return fileurl
 
+def upload_to_oos_public(binary:bytes) ->str:
+    try:
+        image_type = imghdr.what(None,h=binary)
+        if not(image_type=="png" or image_type=="jpeg"):
+            raise HTTPException(415,"Invalid File Type:png or jpeg")
+        
+        im=Image.open(BytesIO(binary))
+        if image_type=="png":
+            im = im.convert('RGB')
+        im_io=BytesIO()
+        im.save(im_io, 'JPEG', quality = COMPRESS_QUALITY)
+        
+        filename=ulid.new().str+".jpg"
+        s3_client.put_object(Bucket='quaint-public',Key='images/'+filename,Body=im_io.getvalue())
+    except:
+        raise HTTPException(500,"Internal Server Error")
+    fileurl = "https://objectstorage.ap-tokyo-1.oraclecloud.com/n/nryxxlkqcfe6/b/quaint-public/o/" + "images/"+filename
+    return fileurl
+
 def download_file_as_base64(key:str) ->str:
     try:
         response = s3_resource.Object("quaint", key).get()
@@ -56,5 +75,12 @@ def download_file_as_base64(key:str) ->str:
 def delete_image(image_url:str) ->None:
     try:
         s3_client.delete_object(Bucket='quaint', Key=image_url)
+    except:
+        raise HTTPException(500,"Internal Server Error")
+
+def delete_image_public(image_url:str) ->None:
+    try:
+        file_key=image_url.split("/")[-1]
+        s3_client.delete_object(Bucket='quaint-public', Key="images/"+file_key)
     except:
         raise HTTPException(500,"Internal Server Error")
