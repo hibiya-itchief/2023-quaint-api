@@ -205,11 +205,9 @@ def upload_thumbnail_image(group_id:str,file:Union[bytes,None] = File(default=No
             storage.delete_image_public(group.public_thumbnail_image_url)
     if file:
         image_url = storage.upload_to_oos_public(file)
-        group.public_thumbnail_image_url=image_url
-        return crud.update_group(db,group,group)
+        return crud.change_public_thumbnail_image_url(db,group,image_url)
     else:
-        group.public_thumbnail_image_url=None
-        return crud.update_group(db,group,group)
+        return crud.change_public_thumbnail_image_url(db,group,None)
 
 @app.put(
     "/groups/{group_id}/tags",

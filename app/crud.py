@@ -86,6 +86,13 @@ def update_group(db:Session,group:schemas.Group,updated_group:schemas.GroupUpdat
     db.refresh(db_group)
     return db_group
 
+def change_public_thumbnail_image_url(db:Session,group:schemas.Group,public_thumbnail_image_url:Union(str,None))->schemas.Group:
+    db_group:models.Group = db.query(models.Group).filter(models.Group.id==group.id).first()
+    db_group.public_thumbnail_image_url=public_thumbnail_image_url
+    db.commit()
+    db.refresh(db_group)
+    return db_group
+
 def add_tag(db:Session,group_id:str,tag_id:schemas.GroupTagCreate):
     group = get_group_public(db,group_id)
     tag = get_tag(db,tag_id.tag_id)
