@@ -46,6 +46,9 @@ class Settings(BaseSettings):
 
     production_flag:int=os.getenv("PRODUCTION_FLAG",0)
 
+    ## Cloudflare deploy hook url
+    cloudflare_deploy_hook_url:str=os.getenv("CLOUDFLARE_DEPLOY_HOOK_URL","")
+
     class Config:
         env_file = 'app/.env'
         secrets_dir='/run/secrets'
