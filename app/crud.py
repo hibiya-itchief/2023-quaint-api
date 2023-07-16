@@ -180,10 +180,7 @@ def delete_events(db:Session,event:schemas.Event):
 
 ## Ticket CRUD
 def count_tickets_for_event(db:Session,event:schemas.Event):
-    db_tickets:List[schemas.Ticket]=db.query(models.Ticket).filter(models.Ticket.event_id==event.id).all()
-    db_tickets_count:int = 0
-    for ticket in db_tickets:
-        db_tickets_count += ticket.person
+    db_tickets_count:int=db.query(models.Ticket).filter(models.Ticket.event_id==event.id).count()
     return db_tickets_count
 
 def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser):
