@@ -117,6 +117,7 @@ class Vote(VoteBase):
 class GroupOwner(BaseModel):
     group_id:str#userdefined id
     user_id:str# sub in jwt (UUID)
+    note:Union[str,None]
     class Config:
         orm_mode=True
 

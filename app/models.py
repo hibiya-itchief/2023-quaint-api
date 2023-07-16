@@ -72,6 +72,7 @@ class GroupOwner(Base):
     __tablename__ = "groupowners"
     group_id=Column(VARCHAR(255), ForeignKey("groups.id"),primary_key=True)
     user_id=Column(VARCHAR(255),primary_key=True) # sub in jwt (UUID)
+    note=Column(VARCHAR(255)) # note for management use
     UniqueConstraint('group_id', 'user_id', name="unique_idx_groupid_userid")
 
 class Ticket(Base):
