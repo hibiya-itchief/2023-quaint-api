@@ -19,8 +19,8 @@ def time_overlap(start1:datetime,end1:datetime,start2:datetime,end2:datetime)->b
     else:
         return False
 
-def grant_ownership(db:Session,group:schemas.Group,user_oid:str)->schemas.GroupOwner:
-    db_groupowner=models.GroupOwner(group_id=group.id,user_id=user_oid)
+def grant_ownership(db:Session,group:schemas.Group,user_oid:str,note:Union[str,None])->schemas.GroupOwner:
+    db_groupowner=models.GroupOwner(group_id=group.id,user_id=user_oid,note=note)
     db.add(db_groupowner)
     db.commit()
     db.refresh(db_groupowner)

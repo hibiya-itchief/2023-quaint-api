@@ -120,11 +120,11 @@ def check_all_ownership(permission:schemas.JWTUser=Depends(auth.admin),db:Sessio
     summary="団体代表者のユーザーとGroupを紐づける",
     tags=["users"],
     description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
-def grant_ownership(user_oid:str,group_id:str,permission=Depends(auth.admin),db:Session=Depends(db.get_db)):
+def grant_ownership(user_oid:str,group_id:str,note:Union[str,None],permission=Depends(auth.admin),db:Session=Depends(db.get_db)):
     group=crud.get_group_public(db,group_id)
     if not group:
         raise HTTPException(404,"グループが見つかりません")
-    return crud.grant_ownership(db,group,user_oid)
+    return crud.grant_ownership(db,group,user_oid,note)
 @app.delete(
     "/users/{user_oid}/owner_of",
     summary="団体代表者のユーザーとGroupの紐づけを削除",
