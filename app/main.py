@@ -372,14 +372,15 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depe
         raise HTTPException(HTTP_403_FORBIDDEN,str(event.target)+"ユーザーのみが整理券を取得できます。校内への入場処理が済んでいるか確認してください。")
     
     if event.sell_starts<datetime.now(timezone(timedelta(hours=+9))) and datetime.now(timezone(timedelta(hours=+9)))<event.sell_ends:
-        if crud.count_tickets_for_event(db,event)+person<=event.ticket_stock and crud.check_qualified_for_ticket(db,event,user):##まだチケットが余っていて、同時間帯の公演の整理券取得ではない
+        qualified:bool=crud.check_qualified_for_ticket(db,event,user)
+        if crud.count_tickets_for_event(db,event)+person<=event.ticket_stock and qualified:##まだチケットが余っていて、同時間帯の公演の整理券取得ではない
             if auth.check_school(user)==False and 0<person<4:#一般アカウント(家族アカウント含む)は1アカウントにつき3人まで入れる
                 return crud.create_ticket(db,event,user,person)
             elif auth.check_school(user) and person==1:
                 return crud.create_ticket(db,event,user,person)
             else:
                 raise HTTPException(400,"同時入場人数は3人まで(本校生徒は1人)までです")
-        elif not crud.check_qualified_for_ticket(db,event,user):
+        elif not qualified:
             raise HTTPException(404,"既にこの公演・この公演と重複する時間帯の公演の整理券を取得している場合、新たに取得はできません。または取得できる整理券の枚数の上限を超えています")
         else:
             raise HTTPException(404,"この公演の整理券は売り切れています")
