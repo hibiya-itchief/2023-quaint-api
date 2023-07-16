@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta, timezone
-from typing import List, Union
+from typing import Dict, List, Union
 
 #from hashids import Hashids
 import ulid
 from fastapi import HTTPException, Query
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, join
 
 from app import auth, models, schemas, storage
 from app.config import params, settings
@@ -58,22 +58,39 @@ def create_group(db:Session,group:schemas.GroupCreate):
     db.commit()
     db.refresh(db_group)
     return db_group
+
 def get_all_groups_public(db:Session)->List[schemas.Group]:
-    db_groups:List[schemas.Group] = db.query(models.Group).all()
-    for db_group in db_groups:
-        db_grouptags = db.query(models.GroupTag).filter(models.GroupTag.group_id==db_group.id).all()
+    query = db.query(models.Group , models.Tag) \
+            .select_from(models.Group)\
+            .outerjoin(models.GroupTag , models.GroupTag.group_id==models.Group.id) \
+            .outerjoin(models.Tag , models.Tag.id==models.GroupTag.tag_id).all()
+    tags_of_each_group:Dict[str,List[schemas.Tag]]=dict()
+    groups_set=set()
+    for q in query:
+        group:schemas.Group=q.Group
+        groups_set.add(group)
+        if tags_of_each_group.get(group.id) is None:
+            tags_of_each_group[group.id]=[]
+        if q.Tag:
+            tags_of_each_group[group.id].append(q.Tag)
+    groups=[]
+    for g in groups_set:
+        g.tags=tags_of_each_group[g.id]
+        groups.append(g)
+    # ここループ2回回すの改善したい 2重ループじゃないからまあ耐えなのか
+    return groups
+
+def get_group_public(db:Session,id:str)->Union[schemas.Group,None]:
+    query = db.query(models.Group , models.Tag) \
+            .select_from(models.Group).filter(models.Group.id==id) \
+            .outerjoin(models.GroupTag , models.GroupTag.group_id==models.Group.id)\
+            .outerjoin(models.Tag , models.Tag.id==models.GroupTag.tag_id).all()
+    if query:
+        group:schemas.Group=query[0].Group
         tags:List[schemas.Tag]=[]
-        for db_grouptag in db_grouptags:
-            tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
-        db_group.tags=tags
-    return db_groups
-def get_group_public(db:Session,id:str)->schemas.Group:
-    group:schemas.Group = db.query(models.Group).filter(models.Group.id==id).first()
-    if group:
-        db_grouptags = db.query(models.GroupTag).filter(models.GroupTag.group_id==group.id).all()
-        tags:List[schemas.Tag]=[]
-        for db_grouptag in db_grouptags:
-            tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
+        for q in query:
+            if q.Tag is not None:
+                tags.append(q.Tag)
         group.tags=tags
         return group
     else:
