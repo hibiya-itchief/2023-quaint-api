@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Union
 from xml.dom.minidom import Entity
 
+import requests
 from fastapi import (Body, Depends, FastAPI, File, HTTPException, Query,
                      UploadFile, status)
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,6 +48,10 @@ tags_metadata = [
         "name": "tags",
         "description": "Tag : Groupにひもづけられるタグ"
     },
+    {
+        "name": "admin",
+        "description": "管理者用API"
+    }
 
 ]
 
@@ -494,3 +499,15 @@ def delete_tag(tag_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Sess
 
 
 #@app.put("/admin/user")
+
+@app.post(
+    "/admin/update_frontend",
+    summary="フロントエンドの更新",
+    tags=["admin"],
+    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n quaint-appのmainブランチの内容をもとにビルドしてCloudflareにデプロイ")
+def update_frontend(permission:schemas.JWTUser=Depends(auth.admin)):
+    res = requests.post(settings.cloudflare_deploy_hook_url)
+    if res.status_code==200:
+        return "OK"
+    else:
+        HTTPException(res.status_code,"Cloudflareへのデプロイに失敗しました")
