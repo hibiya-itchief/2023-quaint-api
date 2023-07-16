@@ -4,7 +4,7 @@ from typing import List, Union
 #from hashids import Hashids
 import ulid
 from fastapi import HTTPException, Query
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -186,20 +186,35 @@ def count_tickets_for_event(db:Session,event:schemas.Event):
 def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser):
     ### このユーザーが同じ時間帯で他の公演のチケットを取っていないか(この公演の2枚目も含む)
     ### 整理券の上限に達していないか(各公演の開始時刻で判定されます)
-    taken_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==auth.user_object_id(user)).all()
+    taken_events:List[schemas.EventDBOutput] = db.query(models.Event) \
+        .join(models.Ticket, \
+        and_( models.Event.id==models.Ticket.event_id, \
+            models.Ticket.owner_id==auth.user_object_id(user) )) \
+        .all()
     tickets_num_per_day:int=0
-    for taken_ticket in taken_tickets:
-        te=get_event(db,taken_ticket.event_id)
+    for taken_event in taken_events:
+        e=taken_event
+        te=schemas.Event(
+            id=e.id,
+            group_id=e.group_id,
+            eventname=e.eventname,
+            lottery=e.lottery,
+            target=e.target,
+            ticket_stock=e.ticket_stock,
+            starts_at=datetime.fromisoformat(e.starts_at),
+            ends_at=datetime.fromisoformat(e.ends_at),
+            sell_starts=datetime.fromisoformat(e.sell_starts),
+            sell_ends=datetime.fromisoformat(e.sell_ends),
+        )
         if(time_overlap(te.starts_at,te.ends_at,event.starts_at,event.ends_at)):
             return False
-        if(params.max_tickets_per_day!=0 and event.starts_at.date()==te.starts_at.date()):
+        if(params.max_tickets_per_day!=0 and event.starts_at.date()==te.starts_at.date()): # 1人1日何枚まで の制限がある かつ 二つのEventの日付部分が等しいなら
             tickets_num_per_day+=1
     
-    if(params.max_tickets!=0 and len(taken_tickets)>params.max_tickets):
+    if(params.max_tickets!=0 and len(taken_events)>params.max_tickets): # 1人何枚まで の制限がある かつ それをオーバーしている
         return False
-    if(params.max_tickets_per_day!=0 and tickets_num_per_day+1>params.max_tickets_per_day):
+    if(params.max_tickets_per_day!=0 and tickets_num_per_day+1>params.max_tickets_per_day): # 1人1日何枚までの制限がある かつ それをオーバーしている
         return False
-    
     return True
 def create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int):
     db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=auth.user_object_id(user),person=person,is_used=False,created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
