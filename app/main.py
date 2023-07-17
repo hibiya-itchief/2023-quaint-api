@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Union
 from xml.dom.minidom import Entity
 
+import requests
 from fastapi import (Body, Depends, FastAPI, File, HTTPException, Query,
                      UploadFile, status)
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +15,7 @@ from starlette.status import (HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN,
 
 from app import auth, crud, db, models, schemas, storage
 from app.config import settings
+from app.ga import ga_screenpageview
 from app.msgraph import MsGraph
 
 #models.Base.metadata.create_all(bind=engine)
@@ -47,6 +49,14 @@ tags_metadata = [
         "name": "tags",
         "description": "Tag : Groupにひもづけられるタグ"
     },
+    {
+        "name": "admin",
+        "description": "管理者用API"
+    },
+    {
+        "name": "ga",
+        "description": "Google Analytics"
+    }
 
 ]
 
@@ -363,7 +373,7 @@ def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.ad
     tags=["tickets"],
     description="### 必要な権限\nアクティブ(校内に来場済み)なユーザーであること\n### ログインが必要か\nはい\n### 説明\n整理券取得できる条件\n- ユーザーが校内に来場ずみ\n- 現在時刻が取りたい整理券の配布時間内\n- 当該公演の整理券在庫が余っている\n- ユーザーは既にこの整理券を取得していない\n- ユーザーは既に当該公演と同じ時間帯の公演の整理券を取得していない\n- 同時入場人数は生徒用アカウントは1名まで、それ以外は3名まで",
     responses={"404":{"description":"- 指定されたGroupまたはEventが見つかりません\n- 既にこの公演・この公演と同じ時間帯の公演の整理券を取得している場合、新たに取得はできません\n- この公演の整理券は売り切れています\n- 現在整理券の配布時間外です"},
-        "400":{"description":"- 同時入場人数は3人まで(本校生徒は1人)までです\n- 校内への来場処理をしたユーザーのみが整理券を取得できます"}})
+        "400":{"description":"- 同時入場人数は3人まで(***Azure ADのアカウントは1人という制約は無くしました***)です\n- 校内への来場処理をしたユーザーのみが整理券を取得できます"}})
 def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     event = crud.get_event(db,event_id)
     if not event:
@@ -372,14 +382,13 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depe
         raise HTTPException(HTTP_403_FORBIDDEN,str(event.target)+"ユーザーのみが整理券を取得できます。校内への入場処理が済んでいるか確認してください。")
     
     if event.sell_starts<datetime.now(timezone(timedelta(hours=+9))) and datetime.now(timezone(timedelta(hours=+9)))<event.sell_ends:
-        if crud.count_tickets_for_event(db,event)+person<=event.ticket_stock and crud.check_qualified_for_ticket(db,event,user):##まだチケットが余っていて、同時間帯の公演の整理券取得ではない
-            if auth.check_school(user)==False and 0<person<4:#一般アカウント(家族アカウント含む)は1アカウントにつき3人まで入れる
-                return crud.create_ticket(db,event,user,person)
-            elif auth.check_school(user) and person==1:
+        qualified:bool=crud.check_qualified_for_ticket(db,event,user)
+        if crud.count_tickets_for_event(db,event)+person<=event.ticket_stock and qualified:##まだチケットが余っていて、同時間帯の公演の整理券取得ではない
+            if 0<person<4: # 1アカウントにつき3人まで入れる
                 return crud.create_ticket(db,event,user,person)
             else:
-                raise HTTPException(400,"同時入場人数は3人まで(本校生徒は1人)までです")
-        elif not crud.check_qualified_for_ticket(db,event,user):
+                raise HTTPException(400,"同時入場人数は3人までです")
+        elif not qualified:
             raise HTTPException(404,"既にこの公演・この公演と重複する時間帯の公演の整理券を取得している場合、新たに取得はできません。または取得できる整理券の枚数の上限を超えています")
         else:
             raise HTTPException(404,"この公演の整理券は売り切れています")
@@ -492,5 +501,26 @@ def delete_tag(tag_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Sess
     return "Successfully Deleted"
     
 
+@app.get(
+    "/ga/screenpageview",
+    response_model=schemas.GAScreenPageViewResponse,
+    summary="Google Analyticsのビュー数を取得",
+    tags=["ga"],
+    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n### 説明\nGoogle Analyticsのビュー数を取得します \n start_dateとend_dateの形式：YYYY-MM-DD, NdaysAgo, yesterday, or today \n page_path は/から始まる相対パス(/はurlで送れないのでURL Encodeする) \n Redisで1分毎にキャッシュしています")
+def get_ga_screenpageview(start_date:str,end_date:str,page_path:str):
+    return {"start_date":start_date,"end_date":end_date,"page_path":page_path,"view":ga_screenpageview(start_date,page_path,end_date)}
+
 
 #@app.put("/admin/user")
+
+@app.post(
+    "/admin/update_frontend",
+    summary="フロントエンドの更新",
+    tags=["admin"],
+    description="### 必要な権限\nAdmin\n### ログインが必要か\nはい\n quaint-appのmainブランチの内容をもとにビルドしてCloudflareにデプロイ")
+def update_frontend(permission:schemas.JWTUser=Depends(auth.admin)):
+    res = requests.post(settings.cloudflare_deploy_hook_url)
+    if res.status_code==200:
+        return "OK"
+    else:
+        HTTPException(res.status_code,"Cloudflareへのデプロイに失敗しました")

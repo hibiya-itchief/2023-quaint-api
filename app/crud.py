@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta, timezone
-from typing import List, Union
+from typing import Dict, List, Union
 
 #from hashids import Hashids
 import ulid
 from fastapi import HTTPException, Query
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, join
 
 from app import auth, models, schemas, storage
 from app.config import params, settings
@@ -41,7 +41,7 @@ def get_ownership_of_user(db:Session,user_oid:str)->List[str]:
     return result
 def check_owner_of(db:Session,user:schemas.JWTUser,group_id:str):
     try:
-        if group_id in get_ownership_of_user(db,user.sub):
+        if group_id in get_ownership_of_user(db,auth.user_object_id(user)):
             return True
         else:
             return False
@@ -58,22 +58,39 @@ def create_group(db:Session,group:schemas.GroupCreate):
     db.commit()
     db.refresh(db_group)
     return db_group
+
 def get_all_groups_public(db:Session)->List[schemas.Group]:
-    db_groups:List[schemas.Group] = db.query(models.Group).all()
-    for db_group in db_groups:
-        db_grouptags = db.query(models.GroupTag).filter(models.GroupTag.group_id==db_group.id).all()
+    query = db.query(models.Group , models.Tag) \
+            .select_from(models.Group)\
+            .outerjoin(models.GroupTag , models.GroupTag.group_id==models.Group.id) \
+            .outerjoin(models.Tag , models.Tag.id==models.GroupTag.tag_id).all()
+    tags_of_each_group:Dict[str,List[schemas.Tag]]=dict()
+    groups_set=set()
+    for q in query:
+        group:schemas.Group=q.Group
+        groups_set.add(group)
+        if tags_of_each_group.get(group.id) is None:
+            tags_of_each_group[group.id]=[]
+        if q.Tag:
+            tags_of_each_group[group.id].append(q.Tag)
+    groups=[]
+    for g in groups_set:
+        g.tags=tags_of_each_group[g.id]
+        groups.append(g)
+    # ここループ2回回すの改善したい 2重ループじゃないからまあ耐えなのか
+    return groups
+
+def get_group_public(db:Session,id:str)->Union[schemas.Group,None]:
+    query = db.query(models.Group , models.Tag) \
+            .select_from(models.Group).filter(models.Group.id==id) \
+            .outerjoin(models.GroupTag , models.GroupTag.group_id==models.Group.id)\
+            .outerjoin(models.Tag , models.Tag.id==models.GroupTag.tag_id).all()
+    if query:
+        group:schemas.Group=query[0].Group
         tags:List[schemas.Tag]=[]
-        for db_grouptag in db_grouptags:
-            tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
-        db_group.tags=tags
-    return db_groups
-def get_group_public(db:Session,id:str)->schemas.Group:
-    group:schemas.Group = db.query(models.Group).filter(models.Group.id==id).first()
-    if group:
-        db_grouptags = db.query(models.GroupTag).filter(models.GroupTag.group_id==group.id).all()
-        tags:List[schemas.Tag]=[]
-        for db_grouptag in db_grouptags:
-            tags.append(db.query(models.Tag).filter(models.Tag.id==db_grouptag.tag_id).first())
+        for q in query:
+            if q.Tag is not None:
+                tags.append(q.Tag)
         group.tags=tags
         return group
     else:
@@ -180,29 +197,41 @@ def delete_events(db:Session,event:schemas.Event):
 
 ## Ticket CRUD
 def count_tickets_for_event(db:Session,event:schemas.Event):
-    db_tickets:List[schemas.Ticket]=db.query(models.Ticket).filter(models.Ticket.event_id==event.id).all()
-    db_tickets_count:int = 0
-    for ticket in db_tickets:
-        db_tickets_count += ticket.person
+    db_tickets_count:int=db.query(models.Ticket).filter(models.Ticket.event_id==event.id).count()
     return db_tickets_count
 
 def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser):
     ### このユーザーが同じ時間帯で他の公演のチケットを取っていないか(この公演の2枚目も含む)
     ### 整理券の上限に達していないか(各公演の開始時刻で判定されます)
-    taken_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==auth.user_object_id(user)).all()
+    taken_events:List[schemas.EventDBOutput] = db.query(models.Event) \
+        .join(models.Ticket, \
+        and_( models.Event.id==models.Ticket.event_id, \
+            models.Ticket.owner_id==auth.user_object_id(user) )) \
+        .all()
     tickets_num_per_day:int=0
-    for taken_ticket in taken_tickets:
-        te=get_event(db,taken_ticket.event_id)
+    for taken_event in taken_events:
+        e=taken_event
+        te=schemas.Event(
+            id=e.id,
+            group_id=e.group_id,
+            eventname=e.eventname,
+            lottery=e.lottery,
+            target=e.target,
+            ticket_stock=e.ticket_stock,
+            starts_at=datetime.fromisoformat(e.starts_at),
+            ends_at=datetime.fromisoformat(e.ends_at),
+            sell_starts=datetime.fromisoformat(e.sell_starts),
+            sell_ends=datetime.fromisoformat(e.sell_ends),
+        )
         if(time_overlap(te.starts_at,te.ends_at,event.starts_at,event.ends_at)):
             return False
-        if(params.max_tickets_per_day!=0 and event.starts_at.date()==te.starts_at.date()):
+        if(params.max_tickets_per_day!=0 and event.starts_at.date()==te.starts_at.date()): # 1人1日何枚まで の制限がある かつ 二つのEventの日付部分が等しいなら
             tickets_num_per_day+=1
     
-    if(params.max_tickets!=0 and len(taken_tickets)>params.max_tickets):
+    if(params.max_tickets!=0 and len(taken_events)>params.max_tickets): # 1人何枚まで の制限がある かつ それをオーバーしている
         return False
-    if(params.max_tickets_per_day!=0 and tickets_num_per_day+1>params.max_tickets_per_day):
+    if(params.max_tickets_per_day!=0 and tickets_num_per_day+1>params.max_tickets_per_day): # 1人1日何枚までの制限がある かつ それをオーバーしている
         return False
-    
     return True
 def create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int):
     db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=auth.user_object_id(user),person=person,is_used=False,created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
