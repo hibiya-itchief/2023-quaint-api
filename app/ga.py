@@ -26,7 +26,9 @@ def ga_api_request_screenpageview(start_date:str,page_path:str,end_date:str):
             )
     )
     response = client.run_report(request)
-    screenpageview:int = response.rows[0].metric_values[0].value
+    screenpageview:int=0
+    if len(response.rows) != 0 and len(response.rows[0].metric_values) != 0:
+        screenpageview = int(response.rows[0].metric_values[0].value)
     return screenpageview
 def ga_screenpageview(start_date:str,page_path:str,end_date:str):
     try:
