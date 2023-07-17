@@ -121,6 +121,12 @@ class GroupOwner(BaseModel):
     class Config:
         orm_mode=True
 
+class GAScreenPageViewResponse(BaseModel):
+    start_date:str
+    end_date:str
+    page_path:str
+    view:int
+
 
 Event.update_forward_refs()
 Group.update_forward_refs()

@@ -11,3 +11,8 @@ services:
     ports:
       - "8000:8000"
     command: /bin/bash /workspace/docker_startup.sh
+
+  redis:
+    image: "redis:latest"
+    volumes:
+      - "./redis.conf:/etc/redis.conf"

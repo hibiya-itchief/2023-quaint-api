@@ -3,3 +3,4 @@ __pycache__/
 db/data
 .pytest_cache
 data/*
+app/ga-credential.json
