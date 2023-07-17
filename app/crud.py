@@ -41,7 +41,7 @@ def get_ownership_of_user(db:Session,user_oid:str)->List[str]:
     return result
 def check_owner_of(db:Session,user:schemas.JWTUser,group_id:str):
     try:
-        if group_id in get_ownership_of_user(db,user.sub):
+        if group_id in get_ownership_of_user(db,auth.user_object_id(user)):
             return True
         else:
             return False
