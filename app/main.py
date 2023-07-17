@@ -15,6 +15,7 @@ from starlette.status import (HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN,
 
 from app import auth, crud, db, models, schemas, storage
 from app.config import settings
+from app.ga import ga_screenpageview
 from app.msgraph import MsGraph
 
 #models.Base.metadata.create_all(bind=engine)
@@ -51,6 +52,10 @@ tags_metadata = [
     {
         "name": "admin",
         "description": "管理者用API"
+    },
+    {
+        "name": "ga",
+        "description": "Google Analytics"
     }
 
 ]
@@ -496,6 +501,15 @@ def delete_tag(tag_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Sess
         raise HTTPException(404,"指定されたTagが見つかりません")
     return "Successfully Deleted"
     
+
+@app.get(
+    "/ga/screenpageview",
+    response_model=schemas.GAScreenPageViewResponse,
+    summary="Google Analyticsのビュー数を取得",
+    tags=["ga"],
+    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n### 説明\nGoogle Analyticsのビュー数を取得します \n start_dateとend_dateの形式：YYYY-MM-DD, NdaysAgo, yesterday, or today \n page_path は/から始まる相対パス(/はurlで送れないのでURL Encodeする) \n Redisで1分毎にキャッシュしています")
+def get_ga_screenpageview(start_date:str,end_date:str,page_path:str):
+    return {"start_date":start_date,"end_date":end_date,"page_path":page_path,"view":ga_screenpageview(start_date,page_path,end_date)}
 
 
 #@app.put("/admin/user")
