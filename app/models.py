@@ -9,6 +9,23 @@ from sqlalchemy.sql.functions import current_timestamp
 from app.db import Base
 
 
+class ReadAuthority(Base):
+    __tablename__ = "readauthority"
+
+    id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
+    name = Column(VARCHAR(255),nullable=False)
+    idp = Column(VARCHAR(255),nullable=False)
+    b2c_visited = Column(Boolean)
+    ad_group = Column(VARCHAR(255))
+    __table_args__ = (UniqueConstraint("idp", "b2c_visited","ad_group", name="unique_idpx_b2c_visited_ad_group"),)
+
+class EventReadAuthority(Base):
+    __tablename__ = "eventreadauthority"
+    id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
+    event_id = Column(VARCHAR(255), ForeignKey("events.id"),nullable=False)
+    readauthority_id = Column(VARCHAR(255), ForeignKey("readauthority.id"),nullable=False)
+    __table_args__ = (UniqueConstraint("event_id", "readauthority_id", name="unique_idx_eventid_readauthorityid"),)
+
 class Event(Base):
     __tablename__ = "events"
 
@@ -24,7 +41,6 @@ class Event(Base):
 
     lottery = Column(Boolean)
 
-    target = Column(VARCHAR(255),nullable=False)
     ticket_stock = Column(Integer,nullable=False)#0でチケット機能を使わない 
 
 class GroupTag(Base):

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Union
+from typing import Dict, List, Set, Union
 
 #from hashids import Hashids
 import ulid
@@ -52,6 +52,19 @@ def get_list_of_your_tickets(db:Session,user:schemas.JWTUser):
     db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==auth.user_object_id(user)).all()
     return db_tickets
 
+def create_readauthority(db:Session,readauthority:schemas.ReadAuthorityCreate):
+    db_readauthority = models.ReadAuthority(id=ulid.new(),**readauthority.dict())
+    db.add(db_readauthority)
+    db.commit()
+    db.refresh(db_readauthority)
+    return db_readauthority
+def get_readauthority(db:Session,id:str)->schemas.ReadAuthority:
+    db_readauthority = db.query(models.ReadAuthority).filter(models.ReadAuthority.id==id).first()
+    return db_readauthority
+def get_all_readauthority(db:Session)->List[schemas.ReadAuthority]:
+    db_readauthoritys = db.query(models.ReadAuthority).all()
+    return db_readauthoritys
+
 def create_group(db:Session,group:schemas.GroupCreate):
     db_group = models.Group(**group.dict())
     db.add(db_group)
@@ -65,7 +78,7 @@ def get_all_groups_public(db:Session)->List[schemas.Group]:
             .outerjoin(models.GroupTag , models.GroupTag.group_id==models.Group.id) \
             .outerjoin(models.Tag , models.Tag.id==models.GroupTag.tag_id).all()
     tags_of_each_group:Dict[str,List[schemas.Tag]]=dict()
-    groups_set=set()
+    groups_set:Set[schemas.Group]=set()
     for q in query:
         group:schemas.Group=q.Group
         groups_set.add(group)
@@ -156,41 +169,71 @@ def create_event(db:Session,group_id:str,event:schemas.EventCreate):
     db.refresh(db_event)
     return db_event
 def get_all_events(db:Session,group_id:str):
-    db_events:List[schemas.EventDBOutput] = db.query(models.Event).filter(models.Event.group_id==group_id).all()
-    events:List[schemas.Event]=[]
-    for e in db_events:
+    query = db.query(models.Event,models.ReadAuthority) \
+            .select_from(models.Event).filter(models.Event.group_id==group_id) \
+            .outerjoin(models.EventReadAuthority , models.EventReadAuthority.event_id==models.Event.id) \
+            .outerjoin(models.ReadAuthority , models.ReadAuthority.id==models.EventReadAuthority.readauthority_id).all()
+    readauthorities_of_each_event:Dict[str,List[schemas.ReadAuthority]]=dict()
+    events_set:Set[schemas.Event]=set()
+    for q in query:
         event=schemas.Event(
-            id=e.id,
-            group_id=e.group_id,
-            eventname=e.eventname,
-            lottery=e.lottery,
-            target=e.target,
-            ticket_stock=e.ticket_stock,
-            starts_at=datetime.fromisoformat(e.starts_at),
-            ends_at=datetime.fromisoformat(e.ends_at),
-            sell_starts=datetime.fromisoformat(e.sell_starts),
-            sell_ends=datetime.fromisoformat(e.sell_ends),
+            id=q.Event.id,
+            group_id=q.Event.group_id,
+            eventname=q.Event.eventname,
+            lottery=q.Event.lottery,
+            target=q.Event.target,
+            ticket_stock=q.Event.ticket_stock,
+            starts_at=datetime.fromisoformat(q.Event.starts_at),
+            ends_at=datetime.fromisoformat(q.Event.ends_at),
+            sell_starts=datetime.fromisoformat(q.Event.sell_starts),
+            sell_ends=datetime.fromisoformat(q.Event.sell_ends),
         )
+        events_set.add(event)
+        if readauthorities_of_each_event.get(event.id) is None:
+            readauthorities_of_each_event[event.id]=[]
+        if q.ReadAuthority:
+            readauthorities_of_each_event[event.id].append(q.ReadAuthority)
+    events:List[schemas.Event]=[]
+    for event in events_set:
+        event.readauthority=readauthorities_of_each_event[event.id]
         events.append(event)
     return events
 def get_event(db:Session,event_id:str):
-    e:schemas.EventDBOutput = db.query(models.Event).filter(models.Event.id==event_id).first()
-    if e:
+    query = db.query(models.Event,models.ReadAuthority) \
+            .select_from(models.Event).filter(models.Event.id==event_id) \
+            .outerjoin(models.EventReadAuthority , models.EventReadAuthority.event_id==models.Event.id) \
+            .outerjoin(models.ReadAuthority , models.ReadAuthority.id==models.EventReadAuthority.readauthority_id).all()
+    if query:
         event=schemas.Event(
-            id=e.id,
-            group_id=e.group_id,
-            eventname=e.eventname,
-            lottery=e.lottery,
-            target=e.target,
-            ticket_stock=e.ticket_stock,
-            starts_at=datetime.fromisoformat(e.starts_at),
-            ends_at=datetime.fromisoformat(e.ends_at),
-            sell_starts=datetime.fromisoformat(e.sell_starts),
-            sell_ends=datetime.fromisoformat(e.sell_ends),
+            id=query[0].Event.id,
+            group_id=query[0].Event.group_id,
+            eventname=query[0].Event.eventname,
+            lottery=query[0].Event.lottery,
+            target=query[0].Event.target,
+            ticket_stock=query[0].Event.ticket_stock,
+            starts_at=datetime.fromisoformat(query[0].Event.starts_at),
+            ends_at=datetime.fromisoformat(query[0].Event.ends_at),
+            sell_starts=datetime.fromisoformat(query[0].Event.sell_starts),
+            sell_ends=datetime.fromisoformat(query[0].Event.sell_ends),
         )
+        readauthorities:List[schemas.ReadAuthority]=[]
+        for q in query:
+            if q.ReadAuthority:
+                readauthorities.append(q.ReadAuthority)
+        event.readauthority=readauthorities
         return event
     else:
         return None
+def add_readauthority_to_event(db:Session,event:schemas.Event,readauthority:schemas.ReadAuthority):
+    db_event_readauthority = models.EventReadAuthority(event_id=event.id,readauthority_id=readauthority.id)
+    db.add(db_event_readauthority)
+    db.commit()
+    db.refresh(db_event_readauthority)
+    return db_event_readauthority
+def delete_readauthority_from_event(db:Session,event:schemas.Event,readauthority:schemas.ReadAuthority):
+    db.query(models.EventReadAuthority).filter(models.EventReadAuthority.event_id==event.id,models.EventReadAuthority.readauthority_id==readauthority.id).delete()
+    db.commit()
+    return 0
 def delete_events(db:Session,event:schemas.Event):
     db.query(models.Event).filter(models.Event.id==event.id).delete()
     db.commit()

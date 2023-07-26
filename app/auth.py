@@ -93,6 +93,15 @@ def school(user:schemas.JWTUser=Depends(get_current_user)):
     else:
         raise HTTPException(HTTP_403_FORBIDDEN,detail="本校生徒・学校関係者である必要があります")
 
+def check_b2cuser(user:schemas.JWTUser):
+    try:
+        if user.iss==B2C_CONFIG['issuer']:
+            return True
+        else:
+            return False
+    except:
+        return False
+
 def check_visited(user:schemas.JWTUser):
     try:
         if user.iss==AD_CONFIG['issuer'] or (user.jobTitle and ('Visited' in user.jobTitle or 'visited' in user.jobTitle)):

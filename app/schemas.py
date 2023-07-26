@@ -6,6 +6,19 @@ from fastapi import Query
 from pydantic import BaseModel, Field
 
 
+class ReadAuthorityBase(BaseModel):
+    name:str
+    idp:str
+    b2c_visited:Union[bool,None]
+    ad_group:Union[str,None]
+class ReadAuthorityCreate(ReadAuthorityBase):
+    pass
+class ReadAuthority(ReadAuthorityBase):
+    id:str
+    class Config:
+        orm_mode=True
+
+
 class EventTarget(str,Enum):
     guest = "guest"
     visited = "visited"
@@ -31,6 +44,7 @@ class EventDBInput(EventBase):
 class Event(EventCreate):
     id:str#ULID
     group_id:str#ULID
+    readauthority:Union[List[ReadAuthority],None]
     class Config:
         orm_mode=True
 class EventDBOutput(EventDBInput):

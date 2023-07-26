@@ -103,7 +103,7 @@ def activate_user(user_sub:str,permission:schemas.JWTUser=Depends(auth.entry),db
 @app.get(
     "/users/me/owner_of",
     response_model=List[str],
-    summary="ownerが自分が権限のある団体を確認する",
+    summary="ownerが自分が書き込み権限のある団体を確認する",
     tags=["users"],
     description="### 必要な権限\nowner\n### ログインが必要か\nはい\n")
 def check_ownership_of_user(user:schemas.JWTUser=Depends(auth.owner),db:Session=Depends(db.get_db)):
@@ -111,7 +111,7 @@ def check_ownership_of_user(user:schemas.JWTUser=Depends(auth.owner),db:Session=
 @app.get(
     "/users/{user_oid}/owner_of",
     response_model=List[str],
-    summary="ユーザーの権限のある団体を確認する",
+    summary="ユーザーの書き込み権限のある団体を確認する",
     tags=["users"],
     description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
 def check_ownership_of_user(user_oid:str,permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
@@ -146,6 +146,22 @@ def delete_ownership(user_oid:str,group_id:str,permission=Depends(auth.admin),db
         raise HTTPException(404,"グループまたはユーザーが見つかりません")
     return {"OK":True}
 
+@app.post(
+    "/readauthority",
+    response_model=schemas.ReadAuthority,
+    summary="読み取り権限の作成",
+    tags=["users"],
+    description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n")
+def create_readauthority(readauthority:schemas.ReadAuthorityCreate,permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    return crud.create_readauthority(db,readauthority)
+@app.get(
+    "/readauthority",
+    response_model=List[schemas.ReadAuthority],
+    summary="読み取り権限の確認",
+    tags=["users"],
+    description="### 必要な権限\nadmin or owner\n### ログインが必要か\nはい\n")
+def get_readauthority(permission:schemas.JWTUser=Depends(auth.owner),db:Session=Depends(db.get_db)):
+    return crud.get_all_readauthority(db)
 
 @app.post(
     "/groups",
@@ -364,6 +380,41 @@ def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.ad
         return {"OK":True}
     except:
         raise HTTPException(400,"既に整理券が取得されている公演は削除できません")
+@app.put(
+    "/groups/{group_id}/events/{event_id}",
+    response_model=schemas.Event,
+    summary="指定されたGroupの指定されたEventに取得できるユーザーの制限を付ける",
+    tags=["events"],
+    description="### 必要な権限\nadmin \n### ログインが必要か\nはい\n### 説明\n指定されたEventに取得できるユーザーの制限を付けます",
+    responses={"404":{"description":"指定されたGroupまたはEventまたはReadAuthorityが見つかりません"},
+        "403":{"description":"Adminの権限が必要です"}})
+def add_readauthority_to_event(group_id:str,event_id:str,readauthority_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    event = crud.get_event(db,event_id)
+    if not event:
+        raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
+    readauthority = crud.get_readauthority(db,readauthority_id)
+    if not readauthority:
+        raise HTTPException(404,"指定されたReadAuthorityが見つかりません")
+    crud.add_readauthority_to_event(db,event_id,readauthority)
+    return crud.get_event(db,event_id)
+
+@app.delete(
+    "/groups/{group_id}/events/{event_id}/",
+    response_model=schemas.Event,
+    summary="指定されたGroupの指定されたEventから取得できるユーザーの制限を外す",
+    tags=["events"],
+    description="### 必要な権限\nadmin \n### ログインが必要か\nはい\n### 説明\n指定されたEventから取得できるユーザーの制限を外します",
+    responses={"404":{"description":"指定されたGroupまたはEventまたはReadAuthorityが見つかりません"},
+        "403":{"description":"Adminの権限が必要です"}})
+def delete_readauthority_from_event(group_id:str,event_id:str,readauthority_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Session=Depends(db.get_db)):
+    event = crud.get_event(db,event_id)
+    if not event:
+        raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
+    readauthority = crud.get_readauthority(db,readauthority_id)
+    if not readauthority:
+        raise HTTPException(404,"指定されたReadAuthorityが見つかりません")
+    crud.delete_readauthority_from_event(db,event_id,readauthority)
+    return crud.get_event(db,event_id)
 
 ### Ticket CRUD
 @app.post(
@@ -378,8 +429,11 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depe
     event = crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
-    if not (event.target==schemas.EventTarget.guest or (event.target==schemas.EventTarget.visited and auth.check_visited(user)) or (event.target==schemas.EventTarget.school and auth.check_school(user))):
-        raise HTTPException(HTTP_403_FORBIDDEN,str(event.target)+"ユーザーのみが整理券を取得できます。校内への入場処理が済んでいるか確認してください。")
+    if len(event.readauthority)>0: # ひとつでもreadauthorityがある場合
+        pass
+        # ここでreadauthorityをチェックする
+
+
     
     if event.sell_starts<datetime.now(timezone(timedelta(hours=+9))) and datetime.now(timezone(timedelta(hours=+9)))<event.sell_ends:
         qualified:bool=crud.check_qualified_for_ticket(db,event,user)
