@@ -176,26 +176,25 @@ def get_all_events(db:Session,group_id:str):
     readauthorities_of_each_event:Dict[str,List[schemas.ReadAuthority]]=dict()
     events_set:Set[schemas.Event]=set()
     for q in query:
-        event=schemas.Event(
-            id=q.Event.id,
-            group_id=q.Event.group_id,
-            eventname=q.Event.eventname,
-            lottery=q.Event.lottery,
-            target=q.Event.target,
-            ticket_stock=q.Event.ticket_stock,
-            starts_at=datetime.fromisoformat(q.Event.starts_at),
-            ends_at=datetime.fromisoformat(q.Event.ends_at),
-            sell_starts=datetime.fromisoformat(q.Event.sell_starts),
-            sell_ends=datetime.fromisoformat(q.Event.sell_ends),
-        )
-        events_set.add(event)
-        if readauthorities_of_each_event.get(event.id) is None:
-            readauthorities_of_each_event[event.id]=[]
+        events_set.add(q.Event)
+        if readauthorities_of_each_event.get(q.Event.id) is None:
+            readauthorities_of_each_event[q.Event.id]=[]
         if q.ReadAuthority:
-            readauthorities_of_each_event[event.id].append(q.ReadAuthority)
+            readauthorities_of_each_event[q.Event.id].append(q.ReadAuthority)
     events:List[schemas.Event]=[]
-    for event in events_set:
-        event.readauthority=readauthorities_of_each_event[event.id]
+    for event_dboutput in events_set:
+        event=schemas.Event(
+            id=event_dboutput.id,
+            group_id=event_dboutput.group_id,
+            eventname=event_dboutput.eventname,
+            lottery=event_dboutput.lottery,
+            ticket_stock=event_dboutput.ticket_stock,
+            starts_at=datetime.fromisoformat(event_dboutput.starts_at),
+            ends_at=datetime.fromisoformat(event_dboutput.ends_at),
+            sell_starts=datetime.fromisoformat(event_dboutput.sell_starts),
+            sell_ends=datetime.fromisoformat(event_dboutput.sell_ends),
+        )
+        event.readauthority=readauthorities_of_each_event[event_dboutput.id]
         events.append(event)
     return events
 def get_event(db:Session,event_id:str):
@@ -209,7 +208,6 @@ def get_event(db:Session,event_id:str):
             group_id=query[0].Event.group_id,
             eventname=query[0].Event.eventname,
             lottery=query[0].Event.lottery,
-            target=query[0].Event.target,
             ticket_stock=query[0].Event.ticket_stock,
             starts_at=datetime.fromisoformat(query[0].Event.starts_at),
             ends_at=datetime.fromisoformat(query[0].Event.ends_at),
@@ -225,7 +223,7 @@ def get_event(db:Session,event_id:str):
     else:
         return None
 def add_readauthority_to_event(db:Session,event:schemas.Event,readauthority:schemas.ReadAuthority):
-    db_event_readauthority = models.EventReadAuthority(event_id=event.id,readauthority_id=readauthority.id)
+    db_event_readauthority = models.EventReadAuthority(id=ulid.new().str,event_id=event.id,readauthority_id=readauthority.id)
     db.add(db_event_readauthority)
     db.commit()
     db.refresh(db_event_readauthority)
@@ -259,7 +257,6 @@ def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUs
             group_id=e.group_id,
             eventname=e.eventname,
             lottery=e.lottery,
-            target=e.target,
             ticket_stock=e.ticket_stock,
             starts_at=datetime.fromisoformat(e.starts_at),
             ends_at=datetime.fromisoformat(e.ends_at),

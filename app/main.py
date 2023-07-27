@@ -395,7 +395,7 @@ def add_readauthority_to_event(group_id:str,event_id:str,readauthority_id:str,pe
     readauthority = crud.get_readauthority(db,readauthority_id)
     if not readauthority:
         raise HTTPException(404,"指定されたReadAuthorityが見つかりません")
-    crud.add_readauthority_to_event(db,event_id,readauthority)
+    crud.add_readauthority_to_event(db,event,readauthority)
     return crud.get_event(db,event_id)
 
 @app.delete(
@@ -430,10 +430,7 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depe
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
     if len(event.readauthority)>0: # ひとつでもreadauthorityがある場合
-        pass
-        # ここでreadauthorityをチェックする
-
-
+        raise HTTPException(HTTP_403_FORBIDDEN,"この公演は取得制限がかけられています")
     
     if event.sell_starts<datetime.now(timezone(timedelta(hours=+9))) and datetime.now(timezone(timedelta(hours=+9)))<event.sell_ends:
         qualified:bool=crud.check_qualified_for_ticket(db,event,user)

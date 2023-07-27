@@ -19,17 +19,11 @@ class ReadAuthority(ReadAuthorityBase):
         orm_mode=True
 
 
-class EventTarget(str,Enum):
-    guest = "guest"
-    visited = "visited"
-    school = "school"
-
 class EventBase(BaseModel):
     eventname:str
 
     lottery:bool=False
 
-    target:EventTarget
     ticket_stock:int
 class EventCreate(EventBase):
     starts_at:datetime
