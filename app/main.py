@@ -430,7 +430,26 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depe
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
     if len(event.readauthority)>0: # ひとつでもreadauthorityがある場合
-        raise HTTPException(HTTP_403_FORBIDDEN,"この公演は取得制限がかけられています")
+        ras_name=''
+        readauthority_flag=False
+        for ra in event.readauthority:
+            ras_name+=ra.name + ','
+            if ra.idp=='ad' and auth.check_school(user):
+                if ra.ad_group is None:
+                    readauthority_flag=True
+                    break
+                elif (ra.ad_group is not None) and (user.groups is not None) and (ra.ad_group in user.groups):
+                    readauthority_flag=True
+                    break
+            if ra.idp=='b2c' and auth.check_b2cuser(user):
+                if ra.b2c_visited is None:
+                    readauthority_flag=True
+                    break
+                elif (ra.b2c_visited is not None) and auth.check_visited(user):
+                    readauthority_flag=True
+                    break
+        if not readauthority_flag:
+            raise HTTPException(HTTP_403_FORBIDDEN,"この公演は取得制限がかけられています。"+ras_name+"の方のみ整理券を取得できます")
     
     if event.sell_starts<datetime.now(timezone(timedelta(hours=+9))) and datetime.now(timezone(timedelta(hours=+9)))<event.sell_ends:
         qualified:bool=crud.check_qualified_for_ticket(db,event,user)
