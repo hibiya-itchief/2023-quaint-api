@@ -1,3 +1,4 @@
+import json
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Union
@@ -17,6 +18,7 @@ from app import auth, crud, db, models, schemas, storage
 from app.config import settings
 from app.ga import ga_screenpageview
 from app.msgraph import MsGraph
+from app.redis_possible import redis_get_if_possible, redis_set_if_possible
 
 #models.Base.metadata.create_all(bind=engine)
 
@@ -398,18 +400,23 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depe
 @app.get(
     "/groups/{group_id}/events/{event_id}/tickets",
     response_model=schemas.TicketsNumberData,
-    summary="指定された公演の整理券の枚数情報を取得",
+    summary="指定された公演の整理券の枚数情報を取得 [Redis TTL=15s]",
     tags=["tickets"],
-    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n",
+    description='結果はRedisに "tickets-numberdata-<Event.id>" というキーでキャッシュされます(TTL=15) \n ### 必要な権限\nなし\n### ログインが必要か\nいいえ\n',
     responses={"404":{"description":"- 指定されたGroupが見つかりません\n- 指定されたEventが見つかりません"}})
 def count_tickets(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
+    cacheresult=redis_get_if_possible("tickets-numberdata-"+event_id)
+    if cacheresult:
+        return json.loads(cacheresult)
     event = crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたEventが見つかりません")
     taken_tickets:int=crud.count_tickets_for_event(db,event)
     stock:int=event.ticket_stock
     left_tickets:int=stock-taken_tickets
-    return schemas.TicketsNumberData(taken_tickets=taken_tickets,left_tickets=left_tickets,stock=stock)
+    tnd=schemas.TicketsNumberData(taken_tickets=taken_tickets,left_tickets=left_tickets,stock=stock)
+    redis_set_if_possible("tickets-numberdata-"+event.id , tnd.json() , ex=15)
+    return tnd
 
 @app.delete(
     "/groups/{group_id}/events/{event_id}/tickets/{ticket_id}",
