@@ -74,6 +74,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+REDIS_CACHE_EXPIRE=120 # (何か特別な意図があってRedisを使うわけでは無く)DB負荷軽減のためにRedisキャッシュするエンドポイントのexpire
+
 @app.get("/")
 def read_root():
     return {
@@ -163,22 +165,34 @@ def create_group(groups:List[schemas.GroupCreate],permission:schemas.JWTUser=Dep
 @app.get(
     "/groups",
     response_model=List[schemas.Group],
-    summary="全Groupの情報を取得",
+    summary="全Groupの情報を取得 [Redis TTL="+str(REDIS_CACHE_EXPIRE)+"s]",
     tags=["groups"],
-    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ")
+    description="Nuxt generate によってフロントエンドに全団体の情報は埋め込まれるため通常のユーザーがこのエンドポイントを操作することは無いが直接このエンドポイントにF5連打とかされてDB負荷増えたら嫌なので、Redis2分間キャッシュ \n ### 必要な権限\nなし\n### ログインが必要か\nいいえ")
 def get_all_groups(db:Session=Depends(db.get_db)):
-    return crud.get_all_groups_public(db)
+    cacheresult=redis_get_if_possible("groups")
+    if cacheresult:
+        return json.loads(cacheresult)
+    groups=crud.get_all_groups_public(db)
+    groups_serializable=[]
+    for g in groups:
+        groups_serializable.append(schemas.Group.from_orm(g).dict())
+    redis_set_if_possible("groups",json.dumps(groups_serializable),ex=REDIS_CACHE_EXPIRE)
+    return groups
 @app.get(
     "/groups/{group_id}",
     response_model=schemas.Group,
-    summary="指定されたGroupの情報を取得",
+    summary="指定されたGroupの情報を取得 [Redis TTL="+str(REDIS_CACHE_EXPIRE)+"s]",
     tags=["groups"],
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ",
     responses={"404":{"description":"指定されたGroupが見つかりません"}})
 def get_group(group_id:str,db:Session=Depends(db.get_db)):
+    cacheresult=redis_get_if_possible("group:"+group_id)
+    if cacheresult:
+        return json.loads(cacheresult)
     group_result = crud.get_group_public(db,group_id)
     if not group_result:
         raise HTTPException(404,"指定されたGroupが見つかりません")
+    redis_set_if_possible("group:"+group_result.id,json.dumps(schemas.Group.from_orm(group_result).dict()),ex=REDIS_CACHE_EXPIRE)
     return group_result
 
 @app.put(
@@ -327,22 +341,34 @@ def create_event(group_id:str,event:schemas.EventCreate,user:schemas.JWTUser=Dep
 @app.get(
     "/groups/{group_id}/events",
     response_model=List[schemas.Event],
-    summary="指定されたGroupの全Eventを取得",
+    summary="指定されたGroupの全Eventを取得 [Redis TTL="+str(REDIS_CACHE_EXPIRE)+"s]",
     tags=["events"],
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n")
 def get_all_events(group_id:str,db:Session=Depends(db.get_db)):
-    return crud.get_all_events(db,group_id)
+    cacheresult=redis_get_if_possible("groupevents:"+group_id)
+    if cacheresult:
+        return json.loads(cacheresult)
+    groupevents=crud.get_all_events(db,group_id)
+    groupevents_serializable=[]
+    for e in groupevents:
+        groupevents_serializable.append(schemas.EventDBOutput_fromEvent(schemas.Event.from_orm(e)).dict())
+    redis_set_if_possible("groupevents:"+group_id,json.dumps(groupevents_serializable),ex=REDIS_CACHE_EXPIRE)
+    return groupevents
 @app.get(
     "/groups/{group_id}/events/{event_id}",
     response_model=schemas.Event,
-    summary="指定されたGroupの指定されたEevntを取得",
+    summary="指定されたGroupの指定されたEevntを取得 [Redis TTL="+str(REDIS_CACHE_EXPIRE)+"s]",
     tags=["events"],
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n",
     responses={"404":{"description":"指定されたGroupまたはEventが見つかりません"}})
 def get_event(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
+    cacheresult=redis_get_if_possible("group:"+group_id+"-event:"+event_id)
+    if cacheresult:
+        return json.loads(cacheresult)
     event = crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
+    redis_set_if_possible("group:"+event.group_id+"-event:"+event.id,json.dumps(schemas.EventDBOutput_fromEvent(schemas.Event.from_orm(event)).dict()),ex=REDIS_CACHE_EXPIRE)
     return event
 @app.delete(
     "/groups/{group_id}/events/{event_id}",
@@ -507,7 +533,7 @@ def delete_tag(tag_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Sess
 @app.get(
     "/ga/screenpageview",
     response_model=schemas.GAScreenPageViewResponse,
-    summary="Google Analyticsのビュー数を取得",
+    summary="Google Analyticsのビュー数を取得 [Redis TTL=60s]",
     tags=["ga"],
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n### 説明\nGoogle Analyticsのビュー数を取得します \n start_dateとend_dateの形式：YYYY-MM-DD, NdaysAgo, yesterday, or today \n page_path は/から始まる相対パス(/はurlで送れないのでURL Encodeする) \n Redisで1分毎にキャッシュしています")
 def get_ga_screenpageview(start_date:str,end_date:str,page_path:str):
