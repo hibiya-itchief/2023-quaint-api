@@ -181,10 +181,6 @@ def get_group(group_id:str,db:Session=Depends(db.get_db)):
         raise HTTPException(404,"指定されたGroupが見つかりません")
     return group_result
 
-@app.get("/groups/{group_id}/private")
-def get_group_private():
-    pass
-
 @app.put(
     "/groups/{group_id}",
     response_model=schemas.Group,
