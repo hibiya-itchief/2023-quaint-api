@@ -318,10 +318,6 @@ def create_event(group_id:str,event:schemas.EventCreate,user:schemas.JWTUser=Dep
         raise HTTPException(400,"公演の開始時刻は終了時刻よりも前である必要があります")
     if event.sell_starts > event.sell_ends:
         raise HTTPException(400,"配布開始時刻は配布終了時刻よりも前である必要があります")
-    existed_events=crud.get_all_events(db,group.id)
-    for ee in existed_events:
-        if event.starts_at < ee.ends_at and ee.starts_at < event.ends_at:
-            raise HTTPException(400,"ひとつの団体が同一時間帯で2つ以上の公演を作ることはできません")
     result = crud.create_event(db,group_id,event)
     if not result:
         raise HTTPException(400,"パラメーターが不適切です")
