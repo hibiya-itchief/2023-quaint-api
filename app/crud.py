@@ -49,7 +49,7 @@ def check_owner_of(db:Session,user:schemas.JWTUser,group_id:str):
         return False
 
 def get_list_of_your_tickets(db:Session,user:schemas.JWTUser):
-    db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==auth.user_object_id(user)).all()
+    db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==auth.user_object_id(user),models.Ticket.status!="cancelled").all()
     return db_tickets
 
 def create_group(db:Session,group:schemas.GroupCreate):
@@ -197,7 +197,7 @@ def delete_events(db:Session,event:schemas.Event):
 
 ## Ticket CRUD
 def count_tickets_for_event(db:Session,event:schemas.Event):
-    db_tickets_count:int=db.query(models.Ticket).filter(models.Ticket.event_id==event.id).count()
+    db_tickets_count:int=db.query(models.Ticket).filter(models.Ticket.event_id==event.id,models.Ticket.status=="active").count() #抽選機能を付けるのであれば、枚数確認せず抽選申し込みできるだろうという予想から、status!="cancelled"としなかった
     return db_tickets_count
 
 def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser):
@@ -206,7 +206,8 @@ def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUs
     taken_events:List[schemas.EventDBOutput] = db.query(models.Event) \
         .join(models.Ticket, \
         and_( models.Event.id==models.Ticket.event_id, \
-            models.Ticket.owner_id==auth.user_object_id(user) )) \
+            models.Ticket.owner_id==auth.user_object_id(user), \
+            models.Ticket.status=="active" )) \
         .all()
     tickets_num_per_day:int=0
     for taken_event in taken_events:
@@ -234,7 +235,7 @@ def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUs
         return False
     return True
 def create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int):
-    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=auth.user_object_id(user),person=person,is_used=False,created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
+    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=auth.user_object_id(user),person=person,status="active",created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
@@ -243,8 +244,11 @@ def get_ticket(db:Session,ticket_id):
     db_ticket:schemas.Ticket = db.query(models.Ticket).filter(models.Ticket.id==ticket_id).first()
     return db_ticket
 def delete_ticket(db:Session,ticket:schemas.Ticket):
-    db.query(models.Ticket).filter(models.Ticket.id==ticket.id).delete()
+    ticket=db.query(models.Ticket).filter(models.Ticket.id==ticket.id).first()
+    ticket.status="cancelled"
     db.commit()
+    db.refresh(ticket)
+    return ticket
 
 
 ## Tag CRUD

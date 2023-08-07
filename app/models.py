@@ -1,7 +1,7 @@
 #from numpy import integer
 #from pandas import notnull
 from sqlalchemy import (TEXT, TIMESTAMP, VARCHAR, Boolean, Column, DateTime,
-                        ForeignKey, Integer, String, UniqueConstraint)
+                        ForeignKey, Integer, String, UniqueConstraint, text)
 from sqlalchemy.orm import relationship
 # from sqlalchemy.dialects.mysql import TIMESTAMP as Timestamp
 from sqlalchemy.sql.functions import current_timestamp
@@ -88,7 +88,7 @@ class Ticket(Base):
     person = Column(Integer,default=1)#何人分のチケットか
 
     is_family_ticket = Column(Boolean,default=False)#家族の1枚保証制度で取られたチケットかどうか
-    is_used = Column(Boolean,default=False)
+    status = Column(VARCHAR(255),default="active",server_default=text('"active"'),index=True,nullable=False) #active,active,cancelled,used,pending,reject
 
 
 
