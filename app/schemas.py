@@ -133,3 +133,16 @@ Group.update_forward_refs()
 Tag.update_forward_refs()
 Ticket.update_forward_refs()
 
+def EventDBOutput_fromEvent(e:Event):
+    return EventDBOutput(
+        eventname=e.eventname,
+        lotterry=e.lottery,
+        target=e.target,
+        ticket_stock=e.ticket_stock,
+        starts_at=e.starts_at.isoformat(),
+        ends_at=e.ends_at.isoformat(),
+        sell_starts=e.sell_starts.isoformat(),
+        sell_ends=e.sell_ends.isoformat(),
+        id=e.id,
+        group_id=e.group_id
+    )
