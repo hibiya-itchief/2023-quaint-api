@@ -83,7 +83,7 @@ class TicketCreate(TicketBase):
 class Ticket(TicketBase):
     id:str#ULID
     created_at:datetime
-    status:Literal["active","active","cancelled","used","pending","reject"] #https://github.com/hibiya-itchief/quaint-api/issues/91
+    status:Literal["active","cancelled","used","pending","reject"] #https://github.com/hibiya-itchief/quaint-api/issues/91
 
     class Config:
         orm_mode=True
