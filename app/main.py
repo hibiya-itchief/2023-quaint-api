@@ -48,6 +48,10 @@ tags_metadata = [
         "description":"Ticket : 各公演に入場するための整理券"
     },
     {
+        "name":"votes",
+        "description":"Vote : 生徒による1、2年クラス劇投票"
+    },
+    {
         "name": "tags",
         "description": "Tag : Groupにひもづけられるタグ"
     },
@@ -284,32 +288,6 @@ def delete_group(group_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:
     except:
         raise HTTPException(400,"指定されたGroupに紐づけられているEvent,Ticket,Tagをすべて削除しないと削除できません")
 
-@app.post("/groups/{group_id}/vote",
-    response_model=schemas.Vote,
-    summary="Groupへの投票",
-    tags=["groups"],
-    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n',)
-def create_vote(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    # Groupが存在するかの判定も下で兼ねられる
-    tickets=get_list_of_your_tickets(db,user)
-    Flag=False
-    for ticket in tickets:
-        if ticket.group_id==group_id:
-            Flag=True
-            break
-    if not Flag:
-        raise HTTPException(400,"整理券を取得して観劇した団体にのみ投票できます。")
-    vote=crud.create_vote(db,group_id)
-    return vote
-
-@app.get("/groups/{group_id}/vote",
-    response_model=schemas.Vote,
-    summary="Groupへの投票数を確認",
-    tags=["groups"],
-    description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nいいえ\n',)
-
-
-            
 
 ### Event Crud
 @app.post(
@@ -467,6 +445,34 @@ def get_ticket(ticket_id:str,user:schemas.JWTUser=Depends(auth.get_current_user)
     if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user) or crud.check_authorizer_of(db,group,user)):
         raise HTTPException(404,"指定された整理券が見つかりません")
     return ticket
+
+
+### Vote Crud
+@app.post("/votes/{group_id}",
+    response_model=schemas.Vote,
+    summary="Groupへの投票",
+    tags=["votes"],
+    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n',)
+def create_vote(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    # Groupが存在するかの判定も下で兼ねられる
+    tickets=get_list_of_your_tickets(db,user)
+    Flag=False
+    for ticket in tickets:
+        if ticket.group_id==group_id:
+            Flag=True
+            break
+    if not Flag:
+        raise HTTPException(400,"整理券を取得して観劇した団体にのみ投票できます。")
+    vote=crud.create_vote(db,group_id)
+    return vote
+
+@app.get("/votes/{group_id}",
+    response_model=schemas.Vote,
+    summary="Groupへの投票数を確認",
+    tags=["votes"],
+    description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nいいえ\n',)
+
+
 
 
 # Tag
