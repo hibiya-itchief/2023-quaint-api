@@ -456,6 +456,12 @@ def get_ticket(ticket_id:str,user:schemas.JWTUser=Depends(auth.get_current_user)
 def create_vote(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     # Groupが存在するかの判定も下で兼ねられる
     tickets=get_list_of_your_tickets(db,user)
+
+    isVoted=False
+    # ここで判別
+    if isVoted:
+      raise HTTPException(400,"既に投票済みです。")
+  
     Flag=False
     for ticket in tickets:
         if ticket.group_id==group_id:
