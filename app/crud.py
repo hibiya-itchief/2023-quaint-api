@@ -247,39 +247,6 @@ def delete_ticket(db:Session,ticket:schemas.Ticket):
     db.commit()
 
 
-## Vote CRUD
-
-def check_voted(db:Session,event:schemas.Event,user:schemas.JWTUser):
-    ### このユーザーが投票済みか(投票済みでTrue)
-    taken_votes:List[schemas.EventDBOutput] = db.query(models.Vote)
-    tickets_num_per_day:int=0
-    for taken_event in taken_events:
-        e=taken_event
-        te=schemas.Event(
-            id=e.id,
-            group_id=e.group_id,
-            eventname=e.eventname,
-            lottery=e.lottery,
-            target=e.target,
-            ticket_stock=e.ticket_stock,
-            starts_at=datetime.fromisoformat(e.starts_at),
-            ends_at=datetime.fromisoformat(e.ends_at),
-            sell_starts=datetime.fromisoformat(e.sell_starts),
-            sell_ends=datetime.fromisoformat(e.sell_ends),
-        )
-        if(time_overlap(te.starts_at,te.ends_at,event.starts_at,event.ends_at)):
-            return False
-        if(params.max_tickets_per_day!=0 and event.starts_at.date()==te.starts_at.date()): # 1人1日何枚まで の制限がある かつ 二つのEventの日付部分が等しいなら
-            tickets_num_per_day+=1
-    
-    if(params.max_tickets!=0 and len(taken_events)>params.max_tickets): # 1人何枚まで の制限がある かつ それをオーバーしている
-        return False
-    if(params.max_tickets_per_day!=0 and tickets_num_per_day+1>params.max_tickets_per_day): # 1人1日何枚までの制限がある かつ それをオーバーしている
-        return False
-    return True
-
-
-
 ## Tag CRUD
 def create_tag(db:Session,tag:schemas.TagCreate):
     db_tag=models.Tag(id=ulid.new(),tagname=tag.tagname)
@@ -310,7 +277,7 @@ def delete_tag(db:Session,id:str):
     return 0
 
 
-# Vote
+# Vote CRUD
 def create_vote(db:Session,group_id:str,user:schemas.JWTUser):
     try:
         db_vote=models.Vote(group_id=group_id,user_id=auth.user_object_id(user))
@@ -327,6 +294,16 @@ def get_user_vote(db:Session,user:schemas.JWTUser):
 def get_group_votes(db:Session,group:schemas.Group):
     db_votes:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id==group.id).all()
     return db_votes
+    
+def check_voted(db:Session,event:schemas.Event,user:schemas.JWTUser):
+    ### このユーザーが投票済みか(投票済みでTrue)
+    taken_votes:List[schemas.EventDBOutput] = db.query(models.Vote) \
+      .filter(models.Vote.user_id==auth.user_object_id(user)).first()
+    
+    if(taken_votes==None):
+        return False
+    else:
+        return True
 
 
 
