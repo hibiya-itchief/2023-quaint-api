@@ -458,7 +458,9 @@ def create_vote(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user)
     tickets=get_list_of_your_tickets(db,user)
 
     isVoted=False
-    # ここで判別
+
+    
+    
     if isVoted:
       raise HTTPException(400,"既に投票済みです。")
   
