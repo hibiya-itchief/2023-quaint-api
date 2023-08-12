@@ -1,22 +1,34 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Union
+from typing import List, Literal, Union
 
 from fastapi import Query
 from pydantic import BaseModel, Field
 
 
-class EventTarget(str,Enum):
-    guest = "guest"
-    visited = "visited"
-    school = "school"
+class UserRole(str,Enum):
+    admin="admin"
+    owner="owner"
+    entry="entry"
+    everyone="everyone"
+    b2c="b2c"
+    b2c_visited="b2c_visited"
+    ad="ad"
+    parents="parents"
+    students="student"
+    school="school"
+    visited="visited"
+    visited_parents="visited_parents"
+    visited_school="visited_school"
+    school_parents="school_parents"
+
 
 class EventBase(BaseModel):
     eventname:str
 
     lottery:bool=False
 
-    target:EventTarget
+    target:UserRole
     ticket_stock:int
 class EventCreate(EventBase):
     starts_at:datetime

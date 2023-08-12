@@ -79,34 +79,6 @@ def get_current_user_not_exception():
         return None
 
 ### Role
-def check_school(user:schemas.JWTUser):
-    try:
-        if user.iss==AD_CONFIG['issuer']:
-            return True
-        else:
-            return False
-    except:
-        return False
-def school(user:schemas.JWTUser=Depends(get_current_user)):
-    if check_school(user):
-        return user
-    else:
-        raise HTTPException(HTTP_403_FORBIDDEN,detail="本校生徒・学校関係者である必要があります")
-
-def check_visited(user:schemas.JWTUser):
-    try:
-        if user.iss==AD_CONFIG['issuer'] or (user.jobTitle and ('Visited' in user.jobTitle or 'visited' in user.jobTitle)):
-            return True
-        else:
-            return False
-    except:
-        return False
-def visited(user:schemas.JWTUser=Depends(get_current_user)):
-    if check_visited(user):
-        return user
-    else:
-        raise HTTPException(HTTP_403_FORBIDDEN,detail="入校処理がされていません")
-
 def check_admin(user:schemas.JWTUser):
     try:
         if user.groups and settings.azure_ad_groups_quaint_admin in user.groups:
@@ -120,7 +92,19 @@ def admin(user:schemas.JWTUser = Depends(get_current_user)):
         return user
     else:
         raise HTTPException(HTTP_403_FORBIDDEN,detail="admin(管理者)の権限がありません")
-
+def check_owner(user:schemas.JWTUser):
+    try:
+        if (user.groups and settings.azure_ad_groups_quaint_owner in user.groups) or check_admin(user):
+            return True
+        else:
+            return False
+    except:
+        return False
+def owner(user:schemas.JWTUser = Depends(get_current_user)):
+    if  check_owner(user): # owner or admin
+        return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="Owner(クラ代・団体代表者)の権限がありません")
 def check_entry(user:schemas.JWTUser):
     try:
         if (user.groups and settings.azure_ad_groups_quaint_entry in user.groups) or check_admin(user):
@@ -135,19 +119,146 @@ def entry(user:schemas.JWTUser = Depends(get_current_user)):
     else:
         raise HTTPException(HTTP_403_FORBIDDEN,detail="entry(入校処理担当者)の権限がありません")
 
-def check_owner(user:schemas.JWTUser):
+def check_everyone(user:schemas.JWTUser):
+    return True
+def everyone():
+    return True
+
+def check_b2c(user:schemas.JWTUser):
     try:
-        if (user.groups and settings.azure_ad_groups_quaint_owner in user.groups) or check_admin(user):
+        if user.iss==B2C_CONFIG['issuer']:
             return True
         else:
             return False
     except:
         return False
-def owner(user:schemas.JWTUser = Depends(get_current_user)):
-    if  check_owner(user): # owner or admin
+def b2c(user:schemas.JWTUser=Depends(get_current_user)):
+    if check_b2c(user):
         return user
     else:
-        raise HTTPException(HTTP_403_FORBIDDEN,detail="Owner(クラ代・団体代表者)の権限がありません")
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="一般アカウントを作成してログインしてください")
+
+def check_b2c_visited(user:schemas.JWTUser):
+    try:
+        if user.iss==B2C_CONFIG['issuer'] and (user.jobTitle and ('Visited' in user.jobTitle or 'visited' in user.jobTitle)):
+            return True
+        else:
+            return False
+    except:
+        return False
+def b2c_visited(user:schemas.JWTUser=Depends(get_current_user)):
+    if check_b2c_visited(user):
+        return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="入校処理を済ませている必要があります")
+def check_ad(user:schemas.JWTUser):
+    try:
+        if user.iss==AD_CONFIG['issuer']:
+            return True
+        else:
+            return False
+    except:
+        return False
+def ad(user:schemas.JWTUser=Depends(get_current_user)):
+    if check_ad(user):
+        return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="学校のアカウント、もしくは事前配布されたアカウントである必要があります")
+def check_parents(user:schemas.JWTUser):
+    if check_ad(user) and (user.groups and settings.azure_ad_groups_quaint_parents in user.groups):
+        return True
+    else:
+        return False
+def parents(user:schemas.JWTUser=Depends(get_current_user)):
+    if check_parents(user):
+        return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="本校保護者である必要があります")
+def check_students(user:schemas.JWTUser):
+    if check_ad(user) and (user.groups and settings.azure_ad_groups_quaint_students in user.groups):
+        return True
+    else:
+        return False
+def students(user:schemas.JWTUser):
+    if check_students(user):
+        return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="本校生徒である必要があります")
+def check_school(user:schemas.JWTUser):
+    if check_ad(user) and user.groups and (settings.azure_ad_groups_quaint_students in user.groups or settings.azure_ad_groups_quaint_teachers in user.groups):
+        return True
+    else:
+        return False
+def school(user:schemas.JWTUser=Depends(get_current_user)):
+    if check_school(user):
+        return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="本校生徒・教職員・学校関係者である必要があります")
+def check_visited(user:schemas.JWTUser):
+    return check_b2c_visited(user) or check_ad(user)
+
+def visited(user:schemas.JWTUser=Depends(get_current_user)):
+    if check_visited(user):
+        return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="入校処理がされていません")
+def check_visited_parents(user:schemas.JWTUser):
+    return check_b2c_visited(user) or check_parents(user)
+
+def visited_parents(user:schemas.JWTUser=Depends(get_current_user)):
+    if check_visited_parents(user):
+        return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="入校処理済みの一般アカウント、もしくは本校保護者である必要があります")
+def check_visited_school(user:schemas.JWTUser):
+    return  check_b2c_visited(user) or check_school(user)
+def visited_school(user:schemas.JWTUser=Depends(get_current_user)):
+    if check_visited_school(user):
+        return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="入校処理済みの一般アカウント、もしくは本校生徒・教職員・学校関係者である必要があります")
+def check_school_parents(user:schemas.JWTUser):
+    return check_school(user) or check_parents(user)
+def shool_parents(user:schemas.JWTUser=Depends(get_current_user)):
+    if check_school_parents(user):
+        return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="保護者、もしくは本校生徒・教職員・学校関係者である必要があります")
+
+def check_role(role:schemas.UserRole,user:schemas.JWTUser):
+    # 絶対もっといい方法ある
+    if role==schemas.UserRole.admin:
+        return check_admin(user)
+    elif role==schemas.UserRole.owner:
+        return check_owner(user)
+    elif role==schemas.UserRole.entry:
+        return check_entry(user)
+    elif role==schemas.UserRole.everyone:
+        return check_everyone(user)
+    elif role==schemas.UserRole.b2c:
+        return check_b2c(user)
+    elif role==schemas.UserRole.b2c_visited:
+        return check_b2c_visited(user)
+    elif role==schemas.UserRole.ad:
+        return check_ad(user)
+    elif role==schemas.UserRole.parents:
+        return check_parents(user)
+    elif role==schemas.UserRole.students:
+        return check_students(user)
+    elif role==schemas.UserRole.school:
+        return check_school(user)
+    elif role==schemas.UserRole.visited:
+        return check_visited(user)
+    elif role==schemas.UserRole.visited_parents:
+        return check_visited_parents(user)
+    elif role==schemas.UserRole.visited_school:
+        return check_visited_school(user)
+    elif role==schemas.UserRole.school_parents:
+        return check_school_parents(user)
+    else:
+        return False
+
+
 
     
 
