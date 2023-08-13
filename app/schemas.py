@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Union
+from typing import List, Literal, Union
 
 from fastapi import Query
 from pydantic import BaseModel, Field
@@ -83,7 +83,7 @@ class TicketCreate(TicketBase):
 class Ticket(TicketBase):
     id:str#ULID
     created_at:datetime
-    is_used:bool
+    status:Literal["active","cancelled","used","pending","reject","paper"] #https://github.com/hibiya-itchief/quaint-api/issues/91
 
     class Config:
         orm_mode=True
