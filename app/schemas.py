@@ -12,6 +12,7 @@ class UserRole(str,Enum):
     chief="chief"
     entry="entry"
     everyone="everyone"
+    paper="paper"
     b2c="b2c"
     b2c_visited="b2c_visited"
     ad="ad"

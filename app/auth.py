@@ -137,6 +137,10 @@ def check_everyone(user:schemas.JWTUser):
     return True
 def everyone():
     return True
+def check_paper(user:schemas.JWTUser):
+    return False
+def paper():
+    return False
 
 def check_b2c(user:schemas.JWTUser):
     try:
@@ -252,6 +256,8 @@ def check_role(role:schemas.UserRole,user:schemas.JWTUser):
         return check_entry(user)
     elif role==schemas.UserRole.everyone:
         return check_everyone(user)
+    elif role==schemas.UserRole.paper:
+        return check_paper(user)
     elif role==schemas.UserRole.b2c:
         return check_b2c(user)
     elif role==schemas.UserRole.b2c_visited:
