@@ -105,6 +105,20 @@ def owner(user:schemas.JWTUser = Depends(get_current_user)):
         return user
     else:
         raise HTTPException(HTTP_403_FORBIDDEN,detail="Owner(クラ代・団体代表者)の権限がありません")
+def check_chief(user:schemas.JWTUser):
+    try:
+        if (user.groups and settings.azure_ad_groups_quaint_chief in user.groups) or check_admin(user):
+            return True
+        else:
+            return False
+    except:
+        return False
+def chief(user:schemas.JWTUser=Depends(get_current_user)):
+    if check_chief(user):
+        return user
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN,detail="チーフ会である必要があります")
+
 def check_entry(user:schemas.JWTUser):
     try:
         if (user.groups and settings.azure_ad_groups_quaint_entry in user.groups) or check_admin(user):
@@ -166,6 +180,7 @@ def ad(user:schemas.JWTUser=Depends(get_current_user)):
         raise HTTPException(HTTP_403_FORBIDDEN,detail="学校のアカウント、もしくは事前配布されたアカウントである必要があります")
 def check_parents(user:schemas.JWTUser):
     if check_ad(user) and (user.groups and settings.azure_ad_groups_quaint_parents in user.groups):
+        print(user.groups)
         return True
     else:
         return False
@@ -231,6 +246,8 @@ def check_role(role:schemas.UserRole,user:schemas.JWTUser):
         return check_admin(user)
     elif role==schemas.UserRole.owner:
         return check_owner(user)
+    elif role==schemas.UserRole.chief:
+        return check_chief(user)
     elif role==schemas.UserRole.entry:
         return check_entry(user)
     elif role==schemas.UserRole.everyone:

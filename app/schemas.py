@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 class UserRole(str,Enum):
     admin="admin"
     owner="owner"
+    chief="chief"
     entry="entry"
     everyone="everyone"
     b2c="b2c"
