@@ -398,8 +398,8 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depe
     event = crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
-    if not (event.target==schemas.EventTarget.guest or (event.target==schemas.EventTarget.visited and auth.check_visited(user)) or (event.target==schemas.EventTarget.school and auth.check_school(user))):
-        raise HTTPException(HTTP_403_FORBIDDEN,str(event.target)+"ユーザーのみが整理券を取得できます。校内への入場処理が済んでいるか確認してください。")
+    if not auth.check_role(event.target,user):
+        raise HTTPException(HTTP_403_FORBIDDEN,"この公演は整理券を取得できる人が制限されています。")
     
     if event.sell_starts<datetime.now(timezone(timedelta(hours=+9))) and datetime.now(timezone(timedelta(hours=+9)))<event.sell_ends:
         qualified:bool=crud.check_qualified_for_ticket(db,event,user)
