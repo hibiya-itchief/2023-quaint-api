@@ -49,7 +49,7 @@ def check_owner_of(db:Session,user:schemas.JWTUser,group_id:str):
         return False
 
 def get_list_of_your_tickets(db:Session,user:schemas.JWTUser):
-    db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==auth.user_object_id(user),models.Ticket.status!="cancelled").all()
+    db_tickets:List[schemas.Ticket] = db.query(models.Ticket).filter(models.Ticket.owner_id==auth.user_object_id(user)).all()
     return db_tickets
 
 def create_group(db:Session,group:schemas.GroupCreate):
