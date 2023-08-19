@@ -3,18 +3,16 @@ import os
 
 from pydantic import BaseSettings
 
+from app import models
+from app.db import SessionLocal
+
 
 class Parameters(BaseSettings):
     person_per_user:int=3 # 1つのユーザーで同時入場できる人数
     max_tickets:int=6 # 全日程を通して取得できる整理券の上限(0で制限無し)
     max_tickets_per_day:int=6 # 1日あたりの取得できる整理券の上限(0で上限無し)各公演の開始時刻で判定されます
 
-class Settings(BaseSettings):
-    mysql_user:str=os.getenv('MYSQL_USER')
-    mysql_password:str=os.getenv('MYSQL_PASSWORD')
-    db_host:str=os.getenv('DB_HOST')
-    mysql_database:str=os.getenv('MYSQL_DATABASE')
-
+class Settings():
     jwt_privatekey:str=os.getenv('JWT_PRIVATEKEY')
     jwt_publickey:str="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0i+BMxUUgG6slPW/9oHP\nUrYpoLX08NNTsFpEwAkpBHxzbauFc2SmFaFnmkkco8lfCQs66sj6fwtTtSc4RH+Z\nncFRaxV5M+AS7utyGhS9iNAg6u5DaGAxbMm1NAqUkuNLGS+pVx+p75b681inCBBu\nVxpPF0eCNMsUfMPDBKKKS6ABuIpl4Ep3BDXLCSfciBFixDA6poIDy7tryfcpglyw\nuq84ROrOBLU3kTaTM4zl8x2VRkGGdU88+7WhpVgB7s7uSJmzmWtojvDGp+1tylqp\nB4geNVB8rjqkZQjr9Y0oI2sJuIAYzDaBWwQsVUMmp2JO64kR8P1P7i99graUaGOd\nJwIDAQAB\n-----END PUBLIC KEY-----"
 
@@ -54,10 +52,7 @@ class Settings(BaseSettings):
 
     ## Google Analytics Property ID
     ga_property_id:str=os.getenv("GA_PROPERTY_ID","")
-
-    class Config:
-        env_file = 'app/.env'
-        secrets_dir='/run/secrets'
+    
 
 params=Parameters()
-settings= Settings()
+dbsettings= Settings()

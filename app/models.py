@@ -9,6 +9,13 @@ from sqlalchemy.sql.functions import current_timestamp
 from app.db import Base
 
 
+class Config(Base):
+    __tablename__ = "systemconfig"
+    id=Column(Integer,autoincrement=True,primary_key=True,index=True,unique=True)
+    jwt_privatekey=Column(VARCHAR(3000))
+    jwt_publickey=Column(VARCHAR(3000))
+    
+
 class Event(Base):
     __tablename__ = "events"
 

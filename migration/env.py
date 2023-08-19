@@ -1,21 +1,18 @@
+import os
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
-from app.config import settings
-
 from alembic import context
-import os
+from app.db import dbsettings
+from sqlalchemy import engine_from_config, pool
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-config.set_section_option("alembic", "DB_USER", settings.mysql_user)
-config.set_section_option("alembic", "DB_PASSWORD", settings.mysql_password)
-config.set_section_option("alembic", "DB_HOST", settings.db_host)
-config.set_section_option("alembic", "DB_NAME", settings.mysql_database)
+config.set_section_option("alembic", "DB_USER", dbsettings.mysql_user)
+config.set_section_option("alembic", "DB_PASSWORD", dbsettings.mysql_password)
+config.set_section_option("alembic", "DB_HOST", dbsettings.db_host)
+config.set_section_option("alembic", "DB_NAME", dbsettings.mysql_database)
 
 connectable = engine_from_config(
     config.get_section(config.config_ini_section),
@@ -33,6 +30,7 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 from app.models import Base
+
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
