@@ -16,6 +16,8 @@
   // connected. This is typically a file mount in .devcontainer/docker-compose.yml
   "workspaceFolder": "/workspace",
 
+  "initializeCommand": "cp app/.env.docker app/.env -n", // .envが無ければdockerコンテナの作成に最低限必要なものだけコピーする(これが無いとcodespaces使えない)
+
   "customizations": {
     // Configure properties specific to VS Code.
     "vscode": {
