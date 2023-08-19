@@ -58,6 +58,10 @@ tags_metadata = [
     {
         "name": "ga",
         "description": "Google Analytics"
+    },
+    {
+        "name": "post",
+        "description": "Post : Groupにひもづけられる投稿"
     }
 
 ]
@@ -524,8 +528,47 @@ def delete_tag(tag_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Sess
     if result==None:
         raise HTTPException(404,"指定されたTagが見つかりません")
     return "Successfully Deleted"
-    
 
+# Post
+@app.get(
+    "/posts",
+    response_model=List[schemas.Post],
+    summary="全Postを取得",
+    tags=["posts"],
+    description="### 必要な権限\n権限によって取得できる投稿の種類が変わります\n### ログインが必要か\n任意")
+def get_all_posts(user:Union[schemas.JWTUser,None]=Depends(auth.get_current_user_not_exception),db:Session=Depends(db.get_db)):
+    pass
+@app.get(
+    "/posts/{post_id}",
+    response_model=schemas.Post,
+    summary="指定されたPostを取得",
+    tags=["posts"],
+    description="### 必要な権限\n権限によって取得できる投稿の種類が変わります\n### ログインが必要か\n任意",)
+def get_post(post_id:str,user:Union[schemas.JWTUser,None]=Depends(auth.get_current_user_not_exception),db:Session=Depends(db.get_db)):
+    pass
+@app.get(
+    "/groups/{group_id}/posts",
+    response_model=List[schemas.PostSummary],
+    summary="指定されたGroupのPostの一覧を取得",
+    tags=["posts"],
+    description="### 必要な権限\n権限によって取得できる投稿の種類が変わります\n### ログインが必要か\n任意",)
+def get_group_posts(group_id:str,user:Union[schemas.JWTUser,None]=Depends(auth.get_current_user_not_exception),db:Session=Depends(db.get_db)):
+    pass
+
+@app.post(
+    "/groups/{group_id}/posts",
+    response_model=schemas.Post,
+    summary="新規Postの作成",
+    tags=["posts"],
+    description="### 必要な権限\n当該Groupのowner\n### ログインが必要か\nはい")
+def create_post(group_id:str,post:schemas.PostCreate,user:schemas.JWTUser = Depends(auth.owner),db:Session=Depends(db.get_db)):
+    group=crud.get_group_public(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
+        raise HTTPException(403,"Adminまたは当該GroupのOwnerの権限が必要です")
+
+# Google Analytics
 @app.get(
     "/ga/screenpageview",
     response_model=schemas.GAScreenPageViewResponse,

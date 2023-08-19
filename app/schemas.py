@@ -135,6 +135,28 @@ class GroupOwner(BaseModel):
     class Config:
         orm_mode=True
 
+
+class PostBase(BaseModel):
+    group_id:str#userdefined id
+    title:str
+    thumbnail_image_url:Union[str,None]
+    global_pinned:bool=False
+    group_pinned:bool=False
+    target:UserRole
+    status:Literal["active","deleted"]
+class PostCreate(PostBase):
+    content:str
+class Post(PostCreate):
+    id:str#ULID
+    created_at:datetime
+    class Config:
+        orm_mode=True
+class PostSummary(PostBase):
+    id:str#ULID
+    created_at:datetime
+    class Config:
+        orm_mode=True
+
 class GAScreenPageViewResponse(BaseModel):
     start_date:str
     end_date:str

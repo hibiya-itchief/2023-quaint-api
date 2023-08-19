@@ -1,5 +1,7 @@
 #from numpy import integer
 #from pandas import notnull
+from datetime import datetime
+
 from sqlalchemy import (TEXT, TIMESTAMP, VARCHAR, Boolean, Column, DateTime,
                         ForeignKey, Integer, String, UniqueConstraint, text)
 from sqlalchemy.orm import relationship
@@ -91,4 +93,17 @@ class Ticket(Base):
     status = Column(VARCHAR(255),default="active",server_default=text('"active"'),index=True,nullable=False) #active,active,cancelled,used,pending,reject
 
 
+class Post(Base):
+    __tablename__ = "posts"
+    group_id = Column(VARCHAR(255), ForeignKey("groups.id"),nullable=False)
+    title = Column(VARCHAR(255),nullable=False)
+    thumbnail_image_url = Column(VARCHAR(255))
+    global_pinned = Column(Boolean,default=False)
+    group_pinned = Column(Boolean,default=False)
+    target = Column(VARCHAR(255),nullable=False)
+    status = Column(VARCHAR(255),default="active",server_default=text('"active"'),index=True,nullable=False) # active,deleted
+    content=Column(VARCHAR(255),nullable=False)
+    id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
+    created_at = Column(DateTime, default=datetime.now(), nullable=False)
+    
 
