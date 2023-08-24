@@ -1,22 +1,36 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Union
+from typing import List, Literal, Union
 
 from fastapi import Query
 from pydantic import BaseModel, Field
 
 
-class EventTarget(str,Enum):
-    guest = "guest"
-    visited = "visited"
-    school = "school"
+class UserRole(str,Enum):
+    admin="admin"
+    owner="owner"
+    chief="chief"
+    entry="entry"
+    everyone="everyone"
+    paper="paper"
+    b2c="b2c"
+    b2c_visited="b2c_visited"
+    ad="ad"
+    parents="parents"
+    students="student"
+    school="school"
+    visited="visited"
+    visited_parents="visited_parents"
+    visited_school="visited_school"
+    school_parents="school_parents"
+
 
 class EventBase(BaseModel):
     eventname:str
 
     lottery:bool=False
 
-    target:EventTarget
+    target:UserRole
     ticket_stock:int
 class EventCreate(EventBase):
     starts_at:datetime
@@ -83,7 +97,7 @@ class TicketCreate(TicketBase):
 class Ticket(TicketBase):
     id:str#ULID
     created_at:datetime
-    is_used:bool
+    status:Literal["active","cancelled","used","pending","reject","paper"] #https://github.com/hibiya-itchief/quaint-api/issues/91
 
     class Config:
         orm_mode=True
@@ -133,3 +147,16 @@ Group.update_forward_refs()
 Tag.update_forward_refs()
 Ticket.update_forward_refs()
 
+def EventDBOutput_fromEvent(e:Event):
+    return EventDBOutput(
+        eventname=e.eventname,
+        lotterry=e.lottery,
+        target=e.target,
+        ticket_stock=e.ticket_stock,
+        starts_at=e.starts_at.isoformat(),
+        ends_at=e.ends_at.isoformat(),
+        sell_starts=e.sell_starts.isoformat(),
+        sell_ends=e.sell_ends.isoformat(),
+        id=e.id,
+        group_id=e.group_id
+    )

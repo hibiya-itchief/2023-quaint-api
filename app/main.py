@@ -1,3 +1,4 @@
+import json
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Union
@@ -17,6 +18,7 @@ from app import auth, crud, db, models, schemas, storage
 from app.config import settings
 from app.ga import ga_screenpageview
 from app.msgraph import MsGraph
+from app.redis_possible import redis_get_if_possible, redis_set_if_possible
 
 #models.Base.metadata.create_all(bind=engine)
 
@@ -71,6 +73,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+REDIS_CACHE_EXPIRE=120 # (何か特別な意図があってRedisを使うわけでは無く)DB負荷軽減のためにRedisキャッシュするエンドポイントのexpire
 
 @app.get("/")
 def read_root():
@@ -161,27 +165,35 @@ def create_group(groups:List[schemas.GroupCreate],permission:schemas.JWTUser=Dep
 @app.get(
     "/groups",
     response_model=List[schemas.Group],
-    summary="全Groupの情報を取得",
+    summary="全Groupの情報を取得 [Redis TTL="+str(REDIS_CACHE_EXPIRE)+"s]",
     tags=["groups"],
-    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ")
+    description="Nuxt generate によってフロントエンドに全団体の情報は埋め込まれるため通常のユーザーがこのエンドポイントを操作することは無いが直接このエンドポイントにF5連打とかされてDB負荷増えたら嫌なので、Redis2分間キャッシュ \n ### 必要な権限\nなし\n### ログインが必要か\nいいえ")
 def get_all_groups(db:Session=Depends(db.get_db)):
-    return crud.get_all_groups_public(db)
+    cacheresult=redis_get_if_possible("groups")
+    if cacheresult:
+        return json.loads(cacheresult)
+    groups=crud.get_all_groups_public(db)
+    groups_serializable=[]
+    for g in groups:
+        groups_serializable.append(schemas.Group.from_orm(g).dict())
+    redis_set_if_possible("groups",json.dumps(groups_serializable),ex=REDIS_CACHE_EXPIRE)
+    return groups
 @app.get(
     "/groups/{group_id}",
     response_model=schemas.Group,
-    summary="指定されたGroupの情報を取得",
+    summary="指定されたGroupの情報を取得 [Redis TTL="+str(REDIS_CACHE_EXPIRE)+"s]",
     tags=["groups"],
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ",
     responses={"404":{"description":"指定されたGroupが見つかりません"}})
 def get_group(group_id:str,db:Session=Depends(db.get_db)):
+    cacheresult=redis_get_if_possible("group:"+group_id)
+    if cacheresult:
+        return json.loads(cacheresult)
     group_result = crud.get_group_public(db,group_id)
     if not group_result:
         raise HTTPException(404,"指定されたGroupが見つかりません")
+    redis_set_if_possible("group:"+group_result.id,json.dumps(schemas.Group.from_orm(group_result).dict()),ex=REDIS_CACHE_EXPIRE)
     return group_result
-
-@app.get("/groups/{group_id}/private")
-def get_group_private():
-    pass
 
 @app.put(
     "/groups/{group_id}",
@@ -318,10 +330,6 @@ def create_event(group_id:str,event:schemas.EventCreate,user:schemas.JWTUser=Dep
         raise HTTPException(400,"公演の開始時刻は終了時刻よりも前である必要があります")
     if event.sell_starts > event.sell_ends:
         raise HTTPException(400,"配布開始時刻は配布終了時刻よりも前である必要があります")
-    existed_events=crud.get_all_events(db,group.id)
-    for ee in existed_events:
-        if event.starts_at < ee.ends_at and ee.starts_at < event.ends_at:
-            raise HTTPException(400,"ひとつの団体が同一時間帯で2つ以上の公演を作ることはできません")
     result = crud.create_event(db,group_id,event)
     if not result:
         raise HTTPException(400,"パラメーターが不適切です")
@@ -329,22 +337,34 @@ def create_event(group_id:str,event:schemas.EventCreate,user:schemas.JWTUser=Dep
 @app.get(
     "/groups/{group_id}/events",
     response_model=List[schemas.Event],
-    summary="指定されたGroupの全Eventを取得",
+    summary="指定されたGroupの全Eventを取得 [Redis TTL="+str(REDIS_CACHE_EXPIRE)+"s]",
     tags=["events"],
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n")
 def get_all_events(group_id:str,db:Session=Depends(db.get_db)):
-    return crud.get_all_events(db,group_id)
+    cacheresult=redis_get_if_possible("groupevents:"+group_id)
+    if cacheresult:
+        return json.loads(cacheresult)
+    groupevents=crud.get_all_events(db,group_id)
+    groupevents_serializable=[]
+    for e in groupevents:
+        groupevents_serializable.append(schemas.EventDBOutput_fromEvent(schemas.Event.from_orm(e)).dict())
+    redis_set_if_possible("groupevents:"+group_id,json.dumps(groupevents_serializable),ex=REDIS_CACHE_EXPIRE)
+    return groupevents
 @app.get(
     "/groups/{group_id}/events/{event_id}",
     response_model=schemas.Event,
-    summary="指定されたGroupの指定されたEevntを取得",
+    summary="指定されたGroupの指定されたEevntを取得 [Redis TTL="+str(REDIS_CACHE_EXPIRE)+"s]",
     tags=["events"],
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n",
     responses={"404":{"description":"指定されたGroupまたはEventが見つかりません"}})
 def get_event(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
+    cacheresult=redis_get_if_possible("group:"+group_id+"-event:"+event_id)
+    if cacheresult:
+        return json.loads(cacheresult)
     event = crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
+    redis_set_if_possible("group:"+event.group_id+"-event:"+event.id,json.dumps(schemas.EventDBOutput_fromEvent(schemas.Event.from_orm(event)).dict()),ex=REDIS_CACHE_EXPIRE)
     return event
 @app.delete(
     "/groups/{group_id}/events/{event_id}",
@@ -371,15 +391,15 @@ def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.ad
     response_model=schemas.Ticket,
     summary="整理券取得",
     tags=["tickets"],
-    description="### 必要な権限\nアクティブ(校内に来場済み)なユーザーであること\n### ログインが必要か\nはい\n### 説明\n整理券取得できる条件\n- ユーザーが校内に来場ずみ\n- 現在時刻が取りたい整理券の配布時間内\n- 当該公演の整理券在庫が余っている\n- ユーザーは既にこの整理券を取得していない\n- ユーザーは既に当該公演と同じ時間帯の公演の整理券を取得していない\n- 同時入場人数は生徒用アカウントは1名まで、それ以外は3名まで",
+    description="### 必要な権限\nアクティブ(校内に来場済み)なユーザーであること\n### ログインが必要か\nはい\n### 説明\n整理券取得できる条件\n- ユーザーが校内に来場ずみ\n- 現在時刻が取りたい整理券の配布時間内\n- 当該公演の整理券在庫が余っている\n- ユーザーは既にこの整理券を取得していない\n- ユーザーは既に当該公演と同じ時間帯の公演の整理券を取得していない\n- 同時入場人数は3名まで(***Azure ADのアカウントは1人という制約は無くしました***)",
     responses={"404":{"description":"- 指定されたGroupまたはEventが見つかりません\n- 既にこの公演・この公演と同じ時間帯の公演の整理券を取得している場合、新たに取得はできません\n- この公演の整理券は売り切れています\n- 現在整理券の配布時間外です"},
         "400":{"description":"- 同時入場人数は3人まで(***Azure ADのアカウントは1人という制約は無くしました***)です\n- 校内への来場処理をしたユーザーのみが整理券を取得できます"}})
 def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     event = crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
-    if not (event.target==schemas.EventTarget.guest or (event.target==schemas.EventTarget.visited and auth.check_visited(user)) or (event.target==schemas.EventTarget.school and auth.check_school(user))):
-        raise HTTPException(HTTP_403_FORBIDDEN,str(event.target)+"ユーザーのみが整理券を取得できます。校内への入場処理が済んでいるか確認してください。")
+    if not auth.check_role(event.target,user):
+        raise HTTPException(HTTP_403_FORBIDDEN,"この公演は整理券を取得できる人が制限されています。")
     
     if event.sell_starts<datetime.now(timezone(timedelta(hours=+9))) and datetime.now(timezone(timedelta(hours=+9)))<event.sell_ends:
         qualified:bool=crud.check_qualified_for_ticket(db,event,user)
@@ -398,18 +418,23 @@ def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depe
 @app.get(
     "/groups/{group_id}/events/{event_id}/tickets",
     response_model=schemas.TicketsNumberData,
-    summary="指定された公演の整理券の枚数情報を取得",
+    summary="指定された公演の整理券の枚数情報を取得 [Redis TTL=15s]",
     tags=["tickets"],
-    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n",
+    description='結果はRedisに "tickets-numberdata-<Event.id>" というキーでキャッシュされます(TTL=15) \n ### 必要な権限\nなし\n### ログインが必要か\nいいえ\n',
     responses={"404":{"description":"- 指定されたGroupが見つかりません\n- 指定されたEventが見つかりません"}})
 def count_tickets(group_id:str,event_id:str,db:Session=Depends(db.get_db)):
+    cacheresult=redis_get_if_possible("tickets-numberdata-"+event_id)
+    if cacheresult:
+        return json.loads(cacheresult)
     event = crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたEventが見つかりません")
     taken_tickets:int=crud.count_tickets_for_event(db,event)
     stock:int=event.ticket_stock
     left_tickets:int=stock-taken_tickets
-    return schemas.TicketsNumberData(taken_tickets=taken_tickets,left_tickets=left_tickets,stock=stock)
+    tnd=schemas.TicketsNumberData(taken_tickets=taken_tickets,left_tickets=left_tickets,stock=stock)
+    redis_set_if_possible("tickets-numberdata-"+event.id , tnd.json() , ex=15)
+    return tnd
 
 @app.delete(
     "/groups/{group_id}/events/{event_id}/tickets/{ticket_id}",
@@ -504,7 +529,7 @@ def delete_tag(tag_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Sess
 @app.get(
     "/ga/screenpageview",
     response_model=schemas.GAScreenPageViewResponse,
-    summary="Google Analyticsのビュー数を取得",
+    summary="Google Analyticsのビュー数を取得 [Redis TTL=60s]",
     tags=["ga"],
     description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n### 説明\nGoogle Analyticsのビュー数を取得します \n start_dateとend_dateの形式：YYYY-MM-DD, NdaysAgo, yesterday, or today \n page_path は/から始まる相対パス(/はurlで送れないのでURL Encodeする) \n Redisで1分毎にキャッシュしています")
 def get_ga_screenpageview(start_date:str,end_date:str,page_path:str):

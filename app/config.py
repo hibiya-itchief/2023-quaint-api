@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     azure_ad_groups_quaint_admin='5c091517-25de-44bc-9e42-ffcb8539435c'
     azure_ad_groups_quaint_entry='63a40184-8dab-43b4-8367-54e84ace6e2a'
     azure_ad_groups_quaint_owner='a577d858-64bf-4815-aaf6-d893c654e92e'
+    azure_ad_groups_quaint_parents='ecd46dae-d84b-42d8-9357-ac24d480a168'
+    azure_ad_groups_quaint_students='865bb05d-cb7d-4919-b18d-8b977ec0499b'
+    azure_ad_groups_quaint_teachers='0a8ee476-cd37-4c31-bd6e-c34e750574f4'
+    azure_ad_groups_quaint_chief='67e48f08-22e0-4ec4-9674-1428aaa5c055'
 
     ## JWT EXPIRE
     access_token_expire:datetime.timedelta=datetime.timedelta(days=10)
