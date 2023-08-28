@@ -294,17 +294,5 @@ def get_user_vote(db:Session,user:schemas.JWTUser):
 def get_group_votes(db:Session,group:schemas.Group):
     db_votes:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id==group.id).all()
     return db_votes
-    
-def check_voted(db:Session,event:schemas.Event,user:schemas.JWTUser):
-    ### このユーザーが投票済みか(投票済みでTrue)
-    taken_votes:List[schemas.EventDBOutput] = db.query(models.Vote) \
-      .filter(models.Vote.user_id==auth.user_object_id(user)).first()
-    
-    if(taken_votes==None):
-        return False
-    else:
-        return True
-
-
 
 
