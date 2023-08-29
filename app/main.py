@@ -474,8 +474,8 @@ def create_vote(group_id:List[schemas.VoteBase],user:schemas.JWTUser=Depends(aut
     summary="Groupへの投票数を確認",
     tags=["votes"],
     description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nいいえ\n',)
-
-
+def get_group_votes(group_id:List[schemas.VoteBase],db:Session=Depends(db.get_db)):
+    return crud.get_group_votes(db,group_id)
 
 
 # Tag
