@@ -453,7 +453,7 @@ def get_ticket(ticket_id:str,user:schemas.JWTUser=Depends(auth.get_current_user)
     summary="投票",
     tags=["votes"],
     description='### 必要な権限\nなし\n### ログインが必要か\nはい\n### 説明\n- オブジェクトではなく配列の形でjsonを渡してください\n- 一人一回限りです\n- 投票先を指定せずに投票する場合は、"2-3":""のように空文字ではなくパラメータ自体をjsonに記述せずNoneにしてください',)
-def create_vote(group_id:List[schemas.VoteBase],user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+def create_vote(group_id:List[schemas.Votes],user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     # Groupが存在するかの判定も下で兼ねられる
     tickets=get_list_of_your_tickets(db,user)
     isVoted=crud.get_user_vote(db,user)
