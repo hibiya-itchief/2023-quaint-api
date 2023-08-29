@@ -466,7 +466,7 @@ def create_vote(group_id:List[schemas.VoteBase],user:schemas.JWTUser=Depends(aut
             break
     if not Flag:
         raise HTTPException(400,"整理券を取得して観劇した団体にのみ投票できます。")
-    vote=crud.create_vote(db,group_id)
+    vote=crud.create_vote(db,group_id,user)
     return vote
 
 @app.get("/votes/{group_id}",
