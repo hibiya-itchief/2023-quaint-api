@@ -477,6 +477,14 @@ def create_vote(group_id:List[schemas.Votes],user:schemas.JWTUser=Depends(auth.g
 def get_group_votes(group_id:List[schemas.VoteBase],db:Session=Depends(db.get_db)):
     return crud.get_group_votes(db,group_id)
 
+@app.get("/votes",
+    response_model=schemas.Vote,
+    summary="userが投票済みかを確認",
+    tags=["votes"],
+    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n',)
+def get_user_vote(user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    return crud.get_user_vote(db,user)
+
 
 # Tag
 @app.post(
