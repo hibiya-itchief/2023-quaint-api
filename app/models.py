@@ -43,11 +43,11 @@ class Vote(Base):
     __tablename__ = "votes"
     user_id = Column(VARCHAR(255),unique=True,nullable=False,primary_key=True)# userdefined unique id
     group_id_21 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
-    group_id_22 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
-    group_id_23 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
+    # group_id_22 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
+    # group_id_23 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
     group_id_11 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
-    group_id_12 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
-    group_id_13 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
+    # group_id_12 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
+    # group_id_13 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
 
 
 class Group(Base):
