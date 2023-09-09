@@ -280,7 +280,7 @@ def delete_tag(db:Session,id:str):
 # Vote CRUD
 def create_vote(db:Session,group_id:str,user:schemas.JWTUser):
     try:
-        db_vote=models.Vote(user_id=auth.user_object_id(user),group_id_21=group_id[0],group_id_22=group_id[1],group_id_23=group_id[2],group_id_11=group_id[3],group_id_12=group_id[4],group_id_13=group_id[5])
+        db_vote=models.Vote(user_id=auth.user_object_id(user),group_id_21=group_id[0],group_id_11=group_id[1])
         db.add(db_vote)
         db.commit()
         db.refresh(db_vote)
