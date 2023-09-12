@@ -110,7 +110,8 @@ class VoteBase(BaseModel):
     group_id:str#userdefined id
     user_id:str# sub in jwt (UUID)
 
-class Votes(VoteBase):
+class Votes(BaseModel):
+    user_id:str
     group_id_21:str #2nd grade 1st class
     # group_id_22:str
     # group_id_23:str
