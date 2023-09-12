@@ -29,6 +29,7 @@ description="""
 """
 if settings.production_flag==1:
     description+="<h2>本番環境</h2>"
+description+=settings.api_hostname
 
 tags_metadata = [
     {
@@ -466,17 +467,24 @@ def delete_ticket(group_id:str,event_id:str,ticket_id:str,user:schemas.JWTUser=D
     response_model=schemas.Ticket,
     summary="指定された整理券の情報を取得",
     tags=["tickets"],
-    description="### 必要な権限\nAdmin,当該GroupのOwnerまたはAuthorizer\n### ログインが必要か\nはい\n### 説明\n総当たり攻撃を防ぐため、指定された整理券は存在するが権限が無い場合も404を返す",
+    description="### 必要な権限\nschool(暫定)\n### ログインが必要か\nはい\n### 説明\n総当たり攻撃を防ぐため、指定された整理券は存在するが権限が無い場合も404を返す",
     responses={"404":{"description":"- 指定された整理券が見つかりません"}})
-def get_ticket(ticket_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+def get_ticket(ticket_id:str,user:schemas.JWTUser=Depends(auth.school),db:Session=Depends(db.get_db)):
     ticket = crud.get_ticket(db,ticket_id)
     if not ticket:
         raise HTTPException(404,"指定された整理券が見つかりません")
-    group = crud.get_group_public(db,ticket.group_id)
-    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user) or crud.check_authorizer_of(db,group,user)):
-        raise HTTPException(404,"指定された整理券が見つかりません")
     return ticket
-
+@app.put(
+    "/tickets/{ticket_id}",
+    response_model=schemas.Ticket,
+    summary="指定された整理券をもぎる",
+    tags=["tickets"],
+    description="### 必要な権限\nschool(暫定)\n### ログインが必要か\nはい\n### 説明\n総当たり攻撃を防ぐため、指定された整理券は存在するが権限が無い場合も404を返す",)
+def use_ticket(ticket_id:str,permission:schemas.JWTUser=Depends(auth.school),db:Session=Depends(db.get_db)):
+    result = crud.use_ticket(db,ticket_id)
+    if not result:
+        raise HTTPException(404,"指定された整理券が見つかりません")
+    return result
 
 # Tag
 @app.post(

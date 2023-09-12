@@ -250,11 +250,20 @@ def get_ticket(db:Session,ticket_id):
     db_ticket:schemas.Ticket = db.query(models.Ticket).filter(models.Ticket.id==ticket_id).first()
     return db_ticket
 def delete_ticket(db:Session,ticket:schemas.Ticket):
-    ticket=db.query(models.Ticket).filter(models.Ticket.id==ticket.id).first()
-    ticket.status="cancelled"
+    db_ticket=db.query(models.Ticket).filter(models.Ticket.id==ticket.id).first()
+    db_ticket.status="cancelled"
+    db.commit()
+    db.refresh(db_ticket)
+    return ticket
+def use_ticket(db:Session,ticket_id:str):
+    ticket=db.query(models.Ticket).filter(models.Ticket.id==ticket_id).first()
+    if not ticket:
+        return None
+    ticket.status="used"
     db.commit()
     db.refresh(ticket)
     return ticket
+        
 
 
 ## Tag CRUD
