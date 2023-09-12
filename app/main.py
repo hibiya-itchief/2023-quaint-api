@@ -486,6 +486,32 @@ def use_ticket(ticket_id:str,permission:schemas.JWTUser=Depends(auth.school),db:
         raise HTTPException(404,"指定された整理券が見つかりません")
     return result
 
+@app.post(
+    "/groups/{group_id}/events/{event_id}/tickets/chief",
+    response_model=schemas.Ticket,
+    tags=["tickets"],
+    description="### 必要な権限\nchief\n### ログインが必要か\nはい\n ### 説明\n チーフ会が紙整理券を1枚とるエンドポイント",
+)
+def chief_create_ticket(group_id:str,event_id:str,permission:schemas.JWTUser=Depends(auth.chief),db:Session=Depends(db.get_db)):
+    event=crud.get_event(db,event_id)
+    if not event:
+        raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
+    if event.target != schemas.UserRole.chief:
+        raise HTTPException(400,"これは紙整理券の公演ではありません")
+    crud.chief_create_ticket()
+@app.delete(
+     "/groups/{group_id}/events/{event_id}/tickets/chief",
+    tags=["tickets"],
+    description="### 必要な権限\nchief\n### ログインが必要か\nはい\n ### 説明\n チーフ会が紙整理券を1枚減らすエンドポイント",
+)
+def chief_delete_ticket(group_id:str,event_id:str,permission:schemas.JWTUser=Depends(auth.chief),db:Session=Depends(db.get_db)):
+    event=crud.get_event(db,event_id)
+    if not event:
+        raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
+    if event.target != schemas.UserRole.chief:
+        raise HTTPException(400,"これは紙整理券の公演ではありません")
+    crud.chief_delete_ticket()
+
 # Tag
 @app.post(
     "/tags",
