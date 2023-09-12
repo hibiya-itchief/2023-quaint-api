@@ -10,7 +10,7 @@ from google.analytics.data_v1beta.types import (DateRange, Dimension, Filter,
 from app.config import settings
 
 # credential.json環境変数に保存 app.gaがapp.mainによって読み込まれる時に実行
-#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'app/ga-credential.json'
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'app/ga-credential.json'
 
 def ga_api_request_screenpageview(start_date:str,page_path:str,end_date:str):
     client = BetaAnalyticsDataClient()
