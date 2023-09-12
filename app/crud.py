@@ -293,13 +293,12 @@ def get_user_vote(db:Session,user:schemas.JWTUser):
     return db_vote
 def get_group_votes(db:Session,group:schemas.Group):
     #本当はここ学年しばりしたい
-    db_votes1:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_21==group.id).all()
+    db_votes1:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_21==group.id).count()
     # db_votes2:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_22==group.id).all()
     # db_votes3:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_23==group.id).all()
-    db_votes4:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_11==group.id).all()
+    db_votes4:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_11==group.id).count()
     # db_votes5:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_12==group.id).all()
     # db_votes6:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_13==group.id).all()
-    db_sum = db_votes1.length + db_votes4.length
-    return db_sum
+    return (db_votes1 + db_votes4)
 
 
