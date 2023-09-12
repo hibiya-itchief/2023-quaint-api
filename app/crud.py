@@ -7,6 +7,7 @@ from fastapi import HTTPException, Query
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, join
+from sqlalchemy.sql import func
 
 from app import auth, models, schemas, storage
 from app.config import params, settings
@@ -196,9 +197,12 @@ def delete_events(db:Session,event:schemas.Event):
     db.commit()
 
 ## Ticket CRUD
-def count_tickets_for_event(db:Session,event:schemas.Event):
-    db_tickets_count:int=db.query(models.Ticket).filter(models.Ticket.event_id==event.id,or_(models.Ticket.status=="active",models.Ticket.status=="paper")).count() #抽選機能を付けるのであれば、枚数確認せず抽選申し込みできるだろうという予想から、status!="cancelled"としなかった  紙整理券(paper)は含めた
-    return db_tickets_count
+def count_tickets_for_event(db:Session,event:schemas.Event)->int:
+    res=db.query(func.sum(models.Ticket.person).label("person_sum")).filter(models.Ticket.event_id==event.id,or_(models.Ticket.status=="active",models.Ticket.status=="paper")).first()
+    #db_tickets_count:int=db.query(models.Ticket).filter(models.Ticket.event_id==event.id,or_(models.Ticket.status=="active",models.Ticket.status=="paper")).count() #抽選機能を付けるのであれば、枚数確認せず抽選申し込みできるだろうという予想から、status!="cancelled"としなかった  紙整理券(paper)は含めた
+    if res.person_sum is None:
+        return 0
+    return res.person_sum
 
 def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser):
     ### このユーザーが同じ時間帯で他の公演のチケットを取っていないか(この公演の2枚目も含む)
