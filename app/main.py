@@ -57,6 +57,10 @@ tags_metadata = [
         "description": "管理者用API"
     },
     {
+        "name": "chief",
+        "description": "チーフ会用API"
+    },
+    {
         "name": "ga",
         "description": "Google Analytics"
     }
@@ -487,30 +491,36 @@ def use_ticket(ticket_id:str,permission:schemas.JWTUser=Depends(auth.school),db:
     return result
 
 @app.post(
-    "/groups/{group_id}/events/{event_id}/tickets/chief",
+    "/chief/groups/{group_id}/events/{event_id}/tickets",
     response_model=schemas.Ticket,
-    tags=["tickets"],
+    tags=["chief"],
     description="### 必要な権限\nchief\n### ログインが必要か\nはい\n ### 説明\n チーフ会が紙整理券を1枚とるエンドポイント",
 )
-def chief_create_ticket(group_id:str,event_id:str,permission:schemas.JWTUser=Depends(auth.chief),db:Session=Depends(db.get_db)):
+def chief_create_ticket(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.chief),db:Session=Depends(db.get_db)):
     event=crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
-    if event.target != schemas.UserRole.chief:
+    if event.target != schemas.UserRole.paper:
         raise HTTPException(400,"これは紙整理券の公演ではありません")
-    crud.chief_create_ticket()
+    if crud.count_tickets_for_event(db,event)>=event.ticket_stock:
+        raise HTTPException(404,"売り切れました")
+    result=crud.chief_create_ticket(db,event,user,1)
+    return result
 @app.delete(
-     "/groups/{group_id}/events/{event_id}/tickets/chief",
-    tags=["tickets"],
+     "/chief/groups/{group_id}/events/{event_id}/tickets",
+    tags=["chief"],
     description="### 必要な権限\nchief\n### ログインが必要か\nはい\n ### 説明\n チーフ会が紙整理券を1枚減らすエンドポイント",
 )
 def chief_delete_ticket(group_id:str,event_id:str,permission:schemas.JWTUser=Depends(auth.chief),db:Session=Depends(db.get_db)):
     event=crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
-    if event.target != schemas.UserRole.chief:
+    if event.target != schemas.UserRole.paper:
         raise HTTPException(400,"これは紙整理券の公演ではありません")
-    crud.chief_delete_ticket()
+    #if crud.count_tickets_for_event(db,event)>=event.ticket_stock:
+    #    raise HTTPException(400,"取得されている整理券が0枚です")
+    crud.chief_delete_ticket(db,event)
+    return {"OK":True}
 
 # Tag
 @app.post(
