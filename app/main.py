@@ -459,7 +459,7 @@ def create_vote(group_id1:str,group_id2:str,user:schemas.JWTUser=Depends(auth.ge
     isVoted=crud.get_user_vote(db,user)
     Flag=False
     for ticket in tickets:
-        if ticket.group_id==group_id:
+        if ticket.group_id==group_id1 or ticket.group_id==group_id2:
             Flag=True
             break
     if not Flag:
@@ -468,12 +468,12 @@ def create_vote(group_id1:str,group_id2:str,user:schemas.JWTUser=Depends(auth.ge
     return vote
 
 @app.get("/votes/{group_id}",
-    response_model=schemas.Vote,
+    response_model=int,
     summary="Groupへの投票数を確認",
     tags=["votes"],
     description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nはい\n',
     responses={"404":{"description":"- 指定された団体が見つかりません"},"401":{"description":"- Adminまたは当該GroupへのOwnerの権限が必要です"}},)
-def get_group_votes(group_id:List[schemas.VoteBase],user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+def get_group_votes(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     if not(auth.check_admin(user) or crud.check_owner_of(db,user,group_id)):
         raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
     return crud.get_group_votes(db,group_id)
