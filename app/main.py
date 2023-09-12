@@ -29,6 +29,7 @@ description="""
 """
 if settings.production_flag==1:
     description+="<h2>本番環境</h2>"
+description+=settings.api_hostname
 
 tags_metadata = [
     {
