@@ -452,7 +452,7 @@ def get_ticket(ticket_id:str,user:schemas.JWTUser=Depends(auth.get_current_user)
     response_model=schemas.Vote,
     summary="投票",
     tags=["votes"],
-    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n### 説明\n- オブジェクトではなく配列の形でjsonを渡してください\n- 一人一回限りです\n- 投票先を指定せずに投票する場合は、"2-3":""のように空文字ではなくパラメータ自体をjsonに記述せずNoneにしてください',)
+    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n### 説明\n- 一人一回限りです\n- 投票先を指定せずに投票する場合は、空文字をパラメータに指定してください\n- 来年はjson形式で渡そうと思います',)
 def create_vote(group_id1:str,group_id2:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     # Groupが存在するかの判定も下で兼ねられる
     tickets=get_list_of_your_tickets(db,user)
@@ -473,8 +473,11 @@ def create_vote(group_id1:str,group_id2:str,user:schemas.JWTUser=Depends(auth.ge
     response_model=schemas.Vote,
     summary="Groupへの投票数を確認",
     tags=["votes"],
-    description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nいいえ\n',)
-def get_group_votes(group_id:List[schemas.VoteBase],db:Session=Depends(db.get_db)):
+    description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nはい\n',
+    responses={"404":{"description":"- 指定された団体が見つかりません"},"401":{"description":"- Adminまたは当該GroupへのOwnerの権限が必要です"}},)
+def get_group_votes(group_id:List[schemas.VoteBase],user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group_id)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
     return crud.get_group_votes(db,group_id)
 
 @app.get("/votes",
