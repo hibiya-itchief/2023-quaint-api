@@ -7,6 +7,7 @@ from fastapi import HTTPException, Query
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, join
+from sqlalchemy.sql import func
 
 from app import auth, models, schemas, storage
 from app.config import params, settings
