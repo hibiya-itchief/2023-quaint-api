@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     access_token_expire:datetime.timedelta=datetime.timedelta(days=10)
 
     production_flag:int=os.getenv("PRODUCTION_FLAG",0)
+    api_hostname:str=os.getenv("API_HOSTNAME","DEFAULT")
 
     ## Cloudflare deploy hook url
     cloudflare_deploy_hook_url:str=os.getenv("CLOUDFLARE_DEPLOY_HOOK_URL","")

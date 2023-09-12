@@ -240,15 +240,30 @@ def create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int
     db.commit()
     db.refresh(db_ticket)
     return db_ticket
+def spectest_ticket(db:Session,user:schemas.JWTUser):
+    db_ticket = models.Ticket(id=ulid.new().str,group_id="spectest0426",event_id="01GYEW7B98AXT2HMQNA9STK657",owner_id=user.name,person=1,is_used=False,created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
+    db.add(db_ticket)
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
 def get_ticket(db:Session,ticket_id):
     db_ticket:schemas.Ticket = db.query(models.Ticket).filter(models.Ticket.id==ticket_id).first()
     return db_ticket
 def delete_ticket(db:Session,ticket:schemas.Ticket):
-    ticket=db.query(models.Ticket).filter(models.Ticket.id==ticket.id).first()
-    ticket.status="cancelled"
+    db_ticket=db.query(models.Ticket).filter(models.Ticket.id==ticket.id).first()
+    db_ticket.status="cancelled"
+    db.commit()
+    db.refresh(db_ticket)
+    return ticket
+def use_ticket(db:Session,ticket_id:str):
+    ticket=db.query(models.Ticket).filter(models.Ticket.id==ticket_id).first()
+    if not ticket:
+        return None
+    ticket.status="used"
     db.commit()
     db.refresh(ticket)
     return ticket
+        
 
 
 ## Tag CRUD
