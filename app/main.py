@@ -457,8 +457,6 @@ def create_vote(group_id1:str,group_id2:str,user:schemas.JWTUser=Depends(auth.ge
     # Groupが存在するかの判定も下で兼ねられる
     tickets=get_list_of_your_tickets(db,user)
     isVoted=crud.get_user_vote(db,user)
-    # if isVoted==[]:
-    #  raise HTTPException(400,"既に投票済みです。")
     Flag=False
     for ticket in tickets:
         if ticket.group_id==group_id:
