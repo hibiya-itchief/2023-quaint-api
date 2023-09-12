@@ -267,6 +267,21 @@ def use_ticket(db:Session,ticket_id:str):
     db.commit()
     db.refresh(ticket)
     return ticket
+def chief_create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int):
+    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=user.name,person=person,status="paper",created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
+    db.add(db_ticket)
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+def chief_delete_ticket(db:Session,event:schemas.Event):
+    db_ticket=db.query(models.Ticket).filter(models.Ticket.event_id==event.id,models.Ticket.status=="paper").first()
+    if db_ticket is None:
+        return None
+    db_ticket.status="cancelled"
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+
         
 
 
