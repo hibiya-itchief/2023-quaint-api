@@ -602,3 +602,49 @@ def update_frontend(permission:schemas.JWTUser=Depends(auth.admin)):
         return "OK"
     else:
         HTTPException(res.status_code,"Cloudflareへのデプロイに失敗しました")
+
+
+@app.get(
+    "/hebe/nowplaying",
+    response_model=schemas.HebeResponse,
+    summary="今やっているHebeの団体IDを取得",
+    tags=["chief"]
+)
+def get_hebe_nowplaying(db:Session = Depends(db.get_db)):
+    h= crud.get_hebe_nowplaying(db)
+    if h is not None:
+        return h
+    hh =schemas.HebeResponse(group_id="")
+    return hh
+@app.get(
+    "/hebe/upnext",
+    response_model=schemas.HebeResponse,
+    summary="次のHebeの団体IDを取得",
+    tags=["chief"]
+)
+def get_hebe_upnext(db:Session = Depends(db.get_db)):
+    h= crud.get_hebe_upnext(db)
+    if h is not None:
+        return h
+    hh =schemas.HebeResponse(group_id="")
+    return hh
+
+@app.post(
+    "/hebe/nowplaying",
+    response_model=schemas.HebeResponse,
+    summary="今やっているHebeの団体IDを設定",
+    tags=["chief"],
+    description="チーフのみ"
+)
+def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Depends(auth.chief),db:Session = Depends(db.get_db)):
+    return crud.set_hebe_nowplaying(db,hebe)
+
+@app.post(
+    "/hebe/upnext",
+    response_model=schemas.HebeResponse,
+    summary="次のHebeの団体IDを設定",
+    tags=["chief"],
+    description="チーフのみ"
+)
+def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Depends(auth.chief),db:Session = Depends(db.get_db)):
+    return crud.set_hebe_upnext(db,hebe)

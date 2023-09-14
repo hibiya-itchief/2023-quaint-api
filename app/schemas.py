@@ -141,6 +141,11 @@ class GAScreenPageViewResponse(BaseModel):
     page_path:str
     view:int
 
+class HebeResponse(BaseModel):
+    group_id:str #userdefined id
+    class Config:
+        orm_mode=True
+
 
 Event.update_forward_refs()
 Group.update_forward_refs()
