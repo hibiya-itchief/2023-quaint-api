@@ -134,6 +134,10 @@ class Vote(VoteBase):
     class Config:
         orm_mode=True
 
+class GroupVotesResponse(BaseModel):
+    group_id:str
+    votes_num:int
+
 
 class GroupOwner(BaseModel):
     group_id:str#userdefined id

@@ -523,7 +523,7 @@ def create_vote(group_id1:Union[str,None]=None,group_id2:Union[str,None]=None,us
     return vote
 
 @app.get("/votes/{group_id}",
-    response_model=int,
+    response_model=schemas.GroupVotesResponse,
     summary="Groupへの投票数を確認",
     tags=["votes"],
     description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nはい\n',
@@ -531,7 +531,10 @@ def create_vote(group_id1:Union[str,None]=None,group_id2:Union[str,None]=None,us
 def get_group_votes(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     if not(auth.check_admin(user) or crud.check_owner_of(db,user,group_id)):
         raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
-    return crud.get_group_votes(db,group_id)
+    g=crud.get_group_public(db,group_id)
+    if g is None:
+        raise HTTPException(404,"指定された団体が見つかりません")
+    return schemas.GroupVotesResponse(group_id=g.id,votes_num=crud.get_group_votes(db,g))
 
 @app.get("/votes",
     response_model=schemas.Vote,
