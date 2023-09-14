@@ -536,7 +536,7 @@ def get_group_votes(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_u
         raise HTTPException(404,"指定された団体が見つかりません")
     return schemas.GroupVotesResponse(group_id=g.id,votes_num=crud.get_group_votes(db,g))
 
-@app.get("/votes",
+@app.get("/users/me/votes",
     response_model=schemas.Vote,
     summary="userが投票済みかを確認",
     tags=["votes"],
