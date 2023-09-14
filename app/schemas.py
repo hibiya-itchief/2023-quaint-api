@@ -122,10 +122,10 @@ class JWTUser(BaseModel):
 
 class VoteBase(BaseModel):
     user_id:str
-    group_id_21:str #2nd grade 1st class
+    group_id_21:Union[str,None] #2nd grade 1st class
     # group_id_22:str
     # group_id_23:str
-    group_id_11:str
+    group_id_11:Union[str,None]
     # group_id_12:str
     # group_id_13:str
 class VoteCreate(VoteBase):
