@@ -120,13 +120,24 @@ class JWTUser(BaseModel):
     groups:Union[List[str],None]
     
 
-
 class VoteBase(BaseModel):
-    group_id:str#userdefined id
-    user_id:str# sub in jwt (UUID)
+    user_id:str
+    group_id_21:Union[str,None] #2nd grade 1st class
+    # group_id_22:str
+    # group_id_23:str
+    group_id_11:Union[str,None]
+    # group_id_12:str
+    # group_id_13:str
+class VoteCreate(VoteBase):
+    pass
 class Vote(VoteBase):
     class Config:
         orm_mode=True
+
+class GroupVotesResponse(BaseModel):
+    group_id:str
+    votes_num:int
+
 
 class GroupOwner(BaseModel):
     group_id:str#userdefined id

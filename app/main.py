@@ -49,6 +49,10 @@ tags_metadata = [
         "description":"Ticket : 各公演に入場するための整理券"
     },
     {
+        "name":"votes",
+        "description":"Vote : 生徒による1、2年クラス劇投票"
+    },
+    {
         "name": "tags",
         "description": "Tag : Groupにひもづけられるタグ"
     },
@@ -289,32 +293,6 @@ def delete_group(group_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:
     except:
         raise HTTPException(400,"指定されたGroupに紐づけられているEvent,Ticket,Tagをすべて削除しないと削除できません")
 
-@app.post("/groups/{group_id}/vote",
-    response_model=schemas.Vote,
-    summary="Groupへの投票",
-    tags=["groups"],
-    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n',)
-def create_vote(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    # Groupが存在するかの判定も下で兼ねられる
-    tickets=get_list_of_your_tickets(db,user)
-    Flag=False
-    for ticket in tickets:
-        if ticket.group_id==group_id:
-            Flag=True
-            break
-    if not Flag:
-        raise HTTPException(400,"整理券を取得して観劇した団体にのみ投票できます。")
-    vote=crud.create_vote(db,group_id)
-    return vote
-
-@app.get("/groups/{group_id}/vote",
-    response_model=schemas.Vote,
-    summary="Groupへの投票数を確認",
-    tags=["groups"],
-    description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nいいえ\n',)
-
-
-            
 
 ### Event Crud
 @app.post(
@@ -521,6 +499,57 @@ def chief_delete_ticket(group_id:str,event_id:str,permission:schemas.JWTUser=Dep
     #    raise HTTPException(400,"取得されている整理券が0枚です")
     crud.chief_delete_ticket(db,event)
     return {"OK":True}
+
+### Vote Crud
+@app.post("/votes",
+    response_model=schemas.Vote,
+    summary="投票",
+    tags=["votes"],
+    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n### 説明\n- 一人一回限りです\n- 投票先を指定せずに投票する場合は、空文字をパラメータに指定してください\n- 来年はjson形式で渡そうと思います')
+def create_vote(group_id1:Union[str,None]=None,group_id2:Union[str,None]=None,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    # Groupが存在するかの判定も下で兼ねられる
+    if group_id1 is None and group_id2 is None:
+        raise HTTPException(400,"投票先の団体を1つ以上選択してください")
+    tickets:List[schemas.Ticket]=crud.get_list_of_your_tickets(db,user)
+    isVoted=crud.get_user_vote(db,user)
+    if isVoted is not None:
+        raise HTTPException(400,"投票は1人1回までです")
+    Flag=False
+    for ticket in tickets:
+        if ticket.group_id==group_id1 or ticket.group_id==group_id2:
+            Flag=True
+            break
+    if not Flag:
+        raise HTTPException(400,"整理券を取得して観劇した団体にのみ投票できます。")
+    vote=crud.create_vote(db,group_id1,group_id2,user)
+    return vote
+
+@app.get("/votes/{group_id}",
+    response_model=schemas.GroupVotesResponse,
+    summary="Groupへの投票数を確認",
+    tags=["votes"],
+    description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nはい\n',
+    responses={"404":{"description":"- 指定された団体が見つかりません"},"401":{"description":"- Adminまたは当該GroupへのOwnerの権限が必要です"}})
+def get_group_votes(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group_id)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
+    g=crud.get_group_public(db,group_id)
+    if g is None:
+        raise HTTPException(404,"指定された団体が見つかりません")
+    return schemas.GroupVotesResponse(group_id=g.id,votes_num=crud.get_group_votes(db,g))
+
+@app.get("/users/me/votes",
+    response_model=schemas.Vote,
+    summary="userが投票済みかを確認",
+    tags=["votes"],
+    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n ### 「重要」未投票の場合は404が返ります',
+    responses={"404":{"description":"まだ投票をしていません"}})
+def get_user_vote(user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    v= crud.get_user_vote(db,user)
+    if v is None:
+        raise HTTPException(404,"まだ投票をしていません")
+    return v
+
 
 # Tag
 @app.post(

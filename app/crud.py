@@ -315,10 +315,10 @@ def delete_tag(db:Session,id:str):
     return 0
 
 
-# Vote
-def create_vote(db:Session,group_id:str,user:schemas.JWTUser):
+# Vote CRUD
+def create_vote(db:Session,group_id1:str,group_id2:str,user:schemas.JWTUser):
     try:
-        db_vote=models.Vote(group_id=group_id,user_id=auth.user_object_id(user))
+        db_vote=models.Vote(user_id=auth.user_object_id(user),group_id_21=group_id2,group_id_11=group_id1)
         db.add(db_vote)
         db.commit()
         db.refresh(db_vote)
@@ -330,8 +330,14 @@ def get_user_vote(db:Session,user:schemas.JWTUser):
     db_vote:schemas.Vote=db.query(models.Vote).filter(models.Vote.user_id==auth.user_object_id(user)).first()
     return db_vote
 def get_group_votes(db:Session,group:schemas.Group):
-    db_votes:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id==group.id).all()
-    return db_votes
+    #本当はここ学年しばりしたい
+    db_votes1:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_21==group.id).count()
+    # db_votes2:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_22==group.id).all()
+    # db_votes3:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_23==group.id).all()
+    db_votes4:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_11==group.id).count()
+    # db_votes5:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_12==group.id).all()
+    # db_votes6:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_13==group.id).all()
+    return (db_votes1 + db_votes4)
 
 def get_hebe_nowplaying(db:Session):
     return db.query(models.HebeNowplaying).first()
