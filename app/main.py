@@ -505,7 +505,7 @@ def chief_delete_ticket(group_id:str,event_id:str,permission:schemas.JWTUser=Dep
     response_model=schemas.Vote,
     summary="投票",
     tags=["votes"],
-    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n### 説明\n- 一人一回限りです\n- 投票先を指定せずに投票する場合は、空文字をパラメータに指定してください\n- 来年はjson形式で渡そうと思います',)
+    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n### 説明\n- 一人一回限りです\n- 投票先を指定せずに投票する場合は、空文字をパラメータに指定してください\n- 来年はjson形式で渡そうと思います')
 def create_vote(group_id1:Union[str,None]=None,group_id2:Union[str,None]=None,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     # Groupが存在するかの判定も下で兼ねられる
     if group_id1 is None and group_id2 is None:
@@ -529,7 +529,7 @@ def create_vote(group_id1:Union[str,None]=None,group_id2:Union[str,None]=None,us
     summary="Groupへの投票数を確認",
     tags=["votes"],
     description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nはい\n',
-    responses={"404":{"description":"- 指定された団体が見つかりません"},"401":{"description":"- Adminまたは当該GroupへのOwnerの権限が必要です"}},)
+    responses={"404":{"description":"- 指定された団体が見つかりません"},"401":{"description":"- Adminまたは当該GroupへのOwnerの権限が必要です"}})
 def get_group_votes(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     if not(auth.check_admin(user) or crud.check_owner_of(db,user,group_id)):
         raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
@@ -542,7 +542,8 @@ def get_group_votes(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_u
     response_model=schemas.Vote,
     summary="userが投票済みかを確認",
     tags=["votes"],
-    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n',)
+    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n ### 「重要」未投票の場合は404が返ります',
+    responses={"404":{"description":"まだ投票をしていません"}})
 def get_user_vote(user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     v= crud.get_user_vote(db,user)
     if v is None:
