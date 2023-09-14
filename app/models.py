@@ -90,5 +90,12 @@ class Ticket(Base):
     is_family_ticket = Column(Boolean,default=False)#家族の1枚保証制度で取られたチケットかどうか
     status = Column(VARCHAR(255),default="active",server_default=text('"active"'),index=True,nullable=False) #active,active,cancelled,used,pending,reject
 
-
+class HebeNowplaying(Base):
+    __tablename__ = "hebenowplaying"
+    
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),primary_key=True,index=True)
+class HebeUpnext(Base):
+    __tablename__ = "hebeupnext"
+    
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),primary_key=True,index=True)
 

@@ -333,6 +333,33 @@ def get_group_votes(db:Session,group:schemas.Group):
     db_votes:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id==group.id).all()
     return db_votes
 
-
+def get_hebe_nowplaying(db:Session):
+    return db.query(models.HebeNowplaying).first()
+def get_hebe_upnext(db:Session):
+    return db.query(models.HebeUpnext).first()
+def set_hebe_nowplaying(db:Session,hebe:schemas.HebeResponse):
+    db_hebe:schemas.HebeResponse=db.query(models.HebeNowplaying).first()
+    if db_hebe is None:
+        add_hebe=models.HebeNowplaying(group_id=hebe.group_id)
+        db.add(add_hebe)
+        db.commit()
+        db.refresh(add_hebe)
+        return add_hebe
+    db_hebe.group_id=hebe.group_id
+    db.commit()
+    db.refresh(db_hebe)
+    return db_hebe
+def set_hebe_upnext(db:Session,hebe:schemas.HebeResponse):
+    db_hebe:schemas.HebeResponse=db.query(models.HebeUpnext).first()
+    if db_hebe is None:
+        add_hebe=models.HebeUpnext(group_id=hebe.group_id)
+        db.add(add_hebe)
+        db.commit()
+        db.refresh(add_hebe)
+        return add_hebe
+    db_hebe.group_id=hebe.group_id
+    db.commit()
+    db.refresh(db_hebe)
+    return db_hebe
 
 
