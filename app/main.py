@@ -457,6 +457,8 @@ def create_vote(group_id1:str,group_id2:str,user:schemas.JWTUser=Depends(auth.ge
     # Groupが存在するかの判定も下で兼ねられる
     tickets:List[schemas.Ticket]=crud.get_list_of_your_tickets(db,user)
     isVoted=crud.get_user_vote(db,user)
+    if isVoted is not None:
+        raise HTTPException(400,"投票は1人1回までです")
     Flag=False
     for ticket in tickets:
         if ticket.group_id==group_id1 or ticket.group_id==group_id2:
