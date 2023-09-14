@@ -542,7 +542,10 @@ def get_group_votes(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_u
     tags=["votes"],
     description='### 必要な権限\nなし\n### ログインが必要か\nはい\n',)
 def get_user_vote(user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    return crud.get_user_vote(db,user)
+    v= crud.get_user_vote(db,user)
+    if v is None:
+        raise HTTPException(404,"まだ投票をしていません")
+    return v
 
 
 # Tag
