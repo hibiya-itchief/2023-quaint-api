@@ -107,10 +107,6 @@ class JWTUser(BaseModel):
     
 
 class VoteBase(BaseModel):
-    group_id:str#userdefined id
-    user_id:str# sub in jwt (UUID)
-
-class Votes(BaseModel):
     user_id:str
     group_id_21:str #2nd grade 1st class
     # group_id_22:str
@@ -118,7 +114,8 @@ class Votes(BaseModel):
     group_id_11:str
     # group_id_12:str
     # group_id_13:str
-
+class VoteCreate(VoteBase):
+    pass
 class Vote(VoteBase):
     class Config:
         orm_mode=True
