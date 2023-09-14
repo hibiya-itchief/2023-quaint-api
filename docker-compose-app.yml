@@ -3,8 +3,6 @@ version: "3"
 services:
   app:
     image: python:3.8
-    depends_on:
-      - db
     restart: always
     volumes:
       - .:/workspace:cached
@@ -16,3 +14,10 @@ services:
     image: "redis:latest"
     volumes:
       - "./redis.conf:/etc/redis.conf"
+  phpmyadmin:
+    image: phpmyadmin
+    restart: always
+    environment: 
+      PMA_ARBITRARY: 1
+    ports:
+      - "8080:80"

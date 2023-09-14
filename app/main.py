@@ -29,6 +29,7 @@ description="""
 """
 if settings.production_flag==1:
     description+="<h2>本番環境</h2>"
+description+=settings.api_hostname
 
 tags_metadata = [
     {
@@ -58,6 +59,10 @@ tags_metadata = [
     {
         "name": "admin",
         "description": "管理者用API"
+    },
+    {
+        "name": "chief",
+        "description": "チーフ会用API"
     },
     {
         "name": "ga",
@@ -365,19 +370,28 @@ def delete_events(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.ad
 
 ### Ticket CRUD
 @app.post(
+    "/spectest/tickets",
+    response_model=schemas.Ticket,
+    summary="整理券取得の負荷テスト",)
+def spectest_ticket(user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    if not auth.check_school(user):
+        raise HTTPException(HTTP_403_FORBIDDEN)
+    return crud.spectest_ticket(db,user)
+
+@app.post(
     "/groups/{group_id}/events/{event_id}/tickets",
     response_model=schemas.Ticket,
     summary="整理券取得",
     tags=["tickets"],
-    description="### 必要な権限\nアクティブ(校内に来場済み)なユーザーであること\n### ログインが必要か\nはい\n### 説明\n整理券取得できる条件\n- ユーザーが校内に来場ずみ\n- 現在時刻が取りたい整理券の配布時間内\n- 当該公演の整理券在庫が余っている\n- ユーザーは既にこの整理券を取得していない\n- ユーザーは既に当該公演と同じ時間帯の公演の整理券を取得していない\n- 同時入場人数は生徒用アカウントは1名まで、それ以外は3名まで",
+    description="### 必要な権限\nアクティブ(校内に来場済み)なユーザーであること\n### ログインが必要か\nはい\n### 説明\n整理券取得できる条件\n- ユーザーが校内に来場ずみ\n- 現在時刻が取りたい整理券の配布時間内\n- 当該公演の整理券在庫が余っている\n- ユーザーは既にこの整理券を取得していない\n- ユーザーは既に当該公演と同じ時間帯の公演の整理券を取得していない\n- 同時入場人数は3名まで(***Azure ADのアカウントは1人という制約は無くしました***)",
     responses={"404":{"description":"- 指定されたGroupまたはEventが見つかりません\n- 既にこの公演・この公演と同じ時間帯の公演の整理券を取得している場合、新たに取得はできません\n- この公演の整理券は売り切れています\n- 現在整理券の配布時間外です"},
         "400":{"description":"- 同時入場人数は3人まで(***Azure ADのアカウントは1人という制約は無くしました***)です\n- 校内への来場処理をしたユーザーのみが整理券を取得できます"}})
 def create_ticket(group_id:str,event_id:str,person:int,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     event = crud.get_event(db,event_id)
     if not event:
         raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
-    if not (event.target==schemas.EventTarget.guest or (event.target==schemas.EventTarget.visited and auth.check_visited(user)) or (event.target==schemas.EventTarget.school and auth.check_school(user))):
-        raise HTTPException(HTTP_403_FORBIDDEN,str(event.target)+"ユーザーのみが整理券を取得できます。校内への入場処理が済んでいるか確認してください。")
+    if not auth.check_role(event.target,user):
+        raise HTTPException(HTTP_403_FORBIDDEN,"この公演は整理券を取得できる人が制限されています。")
     
     if event.sell_starts<datetime.now(timezone(timedelta(hours=+9))) and datetime.now(timezone(timedelta(hours=+9)))<event.sell_ends:
         qualified:bool=crud.check_qualified_for_ticket(db,event,user)
@@ -435,17 +449,56 @@ def delete_ticket(group_id:str,event_id:str,ticket_id:str,user:schemas.JWTUser=D
     response_model=schemas.Ticket,
     summary="指定された整理券の情報を取得",
     tags=["tickets"],
-    description="### 必要な権限\nAdmin,当該GroupのOwnerまたはAuthorizer\n### ログインが必要か\nはい\n### 説明\n総当たり攻撃を防ぐため、指定された整理券は存在するが権限が無い場合も404を返す",
+    description="### 必要な権限\nschool(暫定)\n### ログインが必要か\nはい\n### 説明\n総当たり攻撃を防ぐため、指定された整理券は存在するが権限が無い場合も404を返す",
     responses={"404":{"description":"- 指定された整理券が見つかりません"}})
-def get_ticket(ticket_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+def get_ticket(ticket_id:str,user:schemas.JWTUser=Depends(auth.school),db:Session=Depends(db.get_db)):
     ticket = crud.get_ticket(db,ticket_id)
     if not ticket:
         raise HTTPException(404,"指定された整理券が見つかりません")
-    group = crud.get_group_public(db,ticket.group_id)
-    if not(crud.check_admin(db,user) or crud.check_owner_of(db,group,user) or crud.check_authorizer_of(db,group,user)):
-        raise HTTPException(404,"指定された整理券が見つかりません")
     return ticket
+@app.put(
+    "/tickets/{ticket_id}",
+    response_model=schemas.Ticket,
+    summary="指定された整理券をもぎる",
+    tags=["tickets"],
+    description="### 必要な権限\nschool(暫定)\n### ログインが必要か\nはい\n### 説明\n総当たり攻撃を防ぐため、指定された整理券は存在するが権限が無い場合も404を返す",)
+def use_ticket(ticket_id:str,permission:schemas.JWTUser=Depends(auth.school),db:Session=Depends(db.get_db)):
+    result = crud.use_ticket(db,ticket_id)
+    if not result:
+        raise HTTPException(404,"指定された整理券が見つかりません")
+    return result
 
+@app.post(
+    "/chief/groups/{group_id}/events/{event_id}/tickets",
+    response_model=schemas.Ticket,
+    tags=["chief"],
+    description="### 必要な権限\nchief\n### ログインが必要か\nはい\n ### 説明\n チーフ会が紙整理券を1枚とるエンドポイント",
+)
+def chief_create_ticket(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.chief),db:Session=Depends(db.get_db)):
+    event=crud.get_event(db,event_id)
+    if not event:
+        raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
+    if event.target != schemas.UserRole.paper:
+        raise HTTPException(400,"これは紙整理券の公演ではありません")
+    if crud.count_tickets_for_event(db,event)>=event.ticket_stock:
+        raise HTTPException(404,"売り切れました")
+    result=crud.chief_create_ticket(db,event,user,1)
+    return result
+@app.delete(
+     "/chief/groups/{group_id}/events/{event_id}/tickets",
+    tags=["chief"],
+    description="### 必要な権限\nchief\n### ログインが必要か\nはい\n ### 説明\n チーフ会が紙整理券を1枚減らすエンドポイント",
+)
+def chief_delete_ticket(group_id:str,event_id:str,permission:schemas.JWTUser=Depends(auth.chief),db:Session=Depends(db.get_db)):
+    event=crud.get_event(db,event_id)
+    if not event:
+        raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
+    if event.target != schemas.UserRole.paper:
+        raise HTTPException(400,"これは紙整理券の公演ではありません")
+    #if crud.count_tickets_for_event(db,event)>=event.ticket_stock:
+    #    raise HTTPException(400,"取得されている整理券が0枚です")
+    crud.chief_delete_ticket(db,event)
+    return {"OK":True}
 
 ### Vote Crud
 @app.post("/votes",
@@ -569,3 +622,49 @@ def update_frontend(permission:schemas.JWTUser=Depends(auth.admin)):
         return "OK"
     else:
         HTTPException(res.status_code,"Cloudflareへのデプロイに失敗しました")
+
+
+@app.get(
+    "/hebe/nowplaying",
+    response_model=schemas.HebeResponse,
+    summary="今やっているHebeの団体IDを取得",
+    tags=["chief"]
+)
+def get_hebe_nowplaying(db:Session = Depends(db.get_db)):
+    h= crud.get_hebe_nowplaying(db)
+    if h is not None:
+        return h
+    hh =schemas.HebeResponse(group_id="")
+    return hh
+@app.get(
+    "/hebe/upnext",
+    response_model=schemas.HebeResponse,
+    summary="次のHebeの団体IDを取得",
+    tags=["chief"]
+)
+def get_hebe_upnext(db:Session = Depends(db.get_db)):
+    h= crud.get_hebe_upnext(db)
+    if h is not None:
+        return h
+    hh =schemas.HebeResponse(group_id="")
+    return hh
+
+@app.post(
+    "/hebe/nowplaying",
+    response_model=schemas.HebeResponse,
+    summary="今やっているHebeの団体IDを設定",
+    tags=["chief"],
+    description="チーフのみ"
+)
+def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Depends(auth.chief),db:Session = Depends(db.get_db)):
+    return crud.set_hebe_nowplaying(db,hebe)
+
+@app.post(
+    "/hebe/upnext",
+    response_model=schemas.HebeResponse,
+    summary="次のHebeの団体IDを設定",
+    tags=["chief"],
+    description="チーフのみ"
+)
+def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Depends(auth.chief),db:Session = Depends(db.get_db)):
+    return crud.set_hebe_upnext(db,hebe)

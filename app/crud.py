@@ -7,6 +7,7 @@ from fastapi import HTTPException, Query
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, join
+from sqlalchemy.sql import func
 
 from app import auth, models, schemas, storage
 from app.config import params, settings
@@ -196,9 +197,12 @@ def delete_events(db:Session,event:schemas.Event):
     db.commit()
 
 ## Ticket CRUD
-def count_tickets_for_event(db:Session,event:schemas.Event):
-    db_tickets_count:int=db.query(models.Ticket).filter(models.Ticket.event_id==event.id).count()
-    return db_tickets_count
+def count_tickets_for_event(db:Session,event:schemas.Event)->int:
+    res=db.query(func.sum(models.Ticket.person).label("person_sum")).filter(models.Ticket.event_id==event.id,or_(models.Ticket.status=="active",models.Ticket.status=="paper")).first()
+    #db_tickets_count:int=db.query(models.Ticket).filter(models.Ticket.event_id==event.id,or_(models.Ticket.status=="active",models.Ticket.status=="paper")).count() #抽選機能を付けるのであれば、枚数確認せず抽選申し込みできるだろうという予想から、status!="cancelled"としなかった  紙整理券(paper)は含めた
+    if res.person_sum is None:
+        return 0
+    return res.person_sum
 
 def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser):
     ### このユーザーが同じ時間帯で他の公演のチケットを取っていないか(この公演の2枚目も含む)
@@ -206,7 +210,8 @@ def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUs
     taken_events:List[schemas.EventDBOutput] = db.query(models.Event) \
         .join(models.Ticket, \
         and_( models.Event.id==models.Ticket.event_id, \
-            models.Ticket.owner_id==auth.user_object_id(user) )) \
+            models.Ticket.owner_id==auth.user_object_id(user), \
+            models.Ticket.status=="active" )) \
         .all()
     tickets_num_per_day:int=0
     for taken_event in taken_events:
@@ -234,7 +239,13 @@ def check_qualified_for_ticket(db:Session,event:schemas.Event,user:schemas.JWTUs
         return False
     return True
 def create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int):
-    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=auth.user_object_id(user),person=person,is_used=False,created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
+    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=auth.user_object_id(user),person=person,status="active",created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
+    db.add(db_ticket)
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+def spectest_ticket(db:Session,user:schemas.JWTUser):
+    db_ticket = models.Ticket(id=ulid.new().str,group_id="testgroup",event_id="01H9PTVFH7CS30A5RKBKMAQ82R",owner_id=user.name,person=1,status="cancelled",created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
@@ -243,8 +254,35 @@ def get_ticket(db:Session,ticket_id):
     db_ticket:schemas.Ticket = db.query(models.Ticket).filter(models.Ticket.id==ticket_id).first()
     return db_ticket
 def delete_ticket(db:Session,ticket:schemas.Ticket):
-    db.query(models.Ticket).filter(models.Ticket.id==ticket.id).delete()
+    db_ticket=db.query(models.Ticket).filter(models.Ticket.id==ticket.id).first()
+    db_ticket.status="cancelled"
     db.commit()
+    db.refresh(db_ticket)
+    return ticket
+def use_ticket(db:Session,ticket_id:str):
+    ticket=db.query(models.Ticket).filter(models.Ticket.id==ticket_id).first()
+    if not ticket:
+        return None
+    ticket.status="used"
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+def chief_create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int):
+    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=user.name,person=person,status="paper",created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
+    db.add(db_ticket)
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+def chief_delete_ticket(db:Session,event:schemas.Event):
+    db_ticket=db.query(models.Ticket).filter(models.Ticket.event_id==event.id,models.Ticket.status=="paper").first()
+    if db_ticket is None:
+        return None
+    db_ticket.status="cancelled"
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+
+        
 
 
 ## Tag CRUD
@@ -300,5 +338,34 @@ def get_group_votes(db:Session,group:schemas.Group):
     # db_votes5:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_12==group.id).all()
     # db_votes6:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_13==group.id).all()
     return (db_votes1 + db_votes4)
+
+def get_hebe_nowplaying(db:Session):
+    return db.query(models.HebeNowplaying).first()
+def get_hebe_upnext(db:Session):
+    return db.query(models.HebeUpnext).first()
+def set_hebe_nowplaying(db:Session,hebe:schemas.HebeResponse):
+    db_hebe:schemas.HebeResponse=db.query(models.HebeNowplaying).first()
+    if db_hebe is None:
+        add_hebe=models.HebeNowplaying(group_id=hebe.group_id)
+        db.add(add_hebe)
+        db.commit()
+        db.refresh(add_hebe)
+        return add_hebe
+    db_hebe.group_id=hebe.group_id
+    db.commit()
+    db.refresh(db_hebe)
+    return db_hebe
+def set_hebe_upnext(db:Session,hebe:schemas.HebeResponse):
+    db_hebe:schemas.HebeResponse=db.query(models.HebeUpnext).first()
+    if db_hebe is None:
+        add_hebe=models.HebeUpnext(group_id=hebe.group_id)
+        db.add(add_hebe)
+        db.commit()
+        db.refresh(add_hebe)
+        return add_hebe
+    db_hebe.group_id=hebe.group_id
+    db.commit()
+    db.refresh(db_hebe)
+    return db_hebe
 
 
