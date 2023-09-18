@@ -314,13 +314,13 @@ def get_grouplinks(group_id:str,db:Session=Depends(db.get_db)):
     description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい",
     responses={"404":{"description":"指定されたGroupが見つかりません"}}
 )
-def add_grouplink(group_id:str,linktext:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+def add_grouplink(group_id:str,linktext:str,name:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
     group = crud.get_group_public(db,group_id)
     if not group:
         raise HTTPException(404,"指定されたGroupが見つかりません")
     if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
         raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
-    return crud.add_grouplink(db,group.id,linktext)
+    return crud.add_grouplink(db,group.id,linktext,name)
 
 @app.delete(
     "/groups/{group_id}/links/{grouplink_id}",

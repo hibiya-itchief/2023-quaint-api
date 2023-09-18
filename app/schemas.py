@@ -160,6 +160,7 @@ class HebeResponse(BaseModel):
 class GroupLinkBase(BaseModel):
     group_id:str
     linktext:str
+    name:str
 class GroupLinkCreate(GroupLinkBase):
     pass
 class GroupLink(GroupLinkBase):

@@ -144,8 +144,8 @@ def delete_group(db:Session,group:schemas.Group):
     db.query(models.Group).filter(models.Group.id==group.id).delete()
     db.commit()
 
-def add_grouplink(db:Session,group_id:str,linktext):
-    db_grouplink = models.GroupLink(id=ulid.new().str,group_id=group_id,linktext=linktext)
+def add_grouplink(db:Session,group_id:str,linktext:str,name:str):
+    db_grouplink = models.GroupLink(id=ulid.new().str,group_id=group_id,linktext=linktext,name=name)
     db.add(db_grouplink)
     db.commit()
     db.refresh(db_grouplink)
