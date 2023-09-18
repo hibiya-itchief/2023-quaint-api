@@ -72,6 +72,12 @@ class Group(Base):
         for name, value in dict.items():
             if name in self.__dict__ :
                 setattr(self, name, value)
+
+class GroupLink(Base):
+    __tablename__ = "grouplinks"
+    id=Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
+    linktext = Column(VARCHAR(255),nullable=False)
     
 class GroupOwner(Base):
     __tablename__ = "groupowners"

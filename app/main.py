@@ -293,6 +293,50 @@ def delete_group(group_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:
     except:
         raise HTTPException(400,"指定されたGroupに紐づけられているEvent,Ticket,Tagをすべて削除しないと削除できません")
 
+@app.get(
+    "/groups/{group_id}/links",
+    summary="指定されたGroupのリンクを取得",
+    response_model=List[schemas.GroupLink],
+    tags=["groups"],
+    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ",
+    responses={"404":{"description":"指定されたGroupが見つかりません"}}
+)
+def get_grouplinks(group_id:str,db:Session=Depends(db.get_db)):
+    group=crud.get_group_public(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    return crud.get_grouplinks_of_group(db,group)
+
+@app.post(
+    "/groups/{group_id}/links",
+    summary="指定されたGroupにリンクを追加",
+    tags=["groups"],
+    description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい",
+    responses={"404":{"description":"指定されたGroupが見つかりません"}}
+)
+def add_grouplink(group_id:str,linktext:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    group = crud.get_group_public(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
+    return crud.add_grouplink(db,group.id,linktext)
+
+@app.delete(
+    "/groups/{group_id}/links/{grouplink_id}",
+    summary="指定されたGroupのリンクの削除",
+    tags=["groups"],
+    description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい",
+    responses={"404":{"description":"指定されたGroupが見つかりません"}}
+)
+def delete_grouplink(group_id:str,grouplink_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    gl:schemas.GroupLink = crud.get_grouplink(db,grouplink_id)
+    if not gl:
+        raise HTTPException(404,"指定されたGroupLinkが見つかりません")
+    group=crud.get_group_public(db,gl.group_id)  
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
+    return crud.delete_grouplink(db,grouplink_id)
 
 ### Event Crud
 @app.post(
