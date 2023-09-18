@@ -76,6 +76,7 @@ class Group(Base):
 class GroupLink(Base):
     __tablename__ = "grouplinks"
     id=Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
+    name = Column(VARCHAR(255),nullable=False)
     group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
     linktext = Column(VARCHAR(255),nullable=False)
     
