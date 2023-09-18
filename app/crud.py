@@ -144,6 +144,23 @@ def delete_group(db:Session,group:schemas.Group):
     db.query(models.Group).filter(models.Group.id==group.id).delete()
     db.commit()
 
+def add_grouplink(db:Session,group_id:str,linktext:str,name:str):
+    db_grouplink = models.GroupLink(id=ulid.new().str,group_id=group_id,linktext=linktext,name=name)
+    db.add(db_grouplink)
+    db.commit()
+    db.refresh(db_grouplink)
+    return db_grouplink
+def get_grouplinks_of_group(db:Session,group:schemas.Group):
+    db_grouplinks = db.query(models.GroupLink).filter(models.GroupLink.group_id==group.id).all()
+    return db_grouplinks
+def get_grouplink(db:Session,grouplink_id:str):
+    db_grouplink = db.query(models.GroupLink).filter(models.GroupLink.id==grouplink_id).first()
+    return db_grouplink
+def delete_grouplink(db:Session,grouplink_id:str):
+    db.query(models.GroupLink).filter(models.GroupLink.id==grouplink_id).delete()
+    db.commit()
+    return 0
+
 # Event
 def create_event(db:Session,group_id:str,event:schemas.EventCreate):
     add_event:schemas.EventDBInput=event
@@ -267,6 +284,21 @@ def use_ticket(db:Session,ticket_id:str):
     db.commit()
     db.refresh(ticket)
     return ticket
+def chief_create_ticket(db:Session,event:schemas.Event,user:schemas.JWTUser,person:int):
+    db_ticket = models.Ticket(id=ulid.new().str,group_id=event.group_id,event_id=event.id,owner_id=user.name,person=person,status="paper",created_at=datetime.now(timezone(timedelta(hours=+9))).isoformat())
+    db.add(db_ticket)
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+def chief_delete_ticket(db:Session,event:schemas.Event):
+    db_ticket=db.query(models.Ticket).filter(models.Ticket.event_id==event.id,models.Ticket.status=="paper").first()
+    if db_ticket is None:
+        return None
+    db_ticket.status="cancelled"
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+
         
 
 
@@ -300,10 +332,10 @@ def delete_tag(db:Session,id:str):
     return 0
 
 
-# Vote
-def create_vote(db:Session,group_id:str,user:schemas.JWTUser):
+# Vote CRUD
+def create_vote(db:Session,group_id1:str,group_id2:str,user:schemas.JWTUser):
     try:
-        db_vote=models.Vote(group_id=group_id,user_id=auth.user_object_id(user))
+        db_vote=models.Vote(user_id=auth.user_object_id(user),group_id_21=group_id2,group_id_11=group_id1)
         db.add(db_vote)
         db.commit()
         db.refresh(db_vote)
@@ -315,9 +347,42 @@ def get_user_vote(db:Session,user:schemas.JWTUser):
     db_vote:schemas.Vote=db.query(models.Vote).filter(models.Vote.user_id==auth.user_object_id(user)).first()
     return db_vote
 def get_group_votes(db:Session,group:schemas.Group):
-    db_votes:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id==group.id).all()
-    return db_votes
+    #本当はここ学年しばりしたい
+    db_votes1:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_21==group.id).count()
+    # db_votes2:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_22==group.id).all()
+    # db_votes3:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_23==group.id).all()
+    db_votes4:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_11==group.id).count()
+    # db_votes5:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_12==group.id).all()
+    # db_votes6:List[schemas.Vote]=db.query(models.Vote).filter(models.Vote.group_id_13==group.id).all()
+    return (db_votes1 + db_votes4)
 
-
+def get_hebe_nowplaying(db:Session):
+    return db.query(models.HebeNowplaying).first()
+def get_hebe_upnext(db:Session):
+    return db.query(models.HebeUpnext).first()
+def set_hebe_nowplaying(db:Session,hebe:schemas.HebeResponse):
+    db_hebe:schemas.HebeResponse=db.query(models.HebeNowplaying).first()
+    if db_hebe is None:
+        add_hebe=models.HebeNowplaying(group_id=hebe.group_id)
+        db.add(add_hebe)
+        db.commit()
+        db.refresh(add_hebe)
+        return add_hebe
+    db_hebe.group_id=hebe.group_id
+    db.commit()
+    db.refresh(db_hebe)
+    return db_hebe
+def set_hebe_upnext(db:Session,hebe:schemas.HebeResponse):
+    db_hebe:schemas.HebeResponse=db.query(models.HebeUpnext).first()
+    if db_hebe is None:
+        add_hebe=models.HebeUpnext(group_id=hebe.group_id)
+        db.add(add_hebe)
+        db.commit()
+        db.refresh(add_hebe)
+        return add_hebe
+    db_hebe.group_id=hebe.group_id
+    db.commit()
+    db.refresh(db_hebe)
+    return db_hebe
 
 

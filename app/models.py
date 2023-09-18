@@ -41,8 +41,13 @@ class Tag(Base):
 
 class Vote(Base):
     __tablename__ = "votes"
-    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False)#userdefined id
-    user_id = Column(VARCHAR(255),nullable=False,primary_key=True)# sub in jwt (UUID)
+    user_id = Column(VARCHAR(255),unique=True,nullable=False,primary_key=True)# userdefined unique id
+    group_id_21 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
+    # group_id_22 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
+    # group_id_23 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
+    group_id_11 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
+    # group_id_12 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
+    # group_id_13 = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=True)#userdefined id
 
 
 class Group(Base):
@@ -67,6 +72,13 @@ class Group(Base):
         for name, value in dict.items():
             if name in self.__dict__ :
                 setattr(self, name, value)
+
+class GroupLink(Base):
+    __tablename__ = "grouplinks"
+    id=Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
+    name = Column(VARCHAR(255),nullable=False)
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
+    linktext = Column(VARCHAR(255),nullable=False)
     
 class GroupOwner(Base):
     __tablename__ = "groupowners"
@@ -90,5 +102,12 @@ class Ticket(Base):
     is_family_ticket = Column(Boolean,default=False)#家族の1枚保証制度で取られたチケットかどうか
     status = Column(VARCHAR(255),default="active",server_default=text('"active"'),index=True,nullable=False) #active,active,cancelled,used,pending,reject
 
-
+class HebeNowplaying(Base):
+    __tablename__ = "hebenowplaying"
+    
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),primary_key=True,index=True)
+class HebeUpnext(Base):
+    __tablename__ = "hebeupnext"
+    
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),primary_key=True,index=True)
 

@@ -49,12 +49,20 @@ tags_metadata = [
         "description":"Ticket : 各公演に入場するための整理券"
     },
     {
+        "name":"votes",
+        "description":"Vote : 生徒による1、2年クラス劇投票"
+    },
+    {
         "name": "tags",
         "description": "Tag : Groupにひもづけられるタグ"
     },
     {
         "name": "admin",
         "description": "管理者用API"
+    },
+    {
+        "name": "chief",
+        "description": "チーフ会用API"
     },
     {
         "name": "ga",
@@ -285,32 +293,50 @@ def delete_group(group_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:
     except:
         raise HTTPException(400,"指定されたGroupに紐づけられているEvent,Ticket,Tagをすべて削除しないと削除できません")
 
-@app.post("/groups/{group_id}/vote",
-    response_model=schemas.Vote,
-    summary="Groupへの投票",
+@app.get(
+    "/groups/{group_id}/links",
+    summary="指定されたGroupのリンクを取得",
+    response_model=List[schemas.GroupLink],
     tags=["groups"],
-    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n',)
-def create_vote(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
-    # Groupが存在するかの判定も下で兼ねられる
-    tickets=get_list_of_your_tickets(db,user)
-    Flag=False
-    for ticket in tickets:
-        if ticket.group_id==group_id:
-            Flag=True
-            break
-    if not Flag:
-        raise HTTPException(400,"整理券を取得して観劇した団体にのみ投票できます。")
-    vote=crud.create_vote(db,group_id)
-    return vote
+    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ",
+    responses={"404":{"description":"指定されたGroupが見つかりません"}}
+)
+def get_grouplinks(group_id:str,db:Session=Depends(db.get_db)):
+    group=crud.get_group_public(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    return crud.get_grouplinks_of_group(db,group)
 
-@app.get("/groups/{group_id}/vote",
-    response_model=schemas.Vote,
-    summary="Groupへの投票数を確認",
+@app.post(
+    "/groups/{group_id}/links",
+    summary="指定されたGroupにリンクを追加",
     tags=["groups"],
-    description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nいいえ\n',)
+    description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい",
+    responses={"404":{"description":"指定されたGroupが見つかりません"}}
+)
+def add_grouplink(group_id:str,link:schemas.GroupLinkCreate,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    group = crud.get_group_public(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
+    return crud.add_grouplink(db,group.id,link.linktext,link.name)
 
-
-            
+@app.delete(
+    "/groups/{group_id}/links/{grouplink_id}",
+    summary="指定されたGroupのリンクの削除",
+    tags=["groups"],
+    description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい",
+    responses={"404":{"description":"指定されたGroupが見つかりません"}}
+)
+def delete_grouplink(group_id:str,grouplink_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    gl:schemas.GroupLink = crud.get_grouplink(db,grouplink_id)
+    if not gl:
+        raise HTTPException(404,"指定されたGroupLinkが見つかりません")
+    group=crud.get_group_public(db,gl.group_id)  
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
+    return crud.delete_grouplink(db,grouplink_id)
 
 ### Event Crud
 @app.post(
@@ -486,6 +512,89 @@ def use_ticket(ticket_id:str,permission:schemas.JWTUser=Depends(auth.school),db:
         raise HTTPException(404,"指定された整理券が見つかりません")
     return result
 
+@app.post(
+    "/chief/groups/{group_id}/events/{event_id}/tickets",
+    response_model=schemas.Ticket,
+    tags=["chief"],
+    description="### 必要な権限\nchief\n### ログインが必要か\nはい\n ### 説明\n チーフ会が紙整理券を1枚とるエンドポイント",
+)
+def chief_create_ticket(group_id:str,event_id:str,user:schemas.JWTUser=Depends(auth.chief),db:Session=Depends(db.get_db)):
+    event=crud.get_event(db,event_id)
+    if not event:
+        raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
+    if event.target != schemas.UserRole.paper:
+        raise HTTPException(400,"これは紙整理券の公演ではありません")
+    if crud.count_tickets_for_event(db,event)>=event.ticket_stock:
+        raise HTTPException(404,"売り切れました")
+    result=crud.chief_create_ticket(db,event,user,1)
+    return result
+@app.delete(
+     "/chief/groups/{group_id}/events/{event_id}/tickets",
+    tags=["chief"],
+    description="### 必要な権限\nchief\n### ログインが必要か\nはい\n ### 説明\n チーフ会が紙整理券を1枚減らすエンドポイント",
+)
+def chief_delete_ticket(group_id:str,event_id:str,permission:schemas.JWTUser=Depends(auth.chief),db:Session=Depends(db.get_db)):
+    event=crud.get_event(db,event_id)
+    if not event:
+        raise HTTPException(404,"指定されたGroupまたはEventが見つかりません")
+    if event.target != schemas.UserRole.paper:
+        raise HTTPException(400,"これは紙整理券の公演ではありません")
+    #if crud.count_tickets_for_event(db,event)>=event.ticket_stock:
+    #    raise HTTPException(400,"取得されている整理券が0枚です")
+    crud.chief_delete_ticket(db,event)
+    return {"OK":True}
+
+### Vote Crud
+@app.post("/votes",
+    response_model=schemas.Vote,
+    summary="投票",
+    tags=["votes"],
+    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n### 説明\n- 一人一回限りです\n- 投票先を指定せずに投票する場合は、空文字をパラメータに指定してください\n- 来年はjson形式で渡そうと思います')
+def create_vote(group_id1:Union[str,None]=None,group_id2:Union[str,None]=None,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    # Groupが存在するかの判定も下で兼ねられる
+    if group_id1 is None and group_id2 is None:
+        raise HTTPException(400,"投票先の団体を1つ以上選択してください")
+    tickets:List[schemas.Ticket]=crud.get_list_of_your_tickets(db,user)
+    isVoted=crud.get_user_vote(db,user)
+    if isVoted is not None:
+        raise HTTPException(400,"投票は1人1回までです")
+    Flag=False
+    for ticket in tickets:
+        if ticket.group_id==group_id1 or ticket.group_id==group_id2:
+            Flag=True
+            break
+    if not Flag:
+        raise HTTPException(400,"整理券を取得して観劇した団体にのみ投票できます。")
+    vote=crud.create_vote(db,group_id1,group_id2,user)
+    return vote
+
+@app.get("/votes/{group_id}",
+    response_model=schemas.GroupVotesResponse,
+    summary="Groupへの投票数を確認",
+    tags=["votes"],
+    description='### 必要な権限\nAdminまたは当該グループのOwner \n### ログインが必要か\nはい\n',
+    responses={"404":{"description":"- 指定された団体が見つかりません"},"401":{"description":"- Adminまたは当該GroupへのOwnerの権限が必要です"}})
+def get_group_votes(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group_id)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
+    g=crud.get_group_public(db,group_id)
+    if g is None:
+        raise HTTPException(404,"指定された団体が見つかりません")
+    return schemas.GroupVotesResponse(group_id=g.id,votes_num=crud.get_group_votes(db,g))
+
+@app.get("/users/me/votes",
+    response_model=schemas.Vote,
+    summary="userが投票済みかを確認",
+    tags=["votes"],
+    description='### 必要な権限\nなし\n### ログインが必要か\nはい\n ### 「重要」未投票の場合は404が返ります',
+    responses={"404":{"description":"まだ投票をしていません"}})
+def get_user_vote(user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    v= crud.get_user_vote(db,user)
+    if v is None:
+        raise HTTPException(404,"まだ投票をしていません")
+    return v
+
+
 # Tag
 @app.post(
     "/tags",
@@ -566,3 +675,49 @@ def update_frontend(permission:schemas.JWTUser=Depends(auth.admin)):
         return "OK"
     else:
         HTTPException(res.status_code,"Cloudflareへのデプロイに失敗しました")
+
+
+@app.get(
+    "/hebe/nowplaying",
+    response_model=schemas.HebeResponse,
+    summary="今やっているHebeの団体IDを取得",
+    tags=["chief"]
+)
+def get_hebe_nowplaying(db:Session = Depends(db.get_db)):
+    h= crud.get_hebe_nowplaying(db)
+    if h is not None:
+        return h
+    hh =schemas.HebeResponse(group_id="")
+    return hh
+@app.get(
+    "/hebe/upnext",
+    response_model=schemas.HebeResponse,
+    summary="次のHebeの団体IDを取得",
+    tags=["chief"]
+)
+def get_hebe_upnext(db:Session = Depends(db.get_db)):
+    h= crud.get_hebe_upnext(db)
+    if h is not None:
+        return h
+    hh =schemas.HebeResponse(group_id="")
+    return hh
+
+@app.post(
+    "/hebe/nowplaying",
+    response_model=schemas.HebeResponse,
+    summary="今やっているHebeの団体IDを設定",
+    tags=["chief"],
+    description="チーフのみ"
+)
+def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Depends(auth.chief),db:Session = Depends(db.get_db)):
+    return crud.set_hebe_nowplaying(db,hebe)
+
+@app.post(
+    "/hebe/upnext",
+    response_model=schemas.HebeResponse,
+    summary="次のHebeの団体IDを設定",
+    tags=["chief"],
+    description="チーフのみ"
+)
+def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Depends(auth.chief),db:Session = Depends(db.get_db)):
+    return crud.set_hebe_upnext(db,hebe)
