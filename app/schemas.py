@@ -158,12 +158,12 @@ class HebeResponse(BaseModel):
         orm_mode=True
 
 class GroupLinkBase(BaseModel):
-    group_id:str
     linktext:str
     name:str
 class GroupLinkCreate(GroupLinkBase):
     pass
 class GroupLink(GroupLinkBase):
+    group_id:str
     id:str#ULID
     class Config:
         orm_mode=True
