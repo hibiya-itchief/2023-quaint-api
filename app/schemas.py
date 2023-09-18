@@ -157,6 +157,15 @@ class HebeResponse(BaseModel):
     class Config:
         orm_mode=True
 
+class GroupLinkBase(BaseModel):
+    group_id:str
+    linktext:str
+class GroupLinkCreate(GroupLinkBase):
+    pass
+class GroupLink(GroupLinkBase):
+    id:str#ULID
+    class Config:
+        orm_mode=True
 
 Event.update_forward_refs()
 Group.update_forward_refs()

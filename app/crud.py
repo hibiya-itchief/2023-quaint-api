@@ -144,6 +144,23 @@ def delete_group(db:Session,group:schemas.Group):
     db.query(models.Group).filter(models.Group.id==group.id).delete()
     db.commit()
 
+def add_grouplink(db:Session,group_id:str,linktext):
+    db_grouplink = models.GroupLink(id=ulid.new().str,group_id=group_id,linktext=linktext)
+    db.add(db_grouplink)
+    db.commit()
+    db.refresh(db_grouplink)
+    return db_grouplink
+def get_grouplinks_of_group(db:Session,group:schemas.Group):
+    db_grouplinks = db.query(models.GroupLink).filter(models.GroupLink.group_id==group.id).all()
+    return db_grouplinks
+def get_grouplink(db:Session,grouplink_id:str):
+    db_grouplink = db.query(models.GroupLink).filter(models.GroupLink.id==grouplink_id).first()
+    return db_grouplink
+def delete_grouplink(db:Session,grouplink_id:str):
+    db.query(models.GroupLink).filter(models.GroupLink.id==grouplink_id).delete()
+    db.commit()
+    return 0
+
 # Event
 def create_event(db:Session,group_id:str,event:schemas.EventCreate):
     add_event:schemas.EventDBInput=event
