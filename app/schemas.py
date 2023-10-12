@@ -158,8 +158,8 @@ class HebeResponse(BaseModel):
         orm_mode=True
 
 class GroupLinkBase(BaseModel):
-    linktext:str
-    name:str
+    linktext:str = Query(max_length=1024)
+    name:str = Query(max_length=100)
 class GroupLinkCreate(GroupLinkBase):
     pass
 class GroupLink(GroupLinkBase):

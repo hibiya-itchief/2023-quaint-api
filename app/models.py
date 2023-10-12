@@ -75,10 +75,10 @@ class Group(Base):
 
 class GroupLink(Base):
     __tablename__ = "grouplinks"
-    id=Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
-    name = Column(VARCHAR(255),nullable=False)
-    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False,primary_key=True)
-    linktext = Column(VARCHAR(255),nullable=False)
+    id=Column(VARCHAR(1023),primary_key=True,index=True,unique=True)#ULID
+    name = Column(VARCHAR(1023),nullable=False)
+    group_id = Column(VARCHAR(1023),ForeignKey("groups.id"),nullable=False,primary_key=True)
+    linktext = Column(VARCHAR(1023),nullable=False)
     
 class GroupOwner(Base):
     __tablename__ = "groupowners"
