@@ -650,7 +650,100 @@ def delete_tag(tag_id:str,permission:schemas.JWTUser=Depends(auth.admin),db:Sess
     if result==None:
         raise HTTPException(404,"指定されたTagが見つかりません")
     return "Successfully Deleted"
-    
+
+@app.post(
+    "/posts",
+    response_model=schemas.Post,
+    summary="新規Postの作成",
+    tags=["posts"],
+    description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい\n### 説明\n- Postを作成します。\n- 作成したPostは、当該グループのOwnerまたはAdminのみが削除できます。",
+)
+def create_post(group_id:str,post:schemas.PostCreate,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    group = crud.get_group_public(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,group.id)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
+    return crud.create_post(db,group,post)
+@app.delete(
+    "/posts/{post_id}",
+    summary="指定されたPostの削除",
+    tags=["posts"],
+    description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい\n### 説明\n- Postを削除します。\n- 作成したPostは、当該グループのOwnerまたはAdminのみが削除できます。"
+)
+def delete_post(post_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    post = crud.get_post(db,post_id,user)
+    if not post:
+        raise HTTPException(404,"指定されたPostが見つかりません")
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,post.group_id)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
+    crud.delete_post(db,post)
+    return {"OK":True}
+@app.put(
+    "/posts/{post_id}",
+    response_model=schemas.Post,
+    summary="指定されたPostの更新",
+    tags=["posts"],
+    description="### 必要な権限\nAdminまたは当該グループのOwner\n### ログインが必要か\nはい\n### 説明\n- Postを更新します。\n- 作成したPostは、当該グループのOwnerまたはAdminのみが更新できます。",
+)
+def update_post(post_id:str,group_id:str,updated_post:schemas.PostCreate,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    post = crud.get_post(db,post_id,user)
+    if not post:
+        raise HTTPException(404,"指定されたPostが見つかりません")
+    if not(auth.check_admin(user) or crud.check_owner_of(db,user,post.group_id)):
+        raise HTTPException(401,"Adminまたは当該GroupのOwnerの権限が必要です")
+    return crud.update_post(db,post,updated_post)
+@app.get(
+    "/groups/{group_id}/posts-auth",
+    response_model=List[schemas.PostSummary],
+    summary="指定されたGroupの全Postを取得",
+    tags=["posts"],
+    description="### 必要な権限\n権限によって取得できる投稿が変わる\n### ログインが必要か\nはい\n",
+)
+def get_all_posts_with_auth(group_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    group = crud.get_group_public(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    return crud.get_all_posts_role(db,group,user)
+@app.get(
+    "/groups/{group_id}/posts",
+    response_model=List[schemas.PostSummary],
+    summary="指定されたGroupの全Postを取得",
+    tags=["posts"],
+    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n",
+)
+def get_all_posts(group_id:str,db:Session=Depends(db.get_db)):
+    group = crud.get_group_public(db,group_id)
+    if not group:
+        raise HTTPException(404,"指定されたGroupが見つかりません")
+    return crud.get_all_posts_everyone(db,group)
+@app.get(
+    "/posts-auth/{post_id}",
+    response_model=schemas.Post,
+    summary="指定されたPostを取得",
+    tags=["posts"],
+    description="### 必要な権限\n権限によって取得できる投稿が変わる\n### ログインが必要か\nどちらでも\n",
+    responses={"404":{"description":"指定されたPostが見つかりません"}}
+)
+def get_post(post_id:str,user:schemas.JWTUser=Depends(auth.get_current_user),db:Session=Depends(db.get_db)):
+    post = crud.get_post(db,post_id,user)
+    if not post:
+        raise HTTPException(404,"指定されたPostが見つかりません")
+    return post
+@app.get(
+    "/posts/{post_id}",
+    response_model=schemas.Post,
+    summary="指定されたPostを取得",
+    tags=["posts"],
+    description="### 必要な権限\nなし\n### ログインが必要か\nいいえ\n",
+    responses={"404":{"description":"指定されたPostが見つかりません"}}
+)
+def get_post(post_id:str,db:Session=Depends(db.get_db)):
+    post = crud.get_post(db,post_id,None)
+    if not post:
+        raise HTTPException(404,"指定されたPostが見つかりません")
+    return post
+
 
 @app.get(
     "/ga/screenpageview",

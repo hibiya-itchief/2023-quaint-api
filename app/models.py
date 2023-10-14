@@ -1,10 +1,12 @@
 #from numpy import integer
 #from pandas import notnull
+from datetime import datetime 
 from sqlalchemy import (TEXT, TIMESTAMP, VARCHAR, Boolean, Column, DateTime,
                         ForeignKey, Integer, String, UniqueConstraint, text)
 from sqlalchemy.orm import relationship
 # from sqlalchemy.dialects.mysql import TIMESTAMP as Timestamp
 from sqlalchemy.sql.functions import current_timestamp
+from sqlalchemy.dialects.mysql import LONGTEXT
 
 from app.db import Base
 
@@ -68,7 +70,6 @@ class Group(Base):
     public_page_content_url = Column(VARCHAR(255))#オブジェクトストレージ上の団体個別公開ページのMarkdownへのURL
     private_page_content_url = Column(VARCHAR(255))#オブジェクトストレージ上の団体個別非公開ページのMarkdownへのURL
     def update_dict(self,dict):
-        print(dict)
         for name, value in dict.items():
             if name in self.__dict__ :
                 setattr(self, name, value)
@@ -110,4 +111,19 @@ class HebeUpnext(Base):
     __tablename__ = "hebeupnext"
     
     group_id = Column(VARCHAR(255),ForeignKey("groups.id"),primary_key=True,index=True)
+
+class Post(Base):
+    __tablename__ = "post"
+    id = Column(VARCHAR(255),primary_key=True,index=True,unique=True)#ULID
+    group_id = Column(VARCHAR(255),ForeignKey("groups.id"),nullable=False)
+    title = Column(VARCHAR(255),nullable=False)
+    thumbnail_image = Column(LONGTEXT,nullable=True) #base64
+    content = Column(LONGTEXT,nullable=False) #HTML
+    created_at = Column(DateTime,default=datetime.now(),nullable=False)
+    updated_at = Column(DateTime,default=datetime.now(), onupdate=datetime.now(),nullable=False)
+    target = Column(VARCHAR(255),nullable=False)
+    def update_dict(self,dict):
+        for name, value in dict.items():
+            if name in self.__dict__:
+                setattr(self, name, value)
 

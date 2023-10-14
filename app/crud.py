@@ -331,6 +331,64 @@ def delete_tag(db:Session,id:str):
     db.commit()
     return 0
 
+# Post Crud
+def create_post(db:Session,group:schemas.Group,post:schemas.PostCreate):
+    db_post=models.Post(id=ulid.new().str,group_id=group.id,**post.dict())
+    db.add(db_post)
+    db.commit()
+    db.refresh(db_post)
+    return db_post
+def delete_post(db:Session,post:schemas.Post):
+    db_post:models.Post=db.query(models.Post).filter(models.Post.id==post.id).first()
+    if not db_post:
+        return None
+    db.delete(db_post)
+    db.commit()
+    return 0
+def update_post(db:Session,post:schemas.Post,updated_post:schemas.PostCreate):
+    db_post:models.Post=db.query(models.Post).filter(models.Post.id==post.id).first()
+    if not db_post:
+        return None
+    db_post.update_dict(updated_post.dict())
+    db.commit()
+    db.refresh(db_post)
+    return db_post
+def get_all_posts_everyone(db:Session,group:schemas.Group):
+    db_posts:List[schemas.PostSummary]=db.query(
+        models.Post.id,
+        models.Post.title,
+        models.Post.target,
+        models.Post.group_id,
+        models.Post.thumbnail_image,
+        models.Post.created_at,
+        models.Post.updated_at).filter(models.Post.group_id==group.id,models.Post.target=="everyone").all()
+    return db_posts
+def get_all_posts_role(db:Session,group:schemas.Group,user:schemas.JWTUser):
+    db_posts:List[schemas.PostSummary]=db.query(
+        models.Post.id,
+        models.Post.title,
+        models.Post.target,
+        models.Post.group_id,
+        models.Post.thumbnail_image,
+        models.Post.created_at,
+        models.Post.updated_at).filter(models.Post.group_id==group.id).all()
+    for post in db_posts:
+        if not auth.check_role(post.target,user):
+            db_posts.remove(post)
+    return db_posts
+def get_post(db:Session,post_id:str,user:Union[schemas.JWTUser,None]):
+    db_post:schemas.Post=db.query(models.Post).filter(models.Post.id==post_id).first()
+    if db_post is None:
+        return None
+    if db_post.target=="everyone":
+        return db_post
+    if user is None:
+        return None
+    if auth.check_role(db_post.target,user):
+        return db_post
+    else:
+        return None
+    
 
 # Vote CRUD
 def create_vote(db:Session,group_id1:str,group_id2:str,user:schemas.JWTUser):

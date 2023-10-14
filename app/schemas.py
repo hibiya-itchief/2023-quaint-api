@@ -168,6 +168,31 @@ class GroupLink(GroupLinkBase):
     class Config:
         orm_mode=True
 
+class PostBase(BaseModel):
+    title:str
+    thumbnail_image:str
+    content:str
+    target:UserRole
+class PostCreate(PostBase):
+    pass
+class Post(PostBase):
+    id:str#ULID
+    group_id:str#ULID
+    created_at:datetime
+    updated_at:datetime
+    class Config:
+        orm_mode=True
+class PostSummary(BaseModel):
+    id:str#ULID
+    title:str
+    target:UserRole
+    group_id:str
+    thumbnail_image:str
+    created_at:datetime
+    updated_at:datetime
+    class Config:
+        orm_mode=True
+
 Event.update_forward_refs()
 Group.update_forward_refs()
 Tag.update_forward_refs()
