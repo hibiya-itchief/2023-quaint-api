@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List, Literal, Union
 
 from fastapi import Query
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 
 class UserRole(str,Enum):
@@ -45,13 +45,11 @@ class EventDBInput(EventBase):
 class Event(EventCreate):
     id:str#ULID
     group_id:str#ULID
-    class Config:
-        orm_mode=True
+    model_config = ConfigDict(from_attributes=True)
 class EventDBOutput(EventDBInput):
     id:str#ULID
     group_id:str#ULID
-    class Config:
-        orm_mode=True
+    model_config = ConfigDict(from_attributes=True)
 class GroupTagCreate(BaseModel):
     tag_id:str#ULID
 
@@ -61,30 +59,27 @@ class TagCreate(TagBase):
     pass
 class Tag(TagBase):
     id:str#ULID
-    class Config:
-        orm_mode=True
+    model_config = ConfigDict(from_attributes=True)
 
 class GroupUpdate(BaseModel):
     title:Union[str,None] = Query(default=None,max_length=200)
     description:Union[str,None] = Query(default=None,max_length=200)
-    twitter_url:Union[str,None]=Query(default=None,regex="https?://twitter\.com/[0-9a-zA-Z_]{1,15}/?")
-    instagram_url:Union[str,None]=Query(default=None,regex="https?://instagram\.com/[0-9a-zA-Z_.]{1,30}/?")
-    stream_url:Union[str,None]=Query(default=None,regex="https?://web\.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?")
+    twitter_url:Union[str,None]=Query(default=None,pattern="https?://twitter\.com/[0-9a-zA-Z_]{1,15}/?")
+    instagram_url:Union[str,None]=Query(default=None,pattern="https?://instagram\.com/[0-9a-zA-Z_.]{1,30}/?")
+    stream_url:Union[str,None]=Query(default=None,pattern="https?://web\.microsoftstream\.com/video/[\w!?+\-_~=;.,*&@#$%()'[\]]+/?")
     public_thumbnail_image_url:Union[str,None]=Query(default=None,max_length=200)
     public_page_content_url:Union[str,None] = Query(default=None,max_length=200)
     private_page_content_url:Union[str,None] = Query(default=None,max_length=200)
 class GroupBase(GroupUpdate):#userdefined idをURLにする。groupnameは表示名
-    id:str=Query(regex="^[a-zA-Z0-9_\-.]{3,16}$",min_length=3,max_length=16)
+    id:str=Query(pattern="^[a-zA-Z0-9_\-.]{3,16}$",min_length=3,max_length=16)
     groupname:str = Query(max_length=200)
     enable_vote:bool = True
     
 class GroupCreate(GroupBase):
-    class Config:
-        orm_mode=True
+    model_config = ConfigDict(from_attributes=True)
 class Group(GroupBase):
-    tags:Union[List[Tag],None]
-    class Config:
-        orm_mode=True 
+    tags:Union[List[Tag],None] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class TicketBase(BaseModel):
     group_id:str
@@ -98,9 +93,7 @@ class Ticket(TicketBase):
     id:str#ULID
     created_at:datetime
     status:Literal["active","cancelled","used","pending","reject","paper"] #https://github.com/hibiya-itchief/quaint-api/issues/91
-
-    class Config:
-        orm_mode=True
+    model_config = ConfigDict(from_attributes=True)
 
 class TicketsNumberData(BaseModel):
     taken_tickets:int
@@ -108,31 +101,30 @@ class TicketsNumberData(BaseModel):
     stock:int
 
 class JWTUser(BaseModel):
-    aud:Union[str,None]
-    iss:Union[str,None]
-    iat:Union[int,None]
-    nbf:Union[int,None]
-    exp:Union[int,None]
+    aud:Union[str,None] = None
+    iss:Union[str,None] = None
+    iat:Union[int,None] = None
+    nbf:Union[int,None] = None
+    exp:Union[int,None] = None
     sub:str
-    oid:Union[str,None]
-    name:Union[str,None]
-    jobTitle:Union[str,None]
-    groups:Union[List[str],None]
+    oid:Union[str,None] = None
+    name:Union[str,None] = None
+    jobTitle:Union[str,None] = None
+    groups:Union[List[str],None] = None
     
 
 class VoteBase(BaseModel):
     user_id:str
-    group_id_21:Union[str,None] #2nd grade 1st class
+    group_id_21:Union[str,None] = None #2nd grade 1st class
     # group_id_22:str
     # group_id_23:str
-    group_id_11:Union[str,None]
+    group_id_11:Union[str,None] = None
     # group_id_12:str
     # group_id_13:str
 class VoteCreate(VoteBase):
     pass
 class Vote(VoteBase):
-    class Config:
-        orm_mode=True
+    model_config = ConfigDict(from_attributes=True)
 
 class GroupVotesResponse(BaseModel):
     group_id:str
@@ -142,9 +134,8 @@ class GroupVotesResponse(BaseModel):
 class GroupOwner(BaseModel):
     group_id:str#userdefined id
     user_id:str# sub in jwt (UUID)
-    note:Union[str,None]
-    class Config:
-        orm_mode=True
+    note:Union[str,None] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class GAScreenPageViewResponse(BaseModel):
     start_date:str
@@ -154,8 +145,7 @@ class GAScreenPageViewResponse(BaseModel):
 
 class HebeResponse(BaseModel):
     group_id:str #userdefined id
-    class Config:
-        orm_mode=True
+    model_config = ConfigDict(from_attributes=True)
 
 class GroupLinkBase(BaseModel):
     linktext:str
@@ -165,8 +155,7 @@ class GroupLinkCreate(GroupLinkBase):
 class GroupLink(GroupLinkBase):
     group_id:str
     id:str#ULID
-    class Config:
-        orm_mode=True
+    model_config = ConfigDict(from_attributes=True)
 
 Event.update_forward_refs()
 Group.update_forward_refs()
