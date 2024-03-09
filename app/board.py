@@ -8,23 +8,26 @@ from app import crud, db, schemas
 
 #redisのboard用のgroups, eventsを更新する
 def update_redis(db_session, redis_db):
-    #団体、イベント情報の取得と追加
-    groups = crud.get_all_groups_public(db_session)
-    groups_serializable = []
+    try:
+        #団体、イベント情報の取得と追加
+        groups = crud.get_all_groups_public(db_session)
+        groups_serializable = []
 
-    for g in groups:
-        events_serializable = []
+        for g in groups:
+            events_serializable = []
 
-        groups_serializable.append(schemas.Group.from_orm(g).dict())
+            groups_serializable.append(schemas.Group.from_orm(g).dict())
 
-        events=crud.get_all_events(db_session,g.id)
-        for e in events:
-            events_serializable.append(schemas.EventDBOutput_fromEvent(schemas.Event.from_orm(e)).dict())             
+            events=crud.get_all_events(db_session,g.id)
+            for e in events:
+                events_serializable.append(schemas.EventDBOutput_fromEvent(schemas.Event.from_orm(e)).dict())             
 
-        redis_db.set('board_events:' + g.id, json.dumps(events_serializable))
+            redis_db.set('board_events:' + g.id, json.dumps(events_serializable))
 
-    redis_db.set('board_groups', json.dumps(groups_serializable))
-    return 1 #成功
+        redis_db.set('board_groups', json.dumps(groups_serializable))
+        return 1 #成功
+    except:
+        return 0
 
 #mainから呼ばれる関数
 def update():
