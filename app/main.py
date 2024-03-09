@@ -729,5 +729,14 @@ def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Dep
         tags=["board"],
         description="最後の更新から一分以上経過していた場合のみ更新します"
         )
-def update_board_data():
+def update_board_data(permission:schemas.JWTUser=Depends(auth.admin)):
     return board.update()
+
+@app.get(
+    '/board/groups',
+    summary="/boardで使用する団体情報の取得",
+    tags=["board"],
+    description="boardで使用する団体情報を一括で取得します。"
+)
+def get_all_groups(permission:schemas.JWTUser=Depends(auth.admin)):
+    pass
