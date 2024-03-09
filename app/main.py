@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from starlette.status import (HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN,
                               HTTP_404_NOT_FOUND)
 
-from app import auth, crud, db, models, schemas, storage
+from app import auth, crud, db, models, schemas, storage, board
 from app.config import settings
 from app.ga import ga_screenpageview
 from app.msgraph import MsGraph
@@ -721,3 +721,13 @@ def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Dep
 )
 def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Depends(auth.chief),db:Session = Depends(db.get_db)):
     return crud.set_hebe_upnext(db,hebe)
+
+# debug for board
+@app.post(
+        '/board/update',
+        summary="/boardで使用する団体、イベント情報の更新",
+        tags=["board"],
+        description="最後の更新から一分以上経過していた場合のみ更新します"
+        )
+def update_board_data():
+    return board.update()
