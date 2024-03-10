@@ -431,8 +431,25 @@ def update_redis(db_session, redis_db):
             groups_serializable.append(schemas.Group.from_orm(g).dict())
 
             events = get_all_events(db_session,g.id)
+
             for e in events:
-                events_serializable.append(schemas.EventDBOutput_fromEvent(schemas.Event.from_orm(e)).dict())             
+                #redisに保管する用のevent情報に変換する
+                #/boardで取得されたチケット数を使用するためイベント情報にtaken_ticketsを追加している
+                event_for_redis = schemas.EventRedisOutput(
+                    eventname=e.eventname,
+                    lottery=e.lottery,
+                    target=e.target,
+                    ticket_stock=e.ticket_stock,
+                    starts_at=e.starts_at.isoformat(),
+                    ends_at=e.ends_at.isoformat(),
+                    sell_starts=e.sell_starts.isoformat(),
+                    sell_ends=e.sell_ends.isoformat(),
+                    id=e.id,
+                    group_id=e.group_id,
+                    taken_tickets=count_tickets_for_event(db_session,e)
+                )    
+
+                events_serializable.append(schemas.EventRedisOutput.from_orm(event_for_redis).dict())
 
             redis_db.set('board_events:' + g.id, json.dumps(events_serializable))
             
