@@ -736,14 +736,14 @@ def update_board_data(permission:schemas.JWTUser=Depends(auth.admin), db:Session
     '/board/groups',
     summary="/boardで使用する団体情報の取得",
     tags=["board"],
-    description="redisから/boardで使用する団体情報を一括で取得します。（最新情報でない可能性があります。呼び出し前に/board/updateを実行することを推薦します。）"
+    description="redisから/boardで使用する団体情報を一括で取得します。（最新情報でない可能性があります。呼び出し前に/board/updateを実行することを推薦します。）",
 )
 def get_all_redis_groups():
     cacheresult=redis_get_if_possible("board_groups")
     if cacheresult:
         return json.loads(cacheresult)
     else:
-        return "データが存在しません"
+        return HTTPException(404, "データが存在しません。")
     
 @app.get(
     '/board/groups/{group_id}/events',
@@ -756,4 +756,4 @@ def get_all_redis_events(group_id):
     if cacheresult:
         return json.loads(cacheresult)
     else:
-        return 'データが存在しません'
+        return HTTP_404_NOT_FOUND("データが存在しません。")
