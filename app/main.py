@@ -344,7 +344,7 @@ def delete_grouplink(group_id:str,grouplink_id:str,user:schemas.JWTUser=Depends(
     response_model=schemas.Event,
     summary="新規Eventを作成",
     tags=["events"],
-    description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n### 説明\n- 公演を作成します。（タイムゾーンの設定に気をつけてください）",
+    description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n### 説明\n- 公演を作成します。",
     responses={"400":{"description":"パラメーターが不適切です"},
         "403":{"description":"Adminの権限が必要です"},
         "404":{"description":"指定されたGroupが見つかりません"}})
@@ -743,7 +743,7 @@ def get_all_redis_groups():
     if cacheresult:
         return json.loads(cacheresult)
     else:
-        return HTTPException(404, "データが存在しません。")
+        raise HTTPException(404, "データが存在しません。")
     
 @app.get(
     '/board/groups/{group_id}/events',
@@ -756,4 +756,4 @@ def get_all_redis_events(group_id):
     if cacheresult:
         return json.loads(cacheresult)
     else:
-        return HTTP_404_NOT_FOUND("データが存在しません。")
+        raise HTTP_404_NOT_FOUND("データが存在しません。")

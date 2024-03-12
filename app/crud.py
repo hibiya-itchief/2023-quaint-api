@@ -392,7 +392,7 @@ def board_update(db_session:Session):
     try:
         redis_db = redis.Redis(host=settings.redis_host , port=6379, db=0, decode_responses=True)
     except:
-        return 'DBへの接続に失敗しました' #失敗
+        raise HTTPException(400,'DBへの接続に失敗しました') #失敗
 
     #last_board_update : 最後にboard用の情報を更新した時間
     last_board_update_time = redis_db.get('last_board_update')
@@ -406,17 +406,17 @@ def board_update(db_session:Session):
         if (difference > timedelta(minutes=1)):
             if(update_redis(db_session, redis_db)):
                 redis_db.set('last_board_update', json.dumps(now, default=str))
-                return '新しく情報を更新しました'
+                return {"description":"新しく情報を更新しました。"}
             else:
-                return '新しく情報を更新することに失敗しました'
+                raise HTTPException(400,"新しい情報の更新に失敗しました。")
         else:
-            return '前回の更新は' + last_board_update_time
+            return {"description":f"前回の更新は{last_board_update_time}"}
     else:
         if(update_redis(db_session, redis_db)):
             redis_db.set('last_board_update', json.dumps(now, default=str))
-            return '新しく情報を登録しました'
+            return {"description":'新しく情報を登録しました'}
         else:
-            return '新しい情報の登録に失敗しました'
+            raise HTTPException(400,'新しい情報の登録に失敗しました')
         
 #redisのboard用のgroups, eventsを更新する
 def update_redis(db_session, redis_db):
@@ -448,11 +448,10 @@ def update_redis(db_session, redis_db):
                     group_id=e.group_id,
                     taken_tickets=count_tickets_for_event(db_session,e)
                 )    
-
                 events_serializable.append(schemas.EventRedisOutput.from_orm(event_for_redis).dict())
 
             redis_db.set('board_events:' + g.id, json.dumps(events_serializable))
-            
+
         redis_db.set('board_groups', json.dumps(groups_serializable))
         return 1 #成功
     except:
