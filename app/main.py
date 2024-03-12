@@ -344,7 +344,7 @@ def delete_grouplink(group_id:str,grouplink_id:str,user:schemas.JWTUser=Depends(
     response_model=schemas.Event,
     summary="新規Eventを作成",
     tags=["events"],
-    description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n### 説明\n- 公演を作成します。",
+    description="### 必要な権限\nadmin\n### ログインが必要か\nはい\n### 説明\n- 公演を作成します。（タイムゾーンの設定に気をつけてください）",
     responses={"400":{"description":"パラメーターが不適切です"},
         "403":{"description":"Adminの権限が必要です"},
         "404":{"description":"指定されたGroupが見つかりません"}})
