@@ -40,7 +40,7 @@ jobs:
           echo MYSQL_DATABASE=quaint-app >> .env
           ls ./app
           docker-compose up -d
-          docker-compose exec -T app bash ./wait-for-it.sh db:3306 -t 60 -- pytest --cov --junitxml=/app/app/test/pytest.xml --cov-report=term-missing:skip-covered > ./pytest-coverage.txt
+          docker-compose exec -T app bash .wait-for-it.sh db:3306 -t 60 -- pytest --cov --junitxml=/app/app/test/pytest.xml --cov-report=term-missing:skip-covered > ./pytest-coverage.txt
 
       - name: Create Coverage Comment
         id: coverageComment
