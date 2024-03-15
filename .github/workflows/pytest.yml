@@ -29,8 +29,7 @@ jobs:
 
       - name: Test with pytest on Docker
         run: |
-          cd ./app
-          touch .env
+          touch ./app/.env
           echo DB_HOST=db >> .env
           echo MYSQL_USER=docker_dev >> .env
           echo MYSQL_PASSWORD=cRH1eL4GbNZkFXlk >> .env
