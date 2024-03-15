@@ -53,12 +53,6 @@ class EventDBOutput(EventDBInput):
     class Config:
         orm_mode=True
 
-#/boardで取得されたチケット数を使用するためイベント情報にtaken_ticketsを追加している
-class EventRedisOutput(EventDBOutput):
-    taken_tickets: int
-    class Config:
-        orm_mode=True
-
 class GroupTagCreate(BaseModel):
     tag_id:str#ULID
 

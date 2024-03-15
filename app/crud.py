@@ -1,7 +1,5 @@
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Union
-import redis
-import json
 
 #from hashids import Hashids
 import ulid
@@ -301,9 +299,6 @@ def chief_delete_ticket(db:Session,event:schemas.Event):
     db.refresh(db_ticket)
     return db_ticket
 
-        
-
-
 ## Tag CRUD
 def create_tag(db:Session,tag:schemas.TagCreate):
     db_tag=models.Tag(id=ulid.new(),tagname=tag.tagname)
@@ -386,74 +381,3 @@ def set_hebe_upnext(db:Session,hebe:schemas.HebeResponse):
     db.commit()
     db.refresh(db_hebe)
     return db_hebe
-
-#mainから呼ばれる関数
-def board_update(db_session:Session):
-    try:
-        redis_db = redis.Redis(host=settings.redis_host , port=6379, db=0, decode_responses=True)
-    except:
-        raise HTTPException(400,'DBへの接続に失敗しました') #失敗
-
-    #last_board_update : 最後にboard用の情報を更新した時間
-    last_board_update_time = redis_db.get('last_board_update')
-    now = datetime.now()
-    if(last_board_update_time):
-        #datetimeオブジェクトにstringから変換
-        last_board_update = datetime.strptime(last_board_update_time, '"%Y-%m-%d %H:%M:%S.%f"')
-
-        difference = now - last_board_update
-        #一分間のずれがあるかを判定
-        if (difference > timedelta(minutes=1)):
-            if(update_redis(db_session, redis_db)):
-                redis_db.set('last_board_update', json.dumps(now, default=str))
-                return {"description":"新しく情報を更新しました。"}
-            else:
-                raise HTTPException(400,"新しい情報の更新に失敗しました。")
-        else:
-            return {"description":f"前回の更新は{last_board_update_time}"}
-    else:
-        if(update_redis(db_session, redis_db)):
-            redis_db.set('last_board_update', json.dumps(now, default=str))
-            return {"description":'新しく情報を登録しました'}
-        else:
-            raise HTTPException(400,'新しい情報の登録に失敗しました')
-        
-#redisのboard用のgroups, eventsを更新する
-def update_redis(db_session, redis_db):
-    try:
-        #団体、イベント情報の取得と追加
-        groups = get_all_groups_public(db_session)
-        groups_serializable = []
-
-        for g in groups:
-            events_serializable = []
-
-            groups_serializable.append(schemas.Group.from_orm(g).dict())
-
-            events = get_all_events(db_session,g.id)
-
-            for e in events:
-                #redisに保管する用のevent情報に変換する
-                #/boardで取得されたチケット数を使用するためイベント情報にtaken_ticketsを追加している
-                event_for_redis = schemas.EventRedisOutput(
-                    eventname=e.eventname,
-                    lottery=e.lottery,
-                    target=e.target,
-                    ticket_stock=e.ticket_stock,
-                    starts_at=e.starts_at.isoformat(),
-                    ends_at=e.ends_at.isoformat(),
-                    sell_starts=e.sell_starts.isoformat(),
-                    sell_ends=e.sell_ends.isoformat(),
-                    id=e.id,
-                    group_id=e.group_id,
-                    taken_tickets=count_tickets_for_event(db_session,e)
-                )    
-                events_serializable.append(schemas.EventRedisOutput.from_orm(event_for_redis).dict())
-
-            redis_db.set('board_events:' + g.id, json.dumps(events_serializable))
-
-        redis_db.set('board_groups', json.dumps(groups_serializable))
-        return 1 #成功
-    except:
-        return 0 #失敗
-

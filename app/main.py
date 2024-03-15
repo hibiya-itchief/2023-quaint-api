@@ -721,39 +721,3 @@ def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Dep
 )
 def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Depends(auth.chief),db:Session = Depends(db.get_db)):
     return crud.set_hebe_upnext(db,hebe)
-
-# debug for board
-@app.post(
-        '/board/update',
-        summary="/boardで使用する団体、イベント情報の更新",
-        tags=["board"],
-        description="最後の更新から一分以上経過していた場合のみ更新します"
-        )
-def update_board_data(permission:schemas.JWTUser=Depends(auth.admin), db:Session = Depends(db.get_db)):
-    return crud.board_update(db)
-
-@app.get(
-    '/board/groups',
-    summary="/boardで使用する団体情報の取得",
-    tags=["board"],
-    description="redisから/boardで使用する団体情報を一括で取得します。（最新情報でない可能性があります。呼び出し前に/board/updateを実行することを推薦します。）",
-)
-def get_all_redis_groups():
-    cacheresult=redis_get_if_possible("board_groups")
-    if cacheresult:
-        return json.loads(cacheresult)
-    else:
-        raise HTTPException(404, "データが存在しません。")
-    
-@app.get(
-    '/board/groups/{group_id}/events',
-    summary="/boardで使用するイベント情報の取得",
-    tags=["board"],
-    description="redisから/boardで使用する指定された団体idを持つイベント一覧を一括取得します。"
-)
-def get_all_redis_events(group_id):
-    cacheresult=redis_get_if_possible("board_events:"+group_id)
-    if cacheresult:
-        return json.loads(cacheresult)
-    else:
-        raise HTTP_404_NOT_FOUND("データが存在しません。")
