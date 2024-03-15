@@ -28,15 +28,15 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Test with pytest on Docker
-        env:
-          DB_HOST: db
-          MYSQL_USER: docker_dev
-          MYSQL_PASSWORD: cRH1eL4GbNZkFXlk
-          BIND-ADDRESS: 0.0.0.0
-          MYSQL_RANDOM_ROOT_PASSWORD: yes
-          MYSQL_DATABASE: quaint-app
-
         run: |
+          cd ./workspace/app
+          touch .env
+          echo DB_HOST=db >> .env
+          echo MYSQL_USER=docker_dev >> .env
+          echo MYSQL_PASSWORD=cRH1eL4GbNZkFXlk >> .env
+          echo BIND-ADDRESS=0.0.0.0 >> .env
+          echo MYSQL_RANDOM_ROOT_PASSWORD=yes >> .env
+          echo MYSQL_DATABASE=quaint-app >> .env
           docker-compose up -d
           docker-compose exec -T app bash /app/wait-for-it.sh db:3306 -t 60 -- pytest --cov --junitxml=/app/app/test/pytest.xml --cov-report=term-missing:skip-covered > ./pytest-coverage.txt
 
