@@ -41,7 +41,7 @@ jobs:
           ls ./app
           docker-compose up -d
           docker-compose exec -T app bash
-          ls .
+          ./wait-for-it.sh
 
       - name: Create Coverage Comment
         id: coverageComment
