@@ -40,7 +40,8 @@ jobs:
           echo MYSQL_DATABASE=quaint-app >> .env
           ls ./app
           docker-compose up -d
-          docker-compose exec -T app bash ls .
+          docker-compose exec -T app bash
+          pwd
 
       - name: Create Coverage Comment
         id: coverageComment
