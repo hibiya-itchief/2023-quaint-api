@@ -299,9 +299,6 @@ def chief_delete_ticket(db:Session,event:schemas.Event):
     db.refresh(db_ticket)
     return db_ticket
 
-        
-
-
 ## Tag CRUD
 def create_tag(db:Session,tag:schemas.TagCreate):
     db_tag=models.Tag(id=ulid.new(),tagname=tag.tagname)
@@ -384,5 +381,3 @@ def set_hebe_upnext(db:Session,hebe:schemas.HebeResponse):
     db.commit()
     db.refresh(db_hebe)
     return db_hebe
-
-
