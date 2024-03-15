@@ -41,7 +41,7 @@ jobs:
           ls ./app
           docker-compose up -d
           docker-compose exec -T app bash
-          pwd
+          ls
 
       - name: Create Coverage Comment
         id: coverageComment
