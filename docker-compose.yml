@@ -23,7 +23,8 @@ services:
       - .:/workspace:cached
     ports:
       - "8000:8000"
-    command: /bin/bash /workspace/docker_startup.sh
+    command: >
+      /bin/sh -c 'chmod +x /workspace/docker_startup.sh && /workspace/docker_startup.sh'
 
   redis:
     image: "redis:latest"

@@ -1,8 +1,10 @@
 import datetime
 import os
+from dotenv import load_dotenv
 
 from pydantic import BaseSettings
 
+load_dotenv()
 
 class Parameters(BaseSettings):
     person_per_user:int=3 # 1つのユーザーで同時入場できる人数
@@ -66,3 +68,6 @@ class Settings(BaseSettings):
 
 params=Parameters()
 settings= Settings()
+
+print("config")
+print(settings.mysql_user)
