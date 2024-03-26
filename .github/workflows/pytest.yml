@@ -45,17 +45,16 @@ jobs:
         with:
           pytest-coverage-path: ./pytest-coverage.txt
           junitxml-path: ./app/test/pytest.xml
-
-      - name: Create Coverage Badge
-        uses: schneegans/dynamic-badges-action@v1.3.0
-        with:
-          auth: ${{ secrets.BADGE_GIST }} # 名前は適宜変更:手順5で決めたトークン名
-          gistID: 81370c9284b6c64224021c2c6520c2e3 #先ほど控えたGist ID
-          # 以降はコピペ可
-          # cerverageCommentはPytest Coverage CommentのID
-          # 書き換えた場合は変更が必要
-          filename: pytest-coverage-comment.json
-          label: Coverage
-          message: ${{ steps.coverageComment.outputs.coverage }}
-          color: ${{ steps.coverageComment.outputs.color }}
-          namedLogo: python
+#      - name: Create Coverage Badge
+#        uses: schneegans/dynamic-badges-action@v1.3.0
+#        with:
+#          auth: ${{ secrets.BADGE_GIST }} # 名前は適宜変更:手順5で決めたトークン名
+#          gistID: 81370c9284b6c64224021c2c6520c2e3 #先ほど控えたGist ID
+#          # 以降はコピペ可
+#          # cerverageCommentはPytest Coverage CommentのID
+#          # 書き換えた場合は変更が必要
+#          filename: pytest-coverage-comment.json
+#          label: Coverage
+#          message: ${{ steps.coverageComment.outputs.coverage }}
+#          color: ${{ steps.coverageComment.outputs.color }}
+#          namedLogo: python
