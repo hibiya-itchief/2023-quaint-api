@@ -29,8 +29,6 @@ jobs:
 
       - name: Test with pytest on Docker
         run: |
-          pwd
-          ls
           touch ./app/.env
           echo DB_HOST=db >> ./app/.env
           echo MYSQL_USER=docker_dev >> ./app/.env
@@ -38,9 +36,8 @@ jobs:
           echo BIND-ADDRESS=0.0.0.0 >> ./app/.env
           echo MYSQL_RANDOM_ROOT_PASSWORD=yes >> ./app/.env
           echo MYSQL_DATABASE=quaint-app >> ./app/.env
-          ls ./app
           docker-compose up -d
-          docker-compose exec -T app bash /app/wait-for-it.sh db:3306 -t 60 -- pytest --cov --junitxml=/app/app/test/pytest.xml --cov-report=term-missing:skip-covered > ./pytest-coverage.txt
+          docker-compose exec -T app bash /workflow/app/wait-for-it.sh db:3306 -t 60 -- pytest --cov --junitxml=/app/app/test/pytest.xml --cov-report=term-missing:skip-covered > ./pytest-coverage.txt
 
       - name: Create Coverage Comment
         id: coverageComment
