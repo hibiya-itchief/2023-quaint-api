@@ -37,9 +37,7 @@ jobs:
           echo MYSQL_RANDOM_ROOT_PASSWORD=yes >> ./app/.env
           echo MYSQL_DATABASE=quaint-app >> ./app/.env
           docker-compose up -d
-          docker-compose exec -it quaint-api-app-1 bash
-          pytest ./workspace/app/test
-      #          docker-compose exec -T app bash /workspace/wait-for-it.sh db:3306 -t 60 -- pytest --cov --junitxml=/app/app/test/pytest.xml --cov-report=term-missing:skip-covered > ./pytest-coverage.txt
+          docker-compose exec -T app bash /workspace/wait-for-it.sh db:3306 -t 60 -- pytest ./workspace/app/test --cov --junitxml=/app/app/test/pytest.xml --cov-report=term-missing:skip-covered > ./pytest-coverage.txt
       - name: Create Coverage Comment
         id: coverageComment
         uses: MishaKav/pytest-coverage-comment@main
