@@ -171,3 +171,7 @@ group1_update = schemas.GroupUpdate(
     floor=3,
     place="生徒ホール",
 )
+
+group_tag_create1 = schemas.GroupTagCreate(
+    tag_id='test'
+)

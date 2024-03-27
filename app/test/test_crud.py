@@ -3,9 +3,12 @@ from datetime import datetime
 from app import crud, schemas, models
 from app.main import app
 from app.test import factories
+
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from requests import Session
 from typing_extensions import assert_type
+import pytest
 
 client = TestClient(app)
 
@@ -67,3 +70,28 @@ def test_change_public_thumbnail_image_url(db):
 
     assert res_group.public_thumbnail_image_url == 'abcdefg'
 
+def test_add_tag(db):
+    tag = factories.group_tag_create1
+    db_tag = models.Tag(id=tag.tag_id, tagname='sample')
+    db_group = models.Group(**factories.group1.dict())
+
+    #テスト用のgroupをDBに追加
+    db.add(db_group)
+    db.add(db_tag)
+    db.commit()
+    db.refresh(db_group)
+
+    #指定された団体が存在しない
+    assert crud.add_tag(db, factories.group2.id, tag) == None
+
+    #存在しないタグを追加
+    assert crud.add_tag(db, factories.group1.id, schemas.GroupTagCreate(tag_id='sample')) == None
+
+    #重複していないタグを追加
+    assert crud.add_tag(db, factories.group1.id, tag)  != None
+
+    #重複しているタグを追加
+    with pytest.raises(HTTPException) as err:
+        crud.add_tag(db, factories.group1.id, tag)
+    assert err.value.status_code == 200
+    assert err.value.detail == 'Already Registed'
