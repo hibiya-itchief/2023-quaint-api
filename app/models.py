@@ -67,6 +67,10 @@ class Group(Base):
     public_thumbnail_image_url=Column(VARCHAR(255))#オブジェクトストレージ上の公開団体サムネイル画像へのURL
     public_page_content_url = Column(VARCHAR(255))#オブジェクトストレージ上の団体個別公開ページのMarkdownへのURL
     private_page_content_url = Column(VARCHAR(255))#オブジェクトストレージ上の団体個別非公開ページのMarkdownへのURL
+
+    floor = Column(VARCHAR(255)) #何階か
+    place = Column(VARCHAR(255)) #どこか
+
     def update_dict(self,dict):
         print(dict)
         for name, value in dict.items():

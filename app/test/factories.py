@@ -58,25 +58,30 @@ class group1_GroupCreateByAdmin():
     groupname="2年8組"
     title="SING"
     description="ここに説明文"
-    page_content="<html><h1>宣伝ページ</h1></html>"
     enable_vote=True
     twitter_url=None
     instagram_url=None
     stream_url=None
-    thumbnail_image_url=None
-    cover_image_url=None
+    public_thumbnail_image_url=None    
+    public_page_content_url="<html><h1>宣伝ページ</h1></html>"
+    private_page_content_url="<html><h1>プライベート</h1></html>"
+    floor=1
+    place="社会科教室"
 class group2_GroupCreateByAdmin():
     id="18R"
     groupname="2年8組"
     title="あああああ"
     description="ここに説明文"
-    page_content="<html><h1>宣伝ページ</h1></html>"
-    enable_vote=True
+    enable_vote=False
     twitter_url=None
     instagram_url=None
     stream_url=None
-    thumbnail_image_url=None
+    public_thumbnail_image_url=None
+    public_page_content_url="<html><h1>宣伝ページ</h1></html>"
+    private_page_content_url="<html><h1>プライベート</h1></html>"
     cover_image_url=None
+    floor=2
+    place="生徒ホール"
 
 class Timetable():
     timetablename:str
@@ -118,3 +123,55 @@ class invalid_timetable3():
     starts_at=str(datetime.datetime(year=2022,month=9,day=17,hour=9,minute=30,second=0))
     ends_at=str(datetime.datetime(year=2022,month=9,day=17,hour=9,minute=0,second=0))
 
+# 変数
+group1 = schemas.GroupCreate(
+    id="28r",
+    groupname="2年8組",
+    title="SING",
+    description="ここに説明文",
+    enable_vote=True,
+    twitter_url=None,
+    instagram_url=None,
+    stream_url=None,
+    public_thumbnail_image_url=None,
+    public_page_content_url="<html><h1>宣伝ページ</h1></html>",
+    private_page_content_url="<html><h1>プライベート</h1></html>",
+    floor=1,
+    place="社会科教室",
+)
+
+group2 = schemas.GroupCreate(
+    id="17r",
+    groupname="1年7組",
+    title="hatopoppo",
+    description="ここに説明文",
+    enable_vote=True,
+    twitter_url=None,
+    instagram_url=None,
+    stream_url=None,
+    public_thumbnail_image_url=None,
+    public_page_content_url="<html><h1>宣伝ページ</h1></html>",
+    private_page_content_url="<html><h1>プライベート</h1></html>",
+    floor=2,
+    place="生徒ホール",
+)
+
+group1_update = schemas.GroupUpdate(
+    id="28r",
+    groupname="2年8組",
+    title="sample",
+    description="ここに説明文",
+    enable_vote=True,
+    twitter_url=None,
+    instagram_url=None,
+    stream_url=None,
+    public_thumbnail_image_url=None,
+    public_page_content_url="<html><h1>宣伝ページ</h1></html>",
+    private_page_content_url="<html><h1>プライベート</h1></html>",
+    floor=3,
+    place="生徒ホール",
+)
+
+group_tag_create1 = schemas.GroupTagCreate(
+    tag_id='test'
+)
