@@ -68,6 +68,3 @@ class Settings(BaseSettings):
 
 params=Parameters()
 settings= Settings()
-
-print("config")
-print(settings.mysql_user)
