@@ -156,6 +156,23 @@ group2 = schemas.GroupCreate(
     place="生徒ホール",
 )
 
+# 変数
+group3 = schemas.GroupCreate(
+    id="test_1",
+    groupname="テストグループ",
+    title="TEST_TEST",
+    description="TESTです",
+    enable_vote=True,
+    twitter_url=None,
+    instagram_url=None,
+    stream_url=None,
+    public_thumbnail_image_url=None,
+    public_page_content_url="<html><h1>宣伝ページ</h1></html>",
+    private_page_content_url="<html><h1>プライベート</h1></html>",
+    floor=4,
+    place="LL教室",
+)
+
 group1_update = schemas.GroupUpdate(
     id="28r",
     groupname="2年8組",

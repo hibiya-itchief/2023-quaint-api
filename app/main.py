@@ -739,5 +739,6 @@ async def create_all_events_from_csv(file: UploadFile = File(...),db:Session = D
     data.close()
     file.file.close()
 
-    print(df)
+    crud.check_df(db,df)
+
     return 'ok'

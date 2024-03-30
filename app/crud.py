@@ -3,6 +3,8 @@ from typing import Dict, List, Union
 
 #from hashids import Hashids
 import ulid
+import pandas as pd
+import numpy as np
 from fastapi import HTTPException, Query
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
@@ -381,3 +383,30 @@ def set_hebe_upnext(db:Session,hebe:schemas.HebeResponse):
     db.commit()
     db.refresh(db_hebe)
     return db_hebe
+
+
+def check_df(db:Session, df: pd.DataFrame):
+    #カラム名が正しいかの検証
+    columns = df.columns.values
+    correct_columns = ['group_id', 'eventname', 'lottery', 'target', 'ticket_stock', 'starts_at', 'ends_at', 'sell_starts', 'sell_ends']
+    for i in range(len(columns)):
+        if not (columns[i - 1] == correct_columns[i - 1]):
+            raise HTTPException(422, 'カラム名が正しいことを確認してください。')
+
+    #group_idが正しいかの検証
+    for i in range(len(df)):
+        group = db.query(models.Group).filter(models.Group.id == df.iloc[i - 1, 0]).first()
+
+        if not group:
+            raise HTTPException(400, "存在しないgroup_idが含まれています。")
+        
+    #時刻の表記の仕方が正しいかの判定
+    for m in range(len(df)):
+        for n in [5,6,7,8]:
+            try:
+                time = datetime.fromisoformat(df.iloc[m - 1, n])
+            except:
+                raise HTTPException(422, "時刻の表記方法が正しいことを確認してください。")
+
+    #表記方法に問題なし
+    return None
