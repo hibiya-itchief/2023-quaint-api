@@ -27,3 +27,4 @@ redis[hiredis]
 google-api-python-client
 google-analytics-data
 oauth2client
+pandas

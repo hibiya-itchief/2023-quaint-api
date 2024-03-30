@@ -5,6 +5,8 @@ from typing import Dict, List, Optional, Union
 from xml.dom.minidom import Entity
 
 import requests
+from io import StringIO
+import pandas as pd
 from fastapi import (Body, Depends, FastAPI, File, HTTPException, Query,
                      UploadFile, status)
 from fastapi.middleware.cors import CORSMiddleware
@@ -721,3 +723,21 @@ def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Dep
 )
 def get_hebe_nowplaying(hebe:schemas.HebeResponse,permission:schemas.JWTUser=Depends(auth.chief),db:Session = Depends(db.get_db)):
     return crud.set_hebe_upnext(db,hebe)
+
+@app.post(
+    "/support/events",
+    summary="公演の一括追加",
+    tags=["admin"],
+    description="csvファイルを元に公演を一斉に追加します。csvファイルについてはサンプルのエクセルと同じ書式で書いたものにしてください。正しく処理されません。"
+)
+async def create_all_events_from_csv(file: UploadFile = File(...),db:Session = Depends(db.get_db)):
+    #pandasのDataFrameに読み込んだファイルを変換
+    content = file.file.read()
+    string_data = str(content, 'utf-8')
+    data = StringIO(string_data)
+    df = pd.read_csv(data)
+    data.close()
+    file.file.close()
+
+    print(df)
+    return 'ok'
