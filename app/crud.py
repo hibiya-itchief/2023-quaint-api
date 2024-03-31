@@ -384,7 +384,7 @@ def set_hebe_upnext(db:Session,hebe:schemas.HebeResponse):
     db.refresh(db_hebe)
     return db_hebe
 
-
+#受け取ったpandas.DataFrameの形式が正しいかを検証する
 def check_df(db:Session, df: pd.DataFrame):
     #カラム名が正しいかの検証
     columns = df.columns.values
@@ -395,7 +395,7 @@ def check_df(db:Session, df: pd.DataFrame):
 
     #group_idが正しいかの検証
     for i in range(len(df)):
-        group = db.query(models.Group).filter(models.Group.id == df.iloc[i - 1, 0]).first()
+        group = db.query(models.Group).filter(models.Group.id == df.iat[i - 1, 0]).first()
 
         if not group:
             raise HTTPException(400, "存在しないgroup_idが含まれています。")
@@ -404,9 +404,45 @@ def check_df(db:Session, df: pd.DataFrame):
     for m in range(len(df)):
         for n in [5,6,7,8]:
             try:
-                time = datetime.fromisoformat(df.iloc[m - 1, n])
+                time = datetime.fromisoformat(df.iat[m - 1, n])
             except:
                 raise HTTPException(422, "時刻の表記方法が正しいことを確認してください。")
+            
+    #時刻の設定に問題がないかを確認
+    for i in range(len(df)):
+        starts_at = datetime.fromisoformat(df.iat[i - 1, 5])
+        ends_at = datetime.fromisoformat(df.iat[i - 1, 6])
+        sell_starts = datetime.fromisoformat(df.iat[i - 1, 7])
+        sell_ends = datetime.fromisoformat(df.iat[i - 1, 8])
+
+        if starts_at > ends_at:
+            raise HTTPException(400,f"公演の開始時刻は終了時刻よりも前である必要があります。group_id : {df.iat[i - 1, 0]}, eventname : {df.iat[i - 1, 1]}")
+        if sell_starts > sell_ends:
+            raise HTTPException(400,f"配布開始時刻は配布終了時刻よりも前である必要があります。group_id : {df.iat[i - 1, 0]}, eventname : {df.iat[i - 1, 1]}")
 
     #表記方法に問題なし
+    return None
+
+#pandas.DataFrameの情報を元にDBにeventを追加
+def create_events_from_df(db:Session, df: pd.DataFrame):
+    for i in range(len(df)):
+        group_id = df.iat[i - 1, 0]
+
+        #pandas.DataFrameの情報を読み取ってスキーマに変換
+        event = schemas.EventDBInput(
+            eventname=df.iat[i - 1, 1],
+            lottery=df.iat[i - 1, 2],
+            target=df.iat[i - 1, 3],
+            ticket_stock=df.iat[i - 1, 4],
+            starts_at=df.iat[i - 1, 5],
+            ends_at=df.iat[i - 1, 6],
+            sell_starts=df.iat[i - 1, 7],
+            sell_ends=df.iat[i - 1, 8],
+        )
+
+        db_event = models.Event(id=ulid.new().str,group_id=group_id,**event.dict())
+        db.add(db_event)
+        db.commit()
+        db.refresh(db_event)
+
     return None

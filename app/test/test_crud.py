@@ -102,6 +102,8 @@ def test_check_df(db):
     incorrect_title_df = pd.read_csv(filepath_or_buffer='/workspace/csv/incorrect-title-sheet.csv')
     incorrect_groupid_df = pd.read_csv(filepath_or_buffer='/workspace/csv/incorrect-groupid-sheet.csv')
     incorrect_time_df = pd.read_csv(filepath_or_buffer='/workspace/csv/incorrect-time-sheet.csv')
+    incorrect_time_start = pd.read_csv(filepath_or_buffer='/workspace/csv/incorrect-time-setting-start-sheet.csv')
+    incorrect_time_sell = pd.read_csv(filepath_or_buffer='/workspace/csv/incorrect-time-setting-sell-sheet.csv')
 
     group = factories.group3
     crud.create_group(db, group)
@@ -114,7 +116,7 @@ def test_check_df(db):
     assert err1.value.detail == 'カラム名が正しいことを確認してください。'
 
     with pytest.raises(HTTPException) as err2:
-        crud.check_df(db,incorrect_groupid_df)
+        crud.check_df(db, incorrect_groupid_df)
     assert err2.value.status_code == 400
     assert err2.value.detail == '存在しないgroup_idが含まれています。'
 
@@ -122,3 +124,19 @@ def test_check_df(db):
         crud.check_df(db,incorrect_time_df)
     assert err3.value.status_code == 422
     assert err3.value.detail == '時刻の表記方法が正しいことを確認してください。'
+
+    with pytest.raises(HTTPException) as err4:
+        crud.check_df(db, incorrect_time_start)
+    assert err4.value.status_code == 400
+
+    with pytest.raises(HTTPException) as err5:
+        crud.check_df(db, incorrect_time_sell)
+    assert err5.value.status_code == 400
+
+def test_create_events_from_df(db):
+    df = pd.read_csv(filepath_or_buffer='/workspace/csv/sample-sheet.csv')
+
+    group = factories.group3
+    crud.create_group(db, group)
+
+    assert crud.create_events_from_df(db, df) == None
