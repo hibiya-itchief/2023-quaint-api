@@ -385,8 +385,12 @@ def set_hebe_upnext(db:Session,hebe:schemas.HebeResponse):
     return db_hebe
 
 #受け取ったpandas.DataFrameをserializeする
-#受け取った値についての検証はしない
+#受け取った値についての検証はcolumnsだけ行う
 def convert_df(df:pd.DataFrame) -> pd.DataFrame:
+    #カラムの数が正しいかの検証
+    if len(df.columns.values) != 12:
+        raise HTTPException(422, '列の数が合いません。')
+
     converted_df = pd.DataFrame(columns=['group_id', 'eventname', 'lottery', 'target', 'ticket_stock', 'starts_at', 'ends_at', 'sell_starts', 'sell_ends'])
 
     #1行ずつ取り出してserializeする

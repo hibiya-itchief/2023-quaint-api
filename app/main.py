@@ -743,4 +743,4 @@ async def create_all_events_from_csv(file: UploadFile = File(...), permission:sc
     crud.check_df(db,converted_df)
     crud.create_events_from_df(db, converted_df)
 
-    return [converted_df.iloc[i,:].to_json() for i in range(len(converted_df))]
+    return {'message' :[converted_df.iloc[i,:].to_json() for i in range(len(converted_df))]}
