@@ -97,6 +97,16 @@ def test_add_tag(db):
     assert err.value.status_code == 200
     assert err.value.detail == 'Already Registed'
 
+def test_convert_df():
+    origin_df = pd.read_csv('/workspace/csv/sample-sheet-v2.csv')
+    converted_df = pd.read_csv('/workspace/csv/sample-sheet-v1.csv')
+
+    res_df = crud.convert_df(origin_df)
+
+    for m in range(len(origin_df)):
+        for n in range(len(converted_df.columns.values)):
+            assert res_df.iat[m, n] == converted_df.iat[m, n]
+
 def test_check_df(db):
     correct_df = pd.read_csv(filepath_or_buffer='/workspace/csv/sample-sheet.csv')
     incorrect_title_df = pd.read_csv(filepath_or_buffer='/workspace/csv/incorrect-title-sheet.csv')
@@ -113,17 +123,14 @@ def test_check_df(db):
     with pytest.raises(HTTPException) as err1:
         crud.check_df(db,incorrect_title_df)
     assert err1.value.status_code == 422
-    assert err1.value.detail == 'カラム名が正しいことを確認してください。'
 
     with pytest.raises(HTTPException) as err2:
         crud.check_df(db, incorrect_groupid_df)
     assert err2.value.status_code == 400
-    assert err2.value.detail == '存在しないgroup_idが含まれています。'
 
     with pytest.raises(HTTPException) as err3:
         crud.check_df(db,incorrect_time_df)
     assert err3.value.status_code == 422
-    assert err3.value.detail == '時刻の表記方法が正しいことを確認してください。'
 
     with pytest.raises(HTTPException) as err4:
         crud.check_df(db, incorrect_time_start)

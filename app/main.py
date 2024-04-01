@@ -739,7 +739,8 @@ async def create_all_events_from_csv(file: UploadFile = File(...), permission:sc
     data.close()
     file.file.close()
 
-    crud.check_df(db,df)
-    crud.create_events_from_df(db, df)
+    converted_df = crud.convert_df(df)
+    crud.check_df(db,converted_df)
+    crud.create_events_from_df(db, converted_df)
 
-    return 'success'
+    return [converted_df.iloc[i,:].to_json() for i in range(len(converted_df))]
