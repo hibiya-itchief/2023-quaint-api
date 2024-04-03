@@ -3,6 +3,8 @@ from typing import Dict, List, Union
 
 #from hashids import Hashids
 import ulid
+import pandas as pd
+import numpy as np
 from fastapi import HTTPException, Query
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
@@ -381,3 +383,125 @@ def set_hebe_upnext(db:Session,hebe:schemas.HebeResponse):
     db.commit()
     db.refresh(db_hebe)
     return db_hebe
+
+#受け取ったpandas.DataFrameをserializeする
+#受け取った値についての検証はcolumnsだけ行う
+def convert_df(df:pd.DataFrame) -> pd.DataFrame:
+    #カラムの数が正しいかの検証
+    if len(df.columns.values) != 12:
+        raise HTTPException(422, f'列の数が合いません。正しい列の数は12です。サンプルシートと比較して確認してください。')
+
+    converted_df = pd.DataFrame(columns=['group_id', 'eventname', 'lottery', 'target', 'ticket_stock', 'starts_at', 'ends_at', 'sell_starts', 'sell_ends'])
+
+    #1行ずつ取り出してserializeする
+    for i in range(len(df)):
+        try:
+            #時間の情報をserializeする
+            year = str(df.iat[i, 5])
+            month = str(df.iat[i, 6])
+            day = str(df.iat[i, 7])
+            hours = {
+                'starts_at':str(df.iat[i, 8]).split(':')[0],
+                'ends_at':str(df.iat[i, 9]).split(':')[0],
+                'sell_starts':str(df.iat[i, 10]).split(':')[0],
+                'sell_ends':str(df.iat[i, 11]).split(':')[0],
+            }
+
+            """
+            month, day, hourのserialize
+            上の三つを時間にくっつける上で 9 → 09 みたいにする必要がある
+            """
+            if len(month) == 1:
+                month = '0' + month
+            if len(day) == 1:
+                day = '0' + day
+
+            for key in ['starts_at', 'ends_at', 'sell_starts', 'sell_ends']:
+                if len(hours[key]) == 1:
+                    hours[key] = '0' + hours[key]
+
+            times = {
+                'starts_at':hours['starts_at'] + ':' + str(df.iat[i , 8]).split(':')[1] + ':' + str(df.iat[i , 8]).split(':')[2],
+                'ends_at':hours['ends_at'] + ':' + str(df.iat[i , 9]).split(':')[1] + ':' + str(df.iat[i , 9]).split(':')[2],
+                'sell_starts':hours['sell_starts'] + ':' + str(df.iat[i , 10]).split(':')[1] + ':' + str(df.iat[i , 10]).split(':')[2],
+                'sell_ends':hours['sell_ends'] + ':' + str(df.iat[i , 11]).split(':')[1] + ':' + str(df.iat[i , 11]).split(':')[2],
+            }
+
+            converted_df = pd.concat([converted_df, pd.DataFrame(data={
+                'group_id':[df.iat[i , 0]],
+                'eventname':[df.iat[i , 1]],
+                'lottery':df.iat[i , 2],
+                'target':[df.iat[i , 3]],
+                'ticket_stock':[df.iat[i , 4]],
+                'starts_at':[ year + '-' + month + '-' + day + 'T' + times['starts_at'] + '+09:00'],
+                'ends_at':[ year + '-' + month + '-' + day + 'T' + times['ends_at'] + '+09:00'],
+                'sell_starts':[ year + '-' + month + '-' + day + 'T' + times['sell_starts'] + '+09:00'],
+                'sell_ends':[ year + '-' + month + '-' + day + 'T' + times['sell_ends'] + '+09:00'],
+            })], ignore_index=True)
+        except:
+            raise HTTPException(422, f"pandas.DataFrameの変換に失敗しました。表記方法が正しいことを確認してください。<エラー箇所> 行番号 : { i + 1 }")
+
+    return converted_df
+
+#受け取ったpandas.DataFrameの形式が正しいかを検証する
+def check_df(db:Session, df: pd.DataFrame) -> None:
+    #カラム名が正しいかの検証
+    columns = df.columns.values
+    correct_columns = ['group_id', 'eventname', 'lottery', 'target', 'ticket_stock', 'starts_at', 'ends_at', 'sell_starts', 'sell_ends']
+    for i in range(len(columns)):
+        if not (columns[i] == correct_columns[i]):
+            raise HTTPException(422, f'カラム名が正しいことを確認してください。<エラー箇所> 表記 : {columns[i]}, 正表記 : {correct_columns[i]}')
+
+    #group_idが正しいかの検証
+    for i in range(len(df)):
+        group = db.query(models.Group).filter(models.Group.id == df.iat[i, 0]).first()
+
+        if not group:
+            raise HTTPException(400, f"存在しないgroup_idが含まれています。<エラー箇所> 行番号 : {i + 1}, group_id : {df.iat[i, 0]}")
+        
+    #時刻の表記の仕方が正しいかの判定
+    for m in range(len(df)):
+        for n in [5,6,7,8]:
+            try:
+                time = datetime.fromisoformat(df.iat[m, n])
+            except:
+                raise HTTPException(422, f"時刻の表記方法が正しいことを確認してください。<エラー箇所> 行番号 : {m + 1}, 列番号 : {n + 1}")
+            
+    #時刻の設定に問題がないかを確認
+    for i in range(len(df)):
+        starts_at = datetime.fromisoformat(df.iat[i , 5])
+        ends_at = datetime.fromisoformat(df.iat[i , 6])
+        sell_starts = datetime.fromisoformat(df.iat[i , 7])
+        sell_ends = datetime.fromisoformat(df.iat[i , 8])
+
+        if starts_at > ends_at:
+            raise HTTPException(400,f"公演の開始時刻は終了時刻よりも前である必要があります。group_id : {df.iat[i , 0]}, eventname : {df.iat[i , 1]}")
+        if sell_starts > sell_ends:
+            raise HTTPException(400,f"配布開始時刻は配布終了時刻よりも前である必要があります。group_id : {df.iat[i , 0]}, eventname : {df.iat[i , 1]}")
+
+    #表記方法に問題なし
+    return None
+
+#pandas.DataFrameの情報を元にDBにeventを追加
+def create_events_from_df(db:Session, df: pd.DataFrame) -> None:
+    for i in range(len(df)):
+        group_id = df.iat[i , 0]
+
+        #pandas.DataFrameの情報を読み取ってスキーマに変換
+        event = schemas.EventDBInput(
+            eventname=df.iat[i , 1],
+            lottery=df.iat[i , 2],
+            target=df.iat[i , 3],
+            ticket_stock=df.iat[i , 4],
+            starts_at=df.iat[i , 5],
+            ends_at=df.iat[i , 6],
+            sell_starts=df.iat[i , 7],
+            sell_ends=df.iat[i , 8],
+        )
+
+        db_event = models.Event(id=ulid.new().str,group_id=group_id,**event.dict())
+        db.add(db_event)
+        db.commit()
+        db.refresh(db_event)
+
+    return None

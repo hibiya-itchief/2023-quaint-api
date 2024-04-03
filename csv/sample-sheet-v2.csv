@@ -1,0 +1,3 @@
+group_id,eventname,lottery,target,ticket_stock,year,month,day,starts_at,ends_at,sell_starts,sell_ends
+test_1,テストイベント１,FALSE,everyone,50,2024,9,16,9:30:00,10:30:00,8:30:00,9:00:00
+test_2,テストイベント2,FALSE,admin,50,2024,9,16,12:30:00,13:30:00,10:00:00,11:00:00

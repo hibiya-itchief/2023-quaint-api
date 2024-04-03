@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from requests import Session
 from typing_extensions import assert_type
 import pytest
+import pandas as pd
 
 client = TestClient(app)
 
@@ -95,3 +96,54 @@ def test_add_tag(db):
         crud.add_tag(db, factories.group1.id, tag)
     assert err.value.status_code == 200
     assert err.value.detail == 'Already Registed'
+
+def test_convert_df():
+    origin_df = pd.read_csv('/workspace/csv/sample-sheet-v2.csv')
+    converted_df = pd.read_csv('/workspace/csv/sample-sheet-v1.csv')
+
+    res_df = crud.convert_df(origin_df)
+
+    for m in range(len(origin_df)):
+        for n in range(len(converted_df.columns.values)):
+            assert res_df.iat[m, n] == converted_df.iat[m, n]
+
+def test_check_df(db):
+    correct_df = pd.read_csv(filepath_or_buffer='/workspace/csv/sample-sheet.csv')
+    incorrect_title_df = pd.read_csv(filepath_or_buffer='/workspace/csv/incorrect-title-sheet.csv')
+    incorrect_groupid_df = pd.read_csv(filepath_or_buffer='/workspace/csv/incorrect-groupid-sheet.csv')
+    incorrect_time_df = pd.read_csv(filepath_or_buffer='/workspace/csv/incorrect-time-sheet.csv')
+    incorrect_time_start = pd.read_csv(filepath_or_buffer='/workspace/csv/incorrect-time-setting-start-sheet.csv')
+    incorrect_time_sell = pd.read_csv(filepath_or_buffer='/workspace/csv/incorrect-time-setting-sell-sheet.csv')
+
+    group = factories.group3
+    crud.create_group(db, group)
+
+    assert crud.check_df(db,correct_df) == None
+
+    with pytest.raises(HTTPException) as err1:
+        crud.check_df(db,incorrect_title_df)
+    assert err1.value.status_code == 422
+
+    with pytest.raises(HTTPException) as err2:
+        crud.check_df(db, incorrect_groupid_df)
+    assert err2.value.status_code == 400
+
+    with pytest.raises(HTTPException) as err3:
+        crud.check_df(db,incorrect_time_df)
+    assert err3.value.status_code == 422
+
+    with pytest.raises(HTTPException) as err4:
+        crud.check_df(db, incorrect_time_start)
+    assert err4.value.status_code == 400
+
+    with pytest.raises(HTTPException) as err5:
+        crud.check_df(db, incorrect_time_sell)
+    assert err5.value.status_code == 400
+
+def test_create_events_from_df(db):
+    df = pd.read_csv(filepath_or_buffer='/workspace/csv/sample-sheet.csv')
+
+    group = factories.group3
+    crud.create_group(db, group)
+
+    assert crud.create_events_from_df(db, df) == None

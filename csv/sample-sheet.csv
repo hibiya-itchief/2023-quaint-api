@@ -1,0 +1,2 @@
+group_id,eventname,lottery,target,ticket_stock,starts_at,ends_at,sell_starts,sell_ends
+test_1,テストイベント１,FALSE,everyone,50,2024-09-16T09:30:00+09:00,2024-09-16T10:30:00+09:00,2024-09-16T08:30:00+09:00,2024-09-16T09:20:00+09:00
