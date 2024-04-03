@@ -389,54 +389,57 @@ def set_hebe_upnext(db:Session,hebe:schemas.HebeResponse):
 def convert_df(df:pd.DataFrame) -> pd.DataFrame:
     #カラムの数が正しいかの検証
     if len(df.columns.values) != 12:
-        raise HTTPException(422, '列の数が合いません。')
+        raise HTTPException(422, f'列の数が合いません。正しい列の数は12です。サンプルシートと比較して確認してください。')
 
     converted_df = pd.DataFrame(columns=['group_id', 'eventname', 'lottery', 'target', 'ticket_stock', 'starts_at', 'ends_at', 'sell_starts', 'sell_ends'])
 
     #1行ずつ取り出してserializeする
     for i in range(len(df)):
-        #時間の情報をserializeする
-        year = str(df.iat[i, 5])
-        month = str(df.iat[i, 6])
-        day = str(df.iat[i, 7])
-        hours = {
-            'starts_at':str(df.iat[i, 8]).split(':')[0],
-            'ends_at':str(df.iat[i, 9]).split(':')[0],
-            'sell_starts':str(df.iat[i, 10]).split(':')[0],
-            'sell_ends':str(df.iat[i, 11]).split(':')[0],
-        }
+        try:
+            #時間の情報をserializeする
+            year = str(df.iat[i, 5])
+            month = str(df.iat[i, 6])
+            day = str(df.iat[i, 7])
+            hours = {
+                'starts_at':str(df.iat[i, 8]).split(':')[0],
+                'ends_at':str(df.iat[i, 9]).split(':')[0],
+                'sell_starts':str(df.iat[i, 10]).split(':')[0],
+                'sell_ends':str(df.iat[i, 11]).split(':')[0],
+            }
 
-        """
-        month, day, hourのserialize
-        上の三つを時間にくっつける上で 9 → 09 みたいにする必要がある
-        """
-        if len(month) == 1:
-            month = '0' + month
-        if len(day) == 1:
-            day = '0' + day
+            """
+            month, day, hourのserialize
+            上の三つを時間にくっつける上で 9 → 09 みたいにする必要がある
+            """
+            if len(month) == 1:
+                month = '0' + month
+            if len(day) == 1:
+                day = '0' + day
 
-        for key in ['starts_at', 'ends_at', 'sell_starts', 'sell_ends']:
-            if len(hours[key]) == 1:
-                hours[key] = '0' + hours[key]
+            for key in ['starts_at', 'ends_at', 'sell_starts', 'sell_ends']:
+                if len(hours[key]) == 1:
+                    hours[key] = '0' + hours[key]
 
-        times = {
-            'starts_at':hours['starts_at'] + ':' + str(df.iat[i , 8]).split(':')[1] + ':' + str(df.iat[i , 8]).split(':')[2],
-            'ends_at':hours['ends_at'] + ':' + str(df.iat[i , 9]).split(':')[1] + ':' + str(df.iat[i , 9]).split(':')[2],
-            'sell_starts':hours['sell_starts'] + ':' + str(df.iat[i , 10]).split(':')[1] + ':' + str(df.iat[i , 10]).split(':')[2],
-            'sell_ends':hours['sell_ends'] + ':' + str(df.iat[i , 11]).split(':')[1] + ':' + str(df.iat[i , 11]).split(':')[2],
-        }
+            times = {
+                'starts_at':hours['starts_at'] + ':' + str(df.iat[i , 8]).split(':')[1] + ':' + str(df.iat[i , 8]).split(':')[2],
+                'ends_at':hours['ends_at'] + ':' + str(df.iat[i , 9]).split(':')[1] + ':' + str(df.iat[i , 9]).split(':')[2],
+                'sell_starts':hours['sell_starts'] + ':' + str(df.iat[i , 10]).split(':')[1] + ':' + str(df.iat[i , 10]).split(':')[2],
+                'sell_ends':hours['sell_ends'] + ':' + str(df.iat[i , 11]).split(':')[1] + ':' + str(df.iat[i , 11]).split(':')[2],
+            }
 
-        converted_df = pd.concat([converted_df, pd.DataFrame(data={
-            'group_id':[df.iat[i , 0]],
-            'eventname':[df.iat[i , 1]],
-            'lottery':df.iat[i , 2],
-            'target':[df.iat[i , 3]],
-            'ticket_stock':[df.iat[i , 4]],
-            'starts_at':[ year + '-' + month + '-' + day + 'T' + times['starts_at'] + '+09:00'],
-            'ends_at':[ year + '-' + month + '-' + day + 'T' + times['ends_at'] + '+09:00'],
-            'sell_starts':[ year + '-' + month + '-' + day + 'T' + times['sell_starts'] + '+09:00'],
-            'sell_ends':[ year + '-' + month + '-' + day + 'T' + times['sell_ends'] + '+09:00'],
-        })], ignore_index=True)
+            converted_df = pd.concat([converted_df, pd.DataFrame(data={
+                'group_id':[df.iat[i , 0]],
+                'eventname':[df.iat[i , 1]],
+                'lottery':df.iat[i , 2],
+                'target':[df.iat[i , 3]],
+                'ticket_stock':[df.iat[i , 4]],
+                'starts_at':[ year + '-' + month + '-' + day + 'T' + times['starts_at'] + '+09:00'],
+                'ends_at':[ year + '-' + month + '-' + day + 'T' + times['ends_at'] + '+09:00'],
+                'sell_starts':[ year + '-' + month + '-' + day + 'T' + times['sell_starts'] + '+09:00'],
+                'sell_ends':[ year + '-' + month + '-' + day + 'T' + times['sell_ends'] + '+09:00'],
+            })], ignore_index=True)
+        except:
+            raise HTTPException(422, f"pandas.DataFrameの変換に失敗しました。表記方法が正しいことを確認してください。<エラー箇所> 行番号 : { i + 1 }")
 
     return converted_df
 
